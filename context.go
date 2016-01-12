@@ -129,6 +129,20 @@ func (c *Context) MustGetFinal(key string) interface{} {
 	return value
 }
 
+// HasHeader returns true if request sets its header for specified key
+func (c *Context) HasHeader(key string) bool {
+	key = http.CanonicalHeaderKey(key)
+
+	_, ok := c.Request.Header[key]
+
+	return ok
+}
+
+// Header returns request header value of specified key
+func (c *Context) Header(key string) string {
+	return c.Request.Header.Get(key)
+}
+
 // AddHeader adds response header with key/value pair
 func (c *Context) AddHeader(key, value string) {
 	c.Response.Header().Add(key, value)
