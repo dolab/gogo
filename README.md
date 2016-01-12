@@ -154,6 +154,7 @@ func main() {
 
 ## TODOs
 
+- [ ] server config context
 - [ ] scoffold && generator
 - [ ] mountable third-part app
 
