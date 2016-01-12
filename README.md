@@ -6,6 +6,20 @@ RESTful api framework of golang.
 
 It's heavily inspired from [neko](https://github.com/rocwong/neko) which created by [RocWong](https://github.com/rocwong).
 
+## Installation
+
+```bash
+$ go get github.com/dolab/gogo
+
+# install scoffold && generator tools
+# NOTE: NOT implements yet!
+$ go get github.com/dolab/gogo-scoffold
+$ gogo new myapp
+$ cd myapp
+$ source env.sh
+$ make gogo
+```
+
 ## Getting Started
 
 - Normal
@@ -137,6 +151,11 @@ func main() {
     app.Run()
 }
 ```
+
+## TODOs
+
+- [ ] scoffold && generator
+- [ ] mountable third-part app
 
 ## Thanks
 
