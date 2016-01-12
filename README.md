@@ -1,5 +1,7 @@
 # gogo
 
+[![Build Status](https://travis-ci.org/dolab/gogo.svg?branch=master&style=flat)](https://travis-ci.org/dolab/gogo)
+
 RESTful api framework of golang.
 
 It's heavily inspired from [neko](https://github.com/rocwong/neko) which created by [RocWong](https://github.com/rocwong).
