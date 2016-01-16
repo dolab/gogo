@@ -6,11 +6,15 @@
             "server": {
                 "addr": "localhost",
                 "port": 9090,
-                "ssl": false
+                "ssl": false,
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
             },
             "logger": {
                 "output": "stdout",
-                "level": "debug"
+                "level": "debug",
+                "filter_params": []
             },
             "app": {
                 "access_key": "KEY",
@@ -21,11 +25,15 @@
             "server": {
                 "addr": "localhost",
                 "port": 9090,
-                "ssl": false
+                "ssl": false,
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
             },
             "logger": {
                 "output": "stdout",
-                "level": "info"
+                "level": "debug",
+                "filter_params": ["password"]
             }
         },
         "production": {
@@ -34,11 +42,15 @@
                 "port": 9090,
                 "ssl": true,
                 "ssl_cert": "/path/to/ssl/cert",
-                "ssl_key": "/path/to/ssl/key"
+                "ssl_key": "/path/to/ssl/key",
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
             },
             "logger": {
                 "output": "stdout",
-                "level": "warn"
+                "level": "warn",
+                "filter_params": ["password", "password_confirmation"]
             }
         }
     }
