@@ -2,7 +2,9 @@ package gogo
 
 import (
 	"net/http"
+	"net/url"
 	"path"
+	"time"
 
 	"github.com/golib/httprouter"
 )
@@ -44,8 +46,15 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.New(resp, req, NewAppParams(req, params), handlers)
+
+		t := time.Now()
+
+		ctx.Logger.Infof(`Started %s "%s"`, req.Method, r.filterParameters(req.URL))
+
 		ctx.Next()
 		ctx.Response.FlushHeader()
+
+		ctx.Logger.Infof("Completed %d %s in %v", ctx.Response.Status(), http.StatusText(ctx.Response.Status()), time.Now().Sub(t))
 
 		r.server.Reuse(ctx)
 	})
@@ -58,8 +67,15 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.New(response, req, NewAppParams(req, params), handlers)
+
+		t := time.Now()
+
+		ctx.Logger.Infof(`Started %s "%s"`, req.Method, r.filterParameters(req.URL))
+
 		ctx.Next()
 		ctx.Response.FlushHeader()
+
+		ctx.Logger.Infof("Completed %d in %v", ctx.Response.Status(), time.Now().Sub(t))
 
 		r.server.Reuse(ctx)
 	})
@@ -142,4 +158,21 @@ func (r *AppRoute) calculatePrefix(suffix string) string {
 	}
 
 	return prefix
+}
+
+func (r *AppRoute) filterParameters(lru *url.URL) string {
+	s := lru.Path
+
+	query := lru.Query()
+	if len(query) > 0 {
+		for _, key := range r.server.filterParams {
+			if _, ok := query[key]; ok {
+				query.Set(key, "[FILTERED]")
+			}
+		}
+
+		s += "?" + query.Encode()
+	}
+
+	return s
 }
