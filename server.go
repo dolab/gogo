@@ -20,7 +20,8 @@ type AppServer struct {
 	router *httprouter.Router
 	pool   sync.Pool
 
-	requestId string
+	requestId    string
+	filterParams []string
 }
 
 func NewAppServer(mode RunMode, config *AppConfig, logger *AppLogger) *AppServer {
@@ -75,6 +76,9 @@ func (s *AppServer) Run() {
 	if config.Server.RequestId != "" {
 		s.requestId = config.Server.RequestId
 	}
+
+	// adjust app logger filter parameters
+	s.filterParams = config.Logger.FilterParams
 
 	// If the port is zero, treat the address as a fully qualified local address.
 	// This address must be prefixed with the network type followed by a colon,
