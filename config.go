@@ -27,8 +27,9 @@ var (
 )
 
 type AppConfig struct {
-	Mode     RunMode                      `json:"mode"`
-	Name     string                       `json:"name"`
+	Mode RunMode `json:"mode"`
+	Name string  `json:"name"`
+
 	Sections map[RunMode]*json.RawMessage `json:"sections"`
 }
 
@@ -114,6 +115,8 @@ type ServerConfig struct {
 type LoggerConfig struct {
 	Output string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
 	level  string `json:"level"`  // valid values [debug|info|warn|error]
+
+	FilterParams []string `json:"filter_params"`
 }
 
 func (l *LoggerConfig) Level() logger.Level {
