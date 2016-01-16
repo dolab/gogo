@@ -21,6 +21,7 @@
                 "access_secret": "SECRET"
             }
         },
+
         "test": {
             "server": {
                 "addr": "localhost",
@@ -36,6 +37,7 @@
                 "filter_params": ["password"]
             }
         },
+
         "production": {
             "server": {
                 "addr": "localhost",

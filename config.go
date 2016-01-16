@@ -33,23 +33,31 @@ type AppConfig struct {
 	Sections map[RunMode]*json.RawMessage `json:"sections"`
 }
 
+// NewAppConfig returns app config by parsing application.json
 func NewAppConfig(filename string) (*AppConfig, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewStringAppConfig(string(b))
+}
+
+// NewStringAppConfig returns app config by parsing json string
+func NewStringAppConfig(s string) (*AppConfig, error) {
 	var config *AppConfig
-	err = json.Unmarshal(b, &config)
+
+	err := json.Unmarshal([]byte(s), &config)
 	if err != nil {
 		return nil, err
 	}
 
-	// default to Development mode
+	// default to development mode
 	if !config.Mode.IsValid() {
-		config.Mode = Development
+		config.SetMode(Development)
 	}
 
+	// adjust app name
 	if config.Name == "" {
 		config.Name = "GOGO"
 	}
