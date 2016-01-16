@@ -143,6 +143,11 @@ func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
 
+// SetStatus sets response status code
+func (c *Context) SetStatus(code int) {
+	c.Response.WriteHeader(code)
+}
+
 // AddHeader adds response header with key/value pair
 func (c *Context) AddHeader(key, value string) {
 	c.Response.Header().Add(key, value)
