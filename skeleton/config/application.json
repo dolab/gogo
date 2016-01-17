@@ -1,0 +1,67 @@
+{
+    "name": "gogo",
+    "mode": "test",
+    "sections": {
+        "development": {
+            "server": {
+                "addr": "localhost",
+                "port": 9090,
+                "ssl": false,
+                "ssl_cert": "/path/to/ssl/cert",
+                "ssl_key": "/path/to/ssl/key",
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
+            },
+            "logger": {
+                "output": "stdout",
+                "level": "debug",
+                "filter_params": ["password", "password_confirmation"]
+            },
+            "domain": "https://example.com",
+            "example": {
+                "greeting": "Hello, gogo!"
+            }
+        },
+
+        "test": {
+            "server": {
+                "addr": "localhost",
+                "port": 9090,
+                "ssl": false,
+                "ssl_cert": "/path/to/ssl/cert",
+                "ssl_key": "/path/to/ssl/key",
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
+            },
+            "logger": {
+                "output": "stdout",
+                "level": "debug",
+                "filter_params": ["password", "password_confirmation"]
+            },
+            "domain": "https://example.com",
+            "example": {
+                "greeting": "Hello, gogo!"
+            }
+        },
+
+        "production": {
+            "server": {
+                "addr": "localhost",
+                "port": 9090,
+                "ssl": true,
+                "ssl_cert": "/path/to/ssl/cert",
+                "ssl_key": "/path/to/ssl/key",
+                "request_timeout": 30,
+                "response_timeout": 30,
+                "request_id": "X-Request-Id"
+            },
+            "logger": {
+                "output": "stdout",
+                "level": "warn",
+                "filter_params": ["password", "password_confirmation"]
+            }
+        }
+    }
+}
