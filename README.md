@@ -11,10 +11,15 @@ It's heavily inspired from [neko](https://github.com/rocwong/neko) which created
 ```bash
 $ go get github.com/dolab/gogo
 
-# install scoffold && generator tools
+# create a new app from skeleton
+$ cp -r $GOPATH/src/github.com/dolab/gogo/skeleton myapp
+
+# create a new app by gogo command
+# install scaffold && generator tools
 # NOTE: NOT implements yet!
-$ go get github.com/dolab/gogo-scoffold
-$ gogo new myapp
+$ go get github.com/dolab/gogo/scaffolding
+$ gogo -h
+$ gogo new myapp -namespace=github.com/dolab
 $ cd myapp
 $ source env.sh
 $ make gogo
