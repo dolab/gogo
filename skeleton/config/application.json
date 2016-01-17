@@ -37,7 +37,7 @@
             },
             "logger": {
                 "output": "stdout",
-                "level": "debug",
+                "level": "info",
                 "filter_params": ["password", "password_confirmation"]
             },
             "domain": "https://example.com",

@@ -5,31 +5,32 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	newMockApp = func() *AppServer {
+	newMockApp = func(mode string) *AppServer {
 		root, _ := os.Getwd()
 
-		return New("test", root)
+		return New(mode, path.Join(root, "skeleton"))
 	}
 )
 
 func Test_New(t *testing.T) {
 	assertion := assert.New(t)
 
-	app := newMockApp()
-	app.GET("/testing", func(ctx *Context) {
+	app := newMockApp("test")
+	app.GET("/gogo", func(ctx *Context) {
 		ctx.Text("Hello, gogo!")
 	})
 
 	ts := httptest.NewServer(app)
 	defer ts.Close()
 
-	response, err := http.Get(ts.URL + "/testing")
+	response, err := http.Get(ts.URL + "/gogo")
 	assertion.Nil(err)
 
 	body, err := ioutil.ReadAll(response.Body)
@@ -39,8 +40,7 @@ func Test_New(t *testing.T) {
 
 func Test_NewWithModeConfig(t *testing.T) {
 	assertion := assert.New(t)
-	root, _ := os.Getwd()
 
-	app := New("development", root)
-	assertion.Equal("development testing", app.config.Name)
+	app := newMockApp("development")
+	assertion.Equal("for development", app.config.Name)
 }
