@@ -6,13 +6,12 @@ import (
 	"path"
 	"testing"
 
+	"github.com/dolab/gogo"
 	"github.com/dolab/httptesting"
-
-	"github.com/dolab/gogo/skeleton/app/controllers"
 )
 
 var (
-	testApp    *controllers.Application
+	testApp    *gogo.AppServer
 	testServer *httptest.Server
 	testClient *httptesting.Client
 )
@@ -23,7 +22,7 @@ func TestMain(m *testing.M) {
 		srcPath = path.Clean("../../")
 	)
 
-	testApp = controllers.New(runMode, srcPath)
+	testApp = gogo.New(runMode, srcPath)
 	testServer = httptest.NewServer(testApp)
 	testClient = httptesting.New(testServer.URL, false)
 
