@@ -36,7 +36,7 @@ func (app *Application) Resources() {
 	// register your resources
 	// app.GET("/", handler)
 
-	app.GET("/@example/hello", Example.Hello)
+	app.GET("/@getting_start/hello", GettingStart.Hello)
 }
 
 // Run runs application after registering middelwares and resources

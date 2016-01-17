@@ -19,7 +19,7 @@
                 "filter_params": ["password", "password_confirmation"]
             },
             "domain": "https://example.com",
-            "example": {
+            "getting_start": {
                 "greeting": "Hello, gogo!"
             }
         },
@@ -41,7 +41,7 @@
                 "filter_params": ["password", "password_confirmation"]
             },
             "domain": "https://example.com",
-            "example": {
+            "getting_start": {
                 "greeting": "Hello, gogo!"
             }
         },
