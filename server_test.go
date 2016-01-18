@@ -34,7 +34,7 @@ func Test_ServerNew(t *testing.T) {
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.New(recorder, request, params, nil)
+	ctx := server.new(recorder, request, params, nil)
 	assertion.Equal(request, ctx.Request)
 	assertion.Equal(recorder.Header().Get(server.requestId), ctx.Response.Header().Get(server.requestId))
 	assertion.Equal(params, ctx.Params)
@@ -44,7 +44,7 @@ func Test_ServerNew(t *testing.T) {
 	assertion.EqualValues(-1, ctx.index)
 
 	// creation
-	newCtx := server.New(recorder, request, params, nil)
+	newCtx := server.new(recorder, request, params, nil)
 	assertion.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
@@ -55,10 +55,10 @@ func Test_ServerReuse(t *testing.T) {
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.New(recorder, request, params, nil)
-	server.Reuse(ctx)
+	ctx := server.new(recorder, request, params, nil)
+	server.reuse(ctx)
 
-	newCtx := server.New(recorder, request, params, nil)
+	newCtx := server.new(recorder, request, params, nil)
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 

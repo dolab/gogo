@@ -45,7 +45,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	handlers := r.combineHandlers(handler)
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.New(resp, req, NewAppParams(req, params), handlers)
+		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 
 		t := time.Now()
 
@@ -56,7 +56,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 		ctx.Logger.Infof("Completed %d %s in %v", ctx.Response.Status(), http.StatusText(ctx.Response.Status()), time.Now().Sub(t))
 
-		r.server.Reuse(ctx)
+		r.server.reuse(ctx)
 	})
 }
 
@@ -66,7 +66,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	handlers := r.combineHandlers(handler)
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.New(response, req, NewAppParams(req, params), handlers)
+		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
 
 		t := time.Now()
 
@@ -77,7 +77,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 
 		ctx.Logger.Infof("Completed %d in %v", ctx.Response.Status(), time.Now().Sub(t))
 
-		r.server.Reuse(ctx)
+		r.server.reuse(ctx)
 	})
 }
 

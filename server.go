@@ -137,8 +137,20 @@ func (s *AppServer) Use(middlewares ...Middleware) {
 	s.AppRoute.Use(middlewares...)
 }
 
+// Clean removes all registered middlewares, it useful in testing cases.
+func (s *AppServer) Clean() {
+	s.Handlers = []Middleware{}
+}
+
+// ServeHTTP implements the http.Handler interface
+func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
+
+	s.router.ServeHTTP(w, r)
+}
+
 // New returns a new context for the server
-func (s *AppServer) New(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
+func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
 	// adjust request id
 	requestId := r.Header.Get(s.requestId)
 	if requestId == "" {
@@ -164,18 +176,6 @@ func (s *AppServer) New(w http.ResponseWriter, r *http.Request, params *AppParam
 }
 
 // Reuse puts the context back to pool for later usage
-func (s *AppServer) Reuse(ctx *Context) {
+func (s *AppServer) reuse(ctx *Context) {
 	s.pool.Put(ctx)
-}
-
-// Clean removes all registered middlewares, it useful in testing cases.
-func (s *AppServer) Clean() {
-	s.Handlers = []Middleware{}
-}
-
-// ServeHTTP implements the http.Handler interface
-func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
-
-	s.router.ServeHTTP(w, r)
 }
