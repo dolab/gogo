@@ -7,7 +7,7 @@ import (
 
 	"github.com/dolab/gogo"
 
-	"github.com/dolab/gogo/skeleton/app/controllers"
+	"github.com/skeleton/app/controllers"
 )
 
 var (

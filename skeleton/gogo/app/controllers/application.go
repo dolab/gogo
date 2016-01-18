@@ -3,7 +3,7 @@ package controllers
 import (
 	"github.com/dolab/gogo"
 
-	"github.com/dolab/gogo/skeleton/app/middlewares"
+	"github.com/skeleton/app/middlewares"
 )
 
 type Application struct {
