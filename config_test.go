@@ -65,9 +65,9 @@ func Test_ConfigSection(t *testing.T) {
 
 func Test_ConfigUnmarshalJSON(t *testing.T) {
 	var testConfig struct {
-		Example struct {
+		GettingStart struct {
 			Greeting string `json:"greeting"`
-		} `json:"example"`
+		} `json:"getting_start"`
 	}
 
 	assertion := assert.New(t)
@@ -76,5 +76,5 @@ func Test_ConfigUnmarshalJSON(t *testing.T) {
 
 	err := config.UnmarshalJSON(&testConfig)
 	assertion.Nil(err)
-	assertion.Equal("Hello, gogo!", testConfig.Example.Greeting)
+	assertion.Equal("Hello, gogo!", testConfig.GettingStart.Greeting)
 }
