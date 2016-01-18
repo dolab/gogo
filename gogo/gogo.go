@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dolab/gogo/scaffolding/commands"
+	"github.com/dolab/gogo/gogo/commands"
 	"github.com/golib/cli"
 )
 
