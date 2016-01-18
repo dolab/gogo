@@ -35,7 +35,7 @@ export PATH
 if [ ! -d "$(pwd)/src/{{.Namespace}}/{{.Application}}" ];
 then
     mkdir -p "$(pwd)/src/{{.Namespace}}"
-    ln -s "$(pwd)/gogo" "$(pwd)/src/{{.Namespace}}/{{.Application}}"
+    ln -s "$(pwd)/gogo/" "$(pwd)/src/{{.Namespace}}/{{.Application}}"
 fi
 `
 
@@ -61,7 +61,7 @@ goreinstall:
 gotest:
     go test {{.Namespace}}/{{.Application}}/app/controllers
     go test {{.Namespace}}/{{.Application}}/app/middlewares
-    go test {{.Namespace}}/{{.Application}}/app/models
+    # go test {{.Namespace}}/{{.Application}}/app/models
 
 gopackage:
     mkdir -p bin && go build -a -o bin/{{.Application}} src/{{.Namespace}}/{{.Application}}/main.go
