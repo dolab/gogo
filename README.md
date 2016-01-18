@@ -10,19 +10,39 @@ It's heavily inspired from [neko](https://github.com/rocwong/neko) which created
 
 ```bash
 $ go get github.com/dolab/gogo
+```
 
-# create a new app from skeleton
+- Create application from skeleton
+
+```bash
 $ cp -r $GOPATH/src/github.com/dolab/gogo/skeleton myapp
 
-# create a new app by gogo command
-# install scaffold && generator tools
-# NOTE: NOT implements yet!
-$ go get github.com/dolab/gogo/scaffolding
+# fix application import path
+$ cd myapp
+$ source fix.sh
+$ source env.sh
+
+# run development server
+$ make godev
+```
+
+- Create application using scaffold tools
+
+```bash
+$ go get github.com/dolab/gogo/gogo
+
+# show gogo helps
 $ gogo -h
-$ gogo new myapp -namespace=github.com/dolab
+
+# create a new application
+$ gogo new myapp
+
+# fix application import path
 $ cd myapp
 $ source env.sh
-$ make gogo
+
+# run development server
+$ make godev
 ```
 
 ## Getting Started
