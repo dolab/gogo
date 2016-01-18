@@ -9,8 +9,6 @@ install:
   - mkdir -p skeleton/src/github.com
   - ln -s $TRAVIS_BUILD_DIR/skeleton/gogo/ $TRAVIS_BUILD_DIR/skeleton/src/github.com/skeleton
   - export GOPATH=$GOPATH:$TRAVIS_BUILD_DIR/skeleton
-  - echo $GOPATH
-  - ls $TRAVIS_BUILD_DIR/skeleton/src/github.com/skeleton
   - go get -t -v ./...
 
 script:
