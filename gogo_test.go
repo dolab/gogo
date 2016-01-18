@@ -15,7 +15,7 @@ var (
 	newMockApp = func(mode string) *AppServer {
 		root, _ := os.Getwd()
 
-		return New(mode, path.Join(root, "skeleton"))
+		return New(mode, path.Join(root, "skeleton", "gogo"))
 	}
 )
 

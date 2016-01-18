@@ -28,9 +28,9 @@ var (
 
 		}
 
-		file := path.Join(srcPath, "gogo", "config", filename)
+		file := path.Join(srcPath, "config", filename)
 		if _, err := os.Stat(file); os.IsNotExist(err) {
-			file = path.Join(srcPath, "gogo", "config", "application.json")
+			file = path.Join(srcPath, "config", "application.json")
 		}
 
 		return file
