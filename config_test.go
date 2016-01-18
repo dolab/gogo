@@ -12,7 +12,7 @@ var (
 	newMockConfig = func(name string) (*AppConfig, error) {
 		root, _ := os.Getwd()
 
-		return NewAppConfig(path.Join(root, "skeleton", "config", name))
+		return NewAppConfig(path.Join(root, "skeleton", "gogo", "config", name))
 	}
 )
 
