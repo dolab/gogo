@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 )
 
@@ -21,7 +20,7 @@ func NewDefaultRender(w Responser) Render {
 }
 
 func (render *DefaultRender) ContentType() string {
-	return ""
+	return render.response.Header().Get("Content-Type")
 }
 
 func (render *DefaultRender) Render(v interface{}) error {
@@ -47,8 +46,25 @@ func (render *DefaultRender) Render(v interface{}) error {
 	case io.Reader:
 		r, _ := v.(io.Reader)
 
-		b, _ = ioutil.ReadAll(r)
+		// optimized for io.Reader
+		buf := make([]byte, 0xffff) // 64k
+		for {
+			n, err := r.Read(buf)
+			if err != nil {
+				if err != io.EOF {
+					return err
+				}
 
+				return nil
+			}
+
+			_, err = render.response.Write(buf[:n])
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
 	_, err := render.response.Write(b)

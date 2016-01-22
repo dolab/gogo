@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,7 @@ func (statusCoder *testRenderStatusCoder) StatusCode() int {
 	return statusCoder.code
 }
 
-func Test_EmptyRender(t *testing.T) {
+func Test_DefaultRender(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	response := NewResponse(recorder)
 	assertion := assert.New(t)
@@ -29,6 +30,26 @@ func Test_EmptyRender(t *testing.T) {
 	assertion.Equal(http.StatusOK, recorder.Code)
 	assertion.Equal(render.ContentType(), recorder.Header().Get("Content-Type"))
 	assertion.Equal("Hello, world!", recorder.Body.String())
+}
+
+func Test_DefaultRenderWithReader(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	response := NewResponse(recorder)
+	assertion := assert.New(t)
+
+	s := strings.Repeat("Hello, world!", 0xffff)
+	reader := strings.NewReader(s)
+
+	response.Header().Add("Content-Length", fmt.Sprintf("%d", len(s)))
+	response.Header().Add("Content-Type", "text/plain")
+
+	// render with normal string
+	render := NewDefaultRender(response)
+	render.Render(reader)
+	assertion.Equal(http.StatusOK, recorder.Code)
+	assertion.Equal(render.ContentType(), recorder.Header().Get("Content-Type"))
+	assertion.Equal(fmt.Sprintf("%d", len(s)), recorder.Header().Get("Content-Length"))
+	assertion.Equal(s, recorder.Body.String())
 }
 
 func Test_TextRender(t *testing.T) {
