@@ -47,24 +47,8 @@ func (render *DefaultRender) Render(v interface{}) error {
 		r, _ := v.(io.Reader)
 
 		// optimized for io.Reader
-		buf := make([]byte, 0xffff) // 64k
-		for {
-			n, err := r.Read(buf)
-			if err != nil {
-				if err != io.EOF {
-					return err
-				}
-
-				return nil
-			}
-
-			_, err = render.response.Write(buf[:n])
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
+		_, err := io.Copy(render.response, r)
+		return err
 	}
 
 	_, err := render.response.Write(b)

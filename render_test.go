@@ -52,6 +52,18 @@ func Test_DefaultRenderWithReader(t *testing.T) {
 	assertion.Equal(s, recorder.Body.String())
 }
 
+func Benchmark_DefaultRenderWithReader(b *testing.B) {
+	reader := strings.NewReader(strings.Repeat("Hello, world!", 0xffff))
+
+	for i := 0; i < b.N; i++ {
+		recorder := httptest.NewRecorder()
+		response := NewResponse(recorder)
+
+		render := NewDefaultRender(response)
+		render.Render(reader)
+	}
+}
+
 func Test_TextRender(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	response := NewResponse(recorder)
