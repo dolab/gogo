@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"crypto"
 	"math"
 	"net/http"
 	"sync"
@@ -198,6 +199,15 @@ func (c *Context) Return(body ...interface{}) {
 		c.Render(NewDefaultRender(c.Response), body[0])
 	} else {
 		c.Render(NewDefaultRender(c.Response), "")
+	}
+}
+
+// HashedReturn returns response with ETag header calculated hash of response.Body dynamically
+func (c *Context) HashedReturn(hashType crypto.Hash, body ...interface{}) {
+	if len(body) > 0 {
+		c.Render(NewHashRender(c.Response, hashType), body[0])
+	} else {
+		c.Render(NewHashRender(c.Response, hashType), "")
 	}
 }
 

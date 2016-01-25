@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"crypto"
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
@@ -142,7 +143,9 @@ func Test_ContextRender(t *testing.T) {
 		w    Render
 		data interface{}
 	}{
-		"text render": {NewTextRender(ctx.Response), "text render"},
+		"default render": {NewDefaultRender(ctx.Response), "default render"},
+		"hashed render":  {NewHashRender(ctx.Response, crypto.MD5), "hashed render"},
+		"text render":    {NewTextRender(ctx.Response), "text render"},
 		`{"success":false,"error":"not found"}`: {NewJsonRender(ctx.Response), struct {
 			Success bool   `json:"success"`
 			Error   string `json:"error"`
