@@ -1,9 +1,16 @@
 package gogo
 
 import (
+	"bytes"
+	"crypto"
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"hash"
 	"io"
 	"net/url"
 )
@@ -55,6 +62,130 @@ func (render *DefaultRender) Render(v interface{}) error {
 	return err
 }
 
+// HashRender responses with ETag header calculated from render data dynamically.
+// Supported hash are [MD5|SHA1|SHA256], default to MD5. Its useful when render data is an io.Reader instance.
+// NOTE: This always write response by copy!!!
+type HashRender struct {
+	response Responser
+	hash     hash.Hash
+}
+
+func NewHashRender(w Responser, hashType crypto.Hash) Render {
+	render := &HashRender{
+		response: w,
+	}
+
+	switch hashType {
+	// case crypto.MD5:
+	// 	render.hash = md5.New()
+
+	case crypto.SHA1:
+		render.hash = sha1.New()
+
+	case crypto.SHA256:
+		render.hash = sha256.New()
+
+	default:
+		render.hash = md5.New()
+	}
+
+	return render
+}
+
+func (render *HashRender) ContentType() string {
+	return render.response.Header().Get("Content-Type")
+}
+
+func (render *HashRender) Render(v interface{}) error {
+	// reset hash
+	render.hash.Reset()
+
+	if scr, ok := v.(StatusCoder); ok {
+		render.response.WriteHeader(scr.StatusCode())
+	}
+
+	b := []byte("")
+	switch v.(type) {
+	case []byte:
+		b, _ = v.([]byte)
+
+	case string:
+		s, _ := v.(string)
+
+		b = []byte(s)
+
+	case url.Values:
+		p, _ := v.(url.Values)
+
+		b = []byte(p.Encode())
+
+	case io.Reader:
+		var err error
+
+		r, _ := v.(io.Reader)
+
+		// using bytes.Buffer for efficient I/O
+		bbuf := bytes.NewBuffer(nil)
+		bufSize := int64(2 << 14)
+
+		for {
+			rn, rerr := io.CopyN(bbuf, r, bufSize)
+
+			if rn == 0 {
+				err = rerr
+				break
+			}
+
+			// NOTE: always proccess bytes readed!
+			if rn > 0 {
+				// write to response
+				wn, werr := render.response.Write(bbuf.Bytes())
+				if werr != nil {
+					err = werr
+					break
+				}
+				if rn != int64(wn) {
+					err = io.ErrShortWrite
+					break
+				}
+
+				// write to hash
+				hn, herr := bbuf.WriteTo(render.hash)
+				if herr != nil {
+					err = herr
+					break
+				}
+				if rn != hn {
+					err = io.ErrShortWrite
+					break
+				}
+			}
+
+			if rerr != nil {
+				// ignore io.EOF
+				if rerr == io.EOF {
+					rerr = nil
+				}
+
+				err = rerr
+				break
+			}
+		}
+
+		// add etag header
+		render.response.Header().Add("ETag", hex.EncodeToString(render.hash.Sum(nil)))
+
+		return err
+	}
+
+	// add etag header
+	render.hash.Write(b)
+	render.response.Header().Add("ETag", hex.EncodeToString(render.hash.Sum(nil)))
+
+	_, err := render.response.Write(b)
+	return err
+}
+
 // TextRender responses with Content-Type: text/plain header
 // It transform response data by stringify.
 type TextRender struct {
@@ -78,17 +209,7 @@ func (render *TextRender) Render(v interface{}) error {
 
 	render.response.Header().Set("Content-Type", render.ContentType())
 
-	data := fmt.Sprintf("%v", v)
-
-	// could we auto transfer response status here?
-	// if data == "" {
-	// 	render.response.WriteHeader(http.StatusNoContent)
-
-	// 	render.response.Write([]byte(""))
-	// 	return nil
-	// }
-
-	_, err := render.response.Write([]byte(data))
+	_, err := render.response.Write([]byte(fmt.Sprintf("%v", v)))
 	return err
 }
 
