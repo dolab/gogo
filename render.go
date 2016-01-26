@@ -120,61 +120,25 @@ func (render *HashRender) Render(v interface{}) error {
 		b = []byte(p.Encode())
 
 	case io.Reader:
-		var err error
-
 		r, _ := v.(io.Reader)
 
 		// using bytes.Buffer for efficient I/O
 		bbuf := bytes.NewBuffer(nil)
-		bufSize := int64(2 << 14)
 
-		for {
-			rn, rerr := io.CopyN(bbuf, r, bufSize)
-
-			if rn == 0 {
-				err = rerr
-				break
-			}
-
-			// NOTE: always proccess bytes readed!
-			if rn > 0 {
-				// write to response
-				wn, werr := render.response.Write(bbuf.Bytes())
-				if werr != nil {
-					err = werr
-					break
-				}
-				if rn != int64(wn) {
-					err = io.ErrShortWrite
-					break
-				}
-
-				// write to hash
-				hn, herr := bbuf.WriteTo(render.hash)
-				if herr != nil {
-					err = herr
-					break
-				}
-				if rn != hn {
-					err = io.ErrShortWrite
-					break
-				}
-			}
-
-			if rerr != nil {
-				// ignore io.EOF
-				if rerr == io.EOF {
-					rerr = nil
-				}
-
-				err = rerr
-				break
-			}
+		_, err := bbuf.ReadFrom(r)
+		if err != nil {
+			return err
 		}
+
+		b = bbuf.Bytes()
+
+		// write to hash
+		bbuf.WriteTo(render.hash)
 
 		// add etag header
 		render.response.Header().Add("ETag", hex.EncodeToString(render.hash.Sum(nil)))
 
+		_, err = render.response.Write(b)
 		return err
 	}
 
