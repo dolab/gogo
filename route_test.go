@@ -102,6 +102,42 @@ func Test_RouteHandle(t *testing.T) {
 	}
 }
 
+func Test_RouteHandleWithTailSlash(t *testing.T) {
+	server := newMockServer()
+	route := NewAppRoute("/", server)
+	assertion := assert.New(t)
+
+	route.Handle("GET", "/tailslash/", func(ctx *Context) {
+		ctx.Text("GET /tailslash/")
+	})
+
+	// start server
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// with tail slash
+	request, _ := http.NewRequest("GET", ts.URL+"/tailslash/", nil)
+
+	response, err := http.DefaultClient.Do(request)
+	assertion.Nil(err)
+
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	assertion.Equal("GET /tailslash/", string(body))
+
+	// without tail slash
+	request, _ = http.NewRequest("GET", ts.URL+"/tailslash", nil)
+
+	response, err = http.DefaultClient.Do(request)
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	assertion.Equal("GET /tailslash/", string(body))
+}
+
 func Test_RouteMockHandle(t *testing.T) {
 	server := newMockServer()
 	route := NewAppRoute("/", server)
