@@ -6,6 +6,7 @@ const (
 	Production  RunMode = "production"
 
 	DefaultMaxMultiformBytes = 32 << 20 // 32M
+	DefaultMaxHeaderBytes    = 64 << 10 // 64k
 
 	DefaultHttpRequestId       = "X-Request-Id"
 	DefaultHttpRequestTimeout  = 30 // 30s
