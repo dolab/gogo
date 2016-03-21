@@ -194,51 +194,54 @@ func (c *Context) Redirect(location string) {
 }
 
 // Return returns response following default Content-Type header
-func (c *Context) Return(body ...interface{}) {
+func (c *Context) Return(body ...interface{}) error {
 	if len(body) > 0 {
-		c.Render(NewDefaultRender(c.Response), body[0])
-	} else {
-		c.Render(NewDefaultRender(c.Response), "")
+		return c.Render(NewDefaultRender(c.Response), body[0])
 	}
+
+	return c.Render(NewDefaultRender(c.Response), "")
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
-func (c *Context) HashedReturn(hashType crypto.Hash, body ...interface{}) {
+func (c *Context) HashedReturn(hashType crypto.Hash, body ...interface{}) error {
 	if len(body) > 0 {
-		c.Render(NewHashRender(c.Response, hashType), body[0])
-	} else {
-		c.Render(NewHashRender(c.Response, hashType), "")
+		return c.Render(NewHashRender(c.Response, hashType), body[0])
 	}
+
+	return c.Render(NewHashRender(c.Response, hashType), "")
 }
 
 // Text returns response with Content-Type: text/plain header
-func (c *Context) Text(data interface{}) {
-	c.Render(NewTextRender(c.Response), data)
+func (c *Context) Text(data interface{}) error {
+	return c.Render(NewTextRender(c.Response), data)
 }
 
 // Json returns response with json codec and Content-Type: application/json header
-func (c *Context) Json(data interface{}) {
-	c.Render(NewJsonRender(c.Response), data)
+func (c *Context) Json(data interface{}) error {
+	return c.Render(NewJsonRender(c.Response), data)
 }
 
 // JsonP returns response with json codec and Content-Type: application/javascript header
-func (c *Context) JsonP(callback string, data interface{}) {
-	c.Render(NewJsonpRender(c.Response, callback), data)
+func (c *Context) JsonP(callback string, data interface{}) error {
+	return c.Render(NewJsonpRender(c.Response, callback), data)
 }
 
 // Xml returns response with xml codec and Content-Type: text/xml header
-func (c *Context) Xml(data interface{}) {
-	c.Render(NewXmlRender(c.Response), data)
+func (c *Context) Xml(data interface{}) error {
+	return c.Render(NewXmlRender(c.Response), data)
 }
 
-func (c *Context) Render(w Render, data interface{}) {
+func (c *Context) Render(w Render, data interface{}) error {
 	err := w.Render(data)
 	if err == nil {
-		return
+		return nil
 	}
 
-	c.Logger.Errorf("%T render data with %v", w, err)
+	// abort
 	c.Abort()
 
+	c.Logger.Errorf("%T.Render(%?): %v", w, err)
 	c.Response.WriteHeader(http.StatusInternalServerError)
+
+	return err
 }

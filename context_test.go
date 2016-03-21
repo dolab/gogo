@@ -166,7 +166,8 @@ func Test_ContextRender(t *testing.T) {
 	for expected, testCase := range testCases {
 		recorder.Body.Reset()
 
-		ctx.Render(testCase.w, testCase.data)
+		err := ctx.Render(testCase.w, testCase.data)
+		assertion.Nil(err)
 		assertion.Equal(expected, recorder.Body.String())
 	}
 }
