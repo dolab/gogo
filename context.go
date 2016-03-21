@@ -240,7 +240,7 @@ func (c *Context) Render(w Render, data interface{}) error {
 	// abort
 	c.Abort()
 
-	c.Logger.Errorf("%T.Render(%?): %v", w, err)
+	c.Logger.Errorf("%T.Render(?): %v", w, err)
 	c.Response.WriteHeader(http.StatusInternalServerError)
 
 	return err
