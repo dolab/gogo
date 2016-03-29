@@ -64,7 +64,7 @@ func New(runMode, srcPath string) *AppServer {
 }
 
 // NewWithLogger creates application server with provided Logger
-func NewWithLogger(runMode, srcPath string, logger Logger) {
+func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
 	// adjust app run mode
 	mode := RunMode(runMode)
 	if !mode.IsValid() {
