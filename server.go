@@ -132,7 +132,8 @@ func (s *AppServer) Run() {
 	}
 }
 
-// Use dispatch to Route.Use by overwrite
+// Use applies middlewares to app route
+// NOTE: It dispatch to Route.Use by overwrite
 func (s *AppServer) Use(middlewares ...Middleware) {
 	s.AppRoute.Use(middlewares...)
 }
