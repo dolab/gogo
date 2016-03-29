@@ -18,7 +18,7 @@ type Context struct {
 
 	Server *AppServer
 	Config *AppConfig
-	Logger *AppLogger
+	Logger Logger
 
 	mux            sync.RWMutex
 	settings       map[string]interface{}

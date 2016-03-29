@@ -37,6 +37,7 @@ var (
 	}
 )
 
+// New creates application server with config resolved of run mode.
 func New(runMode, srcPath string) *AppServer {
 	// adjust app run mode
 	mode := RunMode(runMode)
@@ -44,18 +45,38 @@ func New(runMode, srcPath string) *AppServer {
 		log.Fatalf("Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
 	}
 
-	// init app config from file
+	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
 	if err != nil {
 		log.Fatalf("NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
 	config.SetMode(mode)
 
-	// init app logger with config
+	// init default logger
 	section := config.Section()
 	logger := NewAppLogger(section.Logger.Output, runMode)
-	logger.SetLevel(section.Logger.Level())
+	logger.SetLevelByName(section.Logger.LevelName)
 	logger.SetColor(!mode.IsProduction())
+
+	logger.Infof("Initialized %s in %s mode", config.Name, config.Mode)
+
+	return NewAppServer(mode, config, logger)
+}
+
+// NewWithLogger creates application server with provided Logger
+func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
+	// adjust app run mode
+	mode := RunMode(runMode)
+	if !mode.IsValid() {
+		log.Fatalf("Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
+	}
+
+	// resolve config from application.json
+	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
+	if err != nil {
+		log.Fatalf("NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
+	}
+	config.SetMode(mode)
 
 	logger.Infof("Initialized %s in %s mode", config.Name, config.Mode)
 
