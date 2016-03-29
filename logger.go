@@ -14,7 +14,7 @@ type AppLogger struct {
 	requestId string
 }
 
-func NewAppLogger(output, filename string) Logger {
+func NewAppLogger(output, filename string) *AppLogger {
 	switch output {
 	case "stdout", "stderr", "null", "nil":
 		// skip
