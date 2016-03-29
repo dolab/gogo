@@ -63,6 +63,7 @@ func New(runMode, srcPath string) *AppServer {
 	return NewAppServer(mode, config, logger)
 }
 
+// NewWithLogger creates application server with provided Logger
 func NewWithLogger(runMode, srcPath string, logger Logger) {
 	// adjust app run mode
 	mode := RunMode(runMode)
