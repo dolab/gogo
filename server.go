@@ -16,15 +16,15 @@ type AppServer struct {
 
 	mode   RunMode
 	config *AppConfig
-	logger *AppLogger
 	router *httprouter.Router
 	pool   sync.Pool
 
-	requestId    string
-	filterParams []string
+	logger       Logger
+	requestId    string   // request id header name
+	filterParams []string // filter out params when logging
 }
 
-func NewAppServer(mode RunMode, config *AppConfig, logger *AppLogger) *AppServer {
+func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
 		mode:      mode,
 		config:    config,
@@ -149,7 +149,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.router.ServeHTTP(w, r)
 }
 
-// New returns a new context for the server
+// new returns a new context for the server
 func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
 	// adjust request id
 	requestId := r.Header.Get(s.requestId)
@@ -175,7 +175,7 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	return ctx
 }
 
-// Reuse puts the context back to pool for later usage
+// reuse puts the context back to pool for later usage
 func (s *AppServer) reuse(ctx *Context) {
 	s.pool.Put(ctx)
 }
