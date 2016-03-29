@@ -62,3 +62,22 @@ func New(runMode, srcPath string) *AppServer {
 
 	return NewAppServer(mode, config, logger)
 }
+
+func NewWithLogger(runMode, srcPath string, logger Logger) {
+	// adjust app run mode
+	mode := RunMode(runMode)
+	if !mode.IsValid() {
+		log.Fatalf("Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
+	}
+
+	// resolve config from application.json
+	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
+	if err != nil {
+		log.Fatalf("NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
+	}
+	config.SetMode(mode)
+
+	logger.Infof("Initialized %s in %s mode", config.Name, config.Mode)
+
+	return NewAppServer(mode, config, logger)
+}
