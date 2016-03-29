@@ -7,16 +7,18 @@ import (
 	"github.com/dolab/logger"
 )
 
+// AppLogger implements Logger interface
 type AppLogger struct {
 	*logger.Logger
 
 	requestId string
 }
 
-func NewAppLogger(output, filename string) *AppLogger {
+func NewAppLogger(output, filename string) Logger {
 	switch output {
 	case "stdout", "stderr", "null", "nil":
 		// skip
+
 	default:
 		if output[0] != '/' {
 			output = path.Join(output, filename+".log")
@@ -25,27 +27,22 @@ func NewAppLogger(output, filename string) *AppLogger {
 
 	l, err := logger.New(output)
 	if err != nil {
-		log.Println("Cannot create logger:", err)
+		log.Printf("logger.New(%s): %v\n", output, err)
 
 		return nil
 	}
 
-	return &AppLogger{l, ""}
+	logger := &AppLogger{l, ""}
+	return logger
 }
 
-func (l *AppLogger) New(requestId string) *AppLogger {
+// New returns a new Logger with provided requestId which shared writer with current logger
+func (l *AppLogger) New(requestId string) Logger {
 	copied := *l
 	copied.Logger = copied.Logger.New(requestId)
 	copied.requestId = requestId
 
 	return &copied
-}
-
-func (l *AppLogger) SetRequestId(requestId string) *AppLogger {
-	l.Logger = l.Logger.New(requestId)
-	l.requestId = requestId
-
-	return l
 }
 
 func (l *AppLogger) RequestId() string {
