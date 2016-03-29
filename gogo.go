@@ -37,6 +37,7 @@ var (
 	}
 )
 
+// New creates application server with config resolved of run mode.
 func New(runMode, srcPath string) *AppServer {
 	// adjust app run mode
 	mode := RunMode(runMode)

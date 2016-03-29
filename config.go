@@ -16,8 +16,8 @@ var (
 	}
 
 	DefaultLoggerConfig = &LoggerConfig{
-		Output: "stderr",
-		level:  "info",
+		Output:    "stderr",
+		LevelName: "info",
 	}
 
 	DefaultSectionConfig = &SectionConfig{
@@ -121,12 +121,12 @@ type ServerConfig struct {
 
 // logger config spec
 type LoggerConfig struct {
-	Output string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
-	level  string `json:"level"`  // valid values [debug|info|warn|error]
+	Output    string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
+	LevelName string `json:"level"`  // valid values [debug|info|warn|error]
 
 	FilterParams []string `json:"filter_params"`
 }
 
 func (l *LoggerConfig) Level() logger.Level {
-	return logger.ResolveLevelByName(l.level)
+	return logger.ResolveLevelByName(l.LevelName)
 }
