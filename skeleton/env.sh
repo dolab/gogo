@@ -9,8 +9,12 @@ export GOPATH
 
 
 # adjust PATH
-while IFS=':' read -ra ADDR; do
-    for i in "${ADDR[@]}"; do
+readopts="-ra"
+if [ -n "$ZSH_VERSION" ]; then
+    readopts="-rA";
+fi
+while IFS=':' read $readopts ARR; do
+    for i in "${ARR[@]}"; do
         case ":$PATH:" in
             *":$i/bin:"*) :;;
             *) PATH=$i/bin:$PATH
