@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/golib/httprouter"
-	"github.com/stretchr/testify/assert"
+	"github.com/golib/assert"
 )
 
 var (

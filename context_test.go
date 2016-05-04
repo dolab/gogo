@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/golib/assert"
 )
 
 func Test_NewContext(t *testing.T) {

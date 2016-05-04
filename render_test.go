@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/golib/assert"
 )
 
 type testRenderStatusCoder struct {
