@@ -3,7 +3,7 @@ package gogo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/golib/assert"
 )
 
 func Test_NewAppLogger(t *testing.T) {

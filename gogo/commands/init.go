@@ -11,17 +11,23 @@ var (
 
 	envTemplate = `#!/usr/bin/env bash
 
+export APPROOT=$(pwd)
+
 # adjust GOPATH
 case ":$GOPATH:" in
-    *":$(pwd):"*) :;;
-    *) GOPATH=$(pwd):$GOPATH;;
+    *":$APPROOT:"*) :;;
+    *) GOPATH=$APPROOT:$GOPATH;;
 esac
 export GOPATH
 
 
 # adjust PATH
-while IFS=':' read -ra ADDR; do
-    for i in "${ADDR[@]}"; do
+readopts="ra"
+if [ -n "$ZSH_VERSION" ]; then
+    readopts="rA";
+fi
+while IFS=':' read -$readopts ARR; do
+    for i in "${ARR[@]}"; do
         case ":$PATH:" in
             *":$i/bin:"*) :;;
             *) PATH=$i/bin:$PATH
@@ -32,10 +38,10 @@ export PATH
 
 
 # mock development && test envs
-if [ ! -d "$(pwd)/src/{{.Namespace}}/{{.Application}}" ];
+if [ ! -d "$APPROOT/src/{{.Namespace}}/{{.Application}}" ];
 then
-    mkdir -p "$(pwd)/src/{{.Namespace}}"
-    ln -s "$(pwd)/gogo/" "$(pwd)/src/{{.Namespace}}/{{.Application}}"
+    mkdir -p "$APPROOT/src/{{.Namespace}}"
+    ln -s "$APPROOT/gogo/" "$APPROOT/src/{{.Namespace}}/{{.Application}}"
 fi
 `
 
@@ -220,7 +226,7 @@ type GettingStartConfig struct {
 import (
     "testing"
 
-    "github.com/stretchr/testify/assert"
+    "github.com/golib/assert"
 )
 
 func Test_AppConfig(t *testing.T) {

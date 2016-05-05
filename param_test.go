@@ -16,7 +16,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/golib/httprouter"
-	"github.com/stretchr/testify/assert"
+	"github.com/golib/assert"
 )
 
 func Test_AppParamsHasQuery(t *testing.T) {

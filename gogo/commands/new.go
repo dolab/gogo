@@ -26,7 +26,7 @@ var (
 	}
 
 	appEnv       = template.Must(template.New("gogo").Parse(envTemplate))
-	appMakefile  = template.Must(template.New("gogo").Parse(makefileTemplate))
+	appMakefile  = template.Must(template.New("gogo").Parse(strings.Replace(makefileTemplate, "    ", "\t", -1)))
 	appGitIgnore = template.Must(template.New("gogo").Parse(gitIgnoreTemplate))
 
 	appController       = template.Must(template.New("gogo").Parse(applicationTemplate[0]))
