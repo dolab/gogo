@@ -12,20 +12,6 @@ It's heavily inspired from [neko](https://github.com/rocwong/neko) which created
 $ go get github.com/dolab/gogo
 ```
 
-- Create application from skeleton
-
-```bash
-$ cp -r $GOPATH/src/github.com/dolab/gogo/skeleton myapp
-
-# fix application import path
-$ cd myapp
-$ source fix.sh
-$ source env.sh
-
-# run development server
-$ make godev
-```
-
 - Create application using scaffold tools
 
 ```bash
@@ -39,6 +25,25 @@ $ gogo new myapp
 
 # fix application import path
 $ cd myapp
+$ source env.sh
+
+# run development server
+$ make godev
+
+# run test
+$ make
+```
+
+- Create application from skeleton
+
+> **DEPRECATED**!!! Please using scaffold way.
+
+```bash
+$ cp -r $GOPATH/src/github.com/dolab/gogo/skeleton myapp
+
+# fix application import path
+$ cd myapp
+$ source fix.sh
 $ source env.sh
 
 # run development server
@@ -85,6 +90,7 @@ func main() {
             ctx.Abort()
 
             ctx.Logger.Errorf("[PANICED] %v", panicErr)
+            return
         }
 
         ctx.Next()
@@ -130,7 +136,7 @@ func main() {
         panic("Oops ~ ~ ~")
     })
 
-    // prefix resources with /v1 and apply basic auth middleware for all sub resources
+    // prefix resources with /v1 and apply basic auth middleware for all sub-resources
     v1 := app.Group("/v1", func(ctx *gogo.Context) {
         auth := ctx.Header("Authorization")
         if !strings.HasPrefix(auth, "Basic ") {
