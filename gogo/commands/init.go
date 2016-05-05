@@ -55,14 +55,13 @@ gobuild: goclean goinstall
 gorebuild: goclean goreinstall
 
 goclean:
-    rm -rf bin
-    rm -rf pkg
+    rm -rf ./bin ./pkg
 
 goinstall:
-    cd gogo && go get -t -v ./...
+    go get -t -v {{.Namespace}}/{{.Application}}
 
 goreinstall:
-    cd gogo && go get -t -a -v ./...
+    go get -t -a -v {{.Namespace}}/{{.Application}}
 
 gotest:
     go test {{.Namespace}}/{{.Application}}/app/controllers
