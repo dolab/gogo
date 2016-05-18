@@ -107,16 +107,20 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	route := NewAppRoute("/", server)
 	assertion := assert.New(t)
 
-	route.Handle("GET", "/tailslash/", func(ctx *Context) {
-		ctx.Text("GET /tailslash/")
+	route.Handle("GET", "/:tailslash", func(ctx *Context) {
+		ctx.Text("GET /:tailslash")
+	})
+
+	route.Handle("GET", "/:tailslash/*extraargs", func(ctx *Context) {
+		ctx.Text("GET /:tailslash/*extraargs")
 	})
 
 	// start server
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	// with tail slash
-	request, _ := http.NewRequest("GET", ts.URL+"/tailslash/", nil)
+	// without tail slash
+	request, _ := http.NewRequest("GET", ts.URL+"/tailslash", nil)
 
 	response, err := http.DefaultClient.Do(request)
 	assertion.Nil(err)
@@ -124,10 +128,10 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	body, err := ioutil.ReadAll(response.Body)
 	response.Body.Close()
 
-	assertion.Equal("GET /tailslash/", string(body))
+	assertion.Equal("GET /:tailslash", string(body))
 
-	// without tail slash
-	request, _ = http.NewRequest("GET", ts.URL+"/tailslash", nil)
+	// with tail slash
+	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/", nil)
 
 	response, err = http.DefaultClient.Do(request)
 	assertion.Nil(err)
@@ -135,7 +139,29 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	body, err = ioutil.ReadAll(response.Body)
 	response.Body.Close()
 
-	assertion.Equal("GET /tailslash/", string(body))
+	assertion.Equal("GET /:tailslash", string(body))
+
+	// with extra args without tail slash
+	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs", nil)
+
+	response, err = http.DefaultClient.Do(request)
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	assertion.Equal("GET /:tailslash/*extraargs", string(body))
+
+	// with extra args with tail slash
+	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs/", nil)
+
+	response, err = http.DefaultClient.Do(request)
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(response.Body)
+	response.Body.Close()
+
+	assertion.Equal("GET /:tailslash/*extraargs", string(body))
 }
 
 func Test_RouteMockHandle(t *testing.T) {

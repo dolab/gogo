@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/golib/httprouter"
 	"github.com/golib/assert"
+	"github.com/golib/httprouter"
 )
 
 var (
@@ -62,9 +62,10 @@ func Test_ServerReuse(t *testing.T) {
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
-// TODO: implements this later!
+// // TODO: implements this later!
 // func Test_ServerWithRequestTimeout(t *testing.T) {
 // 	assertion := assert.New(t)
+
 // 	config, _ := newMockConfig("request_timeout.json")
 // 	server := NewAppServer(config, Logger)
 // 	server.PUT("/server/request_timeout", func(ctx *Context) {

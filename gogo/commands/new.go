@@ -14,15 +14,15 @@ var (
 	New *_New
 
 	appDirs = [][]string{
-		[]string{"app", "controllers"},
-		[]string{"app", "middlewares"},
-		[]string{"app", "models"},
-		[]string{"config"},
-		[]string{"lib"},
-		[]string{"log"},
-		[]string{"tmp", "cache"},
-		[]string{"tmp", "pids"},
-		[]string{"tmp", "sockes"},
+		{"app", "controllers"},
+		{"app", "middlewares"},
+		{"app", "models"},
+		{"config"},
+		{"lib"},
+		{"log"},
+		{"tmp", "cache"},
+		{"tmp", "pids"},
+		{"tmp", "sockes"},
 	}
 
 	appEnv       = template.Must(template.New("gogo").Parse(envTemplate))
