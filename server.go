@@ -145,8 +145,13 @@ func (s *AppServer) Clean() {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
+	// NOTE: avoid setting path / to empty!
 	if len(r.URL.Path) > 1 && r.URL.Path[len(r.URL.Path)-1] == '/' {
-		r.URL.Path = r.URL.Path[:len(r.URL.Path)-1]
+		r.URL.Path = strings.TrimRight(r.URL.Path, "/")
+
+		if r.URL.Path == "" {
+			r.URL.Path = "/"
+		}
 	}
 
 	s.router.ServeHTTP(w, r)
