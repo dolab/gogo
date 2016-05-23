@@ -159,26 +159,10 @@ func (c *Context) SetHeader(key, value string) {
 	c.Response.Header().Set(key, value)
 }
 
-// Next executes the remain handlers in the chain.
-// NOTE: It ONLY used in the middlewares!
-func (c *Context) Next() {
-	c.index++
-
-	for c.index < int8(len(c.handlers)) {
-		c.handlers[c.index](c)
-
-		c.index++
-	}
-}
-
-// Abort forces to stop call chain.
-func (c *Context) Abort() {
-	c.index = abortIndex
-}
-
 // Redirect returns a HTTP redirect to the specific location.
 func (c *Context) Redirect(location string) {
-	c.SetHeader("Location", location)
+	// always abort
+	c.Abort()
 
 	// adjust status code, default to 302
 	status := c.Response.Status()
@@ -189,6 +173,8 @@ func (c *Context) Redirect(location string) {
 	default:
 		status = http.StatusFound
 	}
+
+	c.SetHeader("Location", location)
 
 	http.Redirect(c.Response, c.Request, location, status)
 }
@@ -232,16 +218,32 @@ func (c *Context) Xml(data interface{}) error {
 }
 
 func (c *Context) Render(w Render, data interface{}) error {
-	err := w.Render(data)
-	if err == nil {
-		return nil
-	}
-
-	// abort
+	// always abort
 	c.Abort()
 
-	c.Logger.Errorf("%T.Render(?): %v", w, err)
-	c.Response.WriteHeader(http.StatusInternalServerError)
+	err := w.Render(data)
+	if err != nil {
+		c.Logger.Errorf("%T.Render(?): %v", w, err)
+
+		c.Response.WriteHeader(http.StatusInternalServerError)
+	}
 
 	return err
+}
+
+// Next executes the remain handlers in the chain.
+// NOTE: It ONLY used in the middlewares!
+func (c *Context) Next() {
+	c.index++
+
+	for c.index < int8(len(c.handlers)) {
+		c.handlers[c.index](c)
+
+		c.index++
+	}
+}
+
+// Abort forces to stop call chain.
+func (c *Context) Abort() {
+	c.index = abortIndex
 }

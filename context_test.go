@@ -67,7 +67,7 @@ func Test_NewContext(t *testing.T) {
 	})
 }
 
-func Test_ContextNext(t *testing.T) {
+func Test_Context_Next(t *testing.T) {
 	counter := 0
 	middleware1 := func(ctx *Context) {
 		counter += 1
@@ -89,7 +89,7 @@ func Test_ContextNext(t *testing.T) {
 	assertion.Equal(3, counter)
 }
 
-func Test_ContextAbort(t *testing.T) {
+func Test_Context_Abort(t *testing.T) {
 	counter := 0
 	middleware1 := func(ctx *Context) {
 		counter += 1
@@ -112,7 +112,7 @@ func Test_ContextAbort(t *testing.T) {
 	assertion.Equal(0, counter)
 }
 
-func Test_ContextRedirect(t *testing.T) {
+func Test_Context_Redirect(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
@@ -128,7 +128,34 @@ func Test_ContextRedirect(t *testing.T) {
 	assertion.Equal(location, recorder.Header().Get("Location"))
 }
 
-func Test_ContextRender(t *testing.T) {
+func Test_Context_RedirectWithAbort(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+	location := "https://www.example.com"
+	assertion := assert.New(t)
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+	ctx.handlers = []Middleware{
+		func(ctx *Context) {
+			ctx.Redirect(location)
+
+			ctx.Next()
+		},
+		func(ctx *Context) {
+			ctx.Render(NewDefaultRender(ctx.Response), "next render")
+		},
+	}
+	ctx.Next()
+
+	assertion.Equal(location, recorder.Header().Get("Location"))
+	assertion.NotContains(recorder.Body.String(), "next render")
+}
+
+func Test_Context_Render(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	assertion := assert.New(t)
@@ -170,4 +197,29 @@ func Test_ContextRender(t *testing.T) {
 		assertion.Nil(err)
 		assertion.Equal(expected, recorder.Body.String())
 	}
+}
+
+func Test_Context_RenderWithAbort(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+	assertion := assert.New(t)
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+	ctx.handlers = []Middleware{
+		func(ctx *Context) {
+			ctx.Render(NewDefaultRender(ctx.Response), "render")
+
+			ctx.Next()
+		},
+		func(ctx *Context) {
+			ctx.Render(NewDefaultRender(ctx.Response), "next render")
+		},
+	}
+	ctx.Next()
+
+	assertion.Equal("render", recorder.Body.String())
 }

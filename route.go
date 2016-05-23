@@ -48,7 +48,6 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 
 		t := time.Now()
-
 		ctx.Logger.Infof(`Started %s "%s"`, req.Method, r.filterParameters(req.URL))
 
 		ctx.Next()
@@ -69,7 +68,6 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
 
 		t := time.Now()
-
 		ctx.Logger.Infof(`Started %s "%s"`, req.Method, r.filterParameters(req.URL))
 
 		ctx.Next()
