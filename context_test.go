@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/golib/assert"
+	"github.com/golib/httprouter"
 )
 
 func Test_NewContext(t *testing.T) {
@@ -65,6 +66,34 @@ func Test_NewContext(t *testing.T) {
 	assertion.Panics(func() {
 		ctx.MustGetFinal("unknownMiddlewareFinalKey")
 	})
+}
+
+func Test_Context_RequestHeader(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
+	request.Header.Add("X-Canonical-Key", "Canonical-Value")
+	request.Header["x-normal-key"] = []string{"normal value"}
+	params := NewAppParams(request, httprouter.Params{})
+	assertion := assert.New(t)
+
+	server := newMockServer()
+	ctx := server.new(recorder, request, params, nil)
+	assertion.True(ctx.HasRawHeader("X-Canonical-Key"))
+	assertion.False(ctx.HasRawHeader("x-canonical-key"))
+	assertion.True(ctx.HasHeader("X-Canonical-Key"))
+	assertion.True(ctx.HasHeader("x-canonical-key"))
+	assertion.True(ctx.HasRawHeader("x-normal-key"))
+	assertion.False(ctx.HasRawHeader("X-Normal-Key"))
+	assertion.False(ctx.HasHeader("x-normal-key"))
+	assertion.False(ctx.HasHeader("X-Normal-Key"))
+	assertion.Equal("Canonical-Value", ctx.RawHeader("X-Canonical-Key"))
+	assertion.Empty(ctx.RawHeader("x-canonical-key"))
+	assertion.Equal("Canonical-Value", ctx.Header("X-Canonical-Key"))
+	assertion.Equal("Canonical-Value", ctx.Header("x-canonical-key"))
+	assertion.Equal("normal value", ctx.RawHeader("x-normal-key"))
+	assertion.Empty(ctx.RawHeader("X-Normal-Key"))
+	assertion.Empty(ctx.Header("x-normal-key"))
+	assertion.Empty(ctx.Header("X-Normal-Key"))
 }
 
 func Test_Context_Next(t *testing.T) {

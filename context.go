@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"math"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -130,16 +131,36 @@ func (c *Context) MustGetFinal(key string) interface{} {
 	return value
 }
 
-// HasHeader returns true if request sets its header for specified key
-func (c *Context) HasHeader(key string) bool {
-	key = http.CanonicalHeaderKey(key)
+// HasRawHeader returns true if request sets its header with specified key
+func (c *Context) HasRawHeader(key string) bool {
+	for yek, _ := range c.Request.Header {
+		if key == yek {
+			return true
+		}
+	}
 
-	_, ok := c.Request.Header[key]
+	return false
+}
+
+// RawHeader returns request header value of specified key
+func (c *Context) RawHeader(key string) string {
+	for yek, val := range c.Request.Header {
+		if key == yek {
+			return strings.Join(val, ",")
+		}
+	}
+
+	return ""
+}
+
+// HasHeader returns true if request sets its header for canonicaled specified key
+func (c *Context) HasHeader(key string) bool {
+	_, ok := c.Request.Header[http.CanonicalHeaderKey(key)]
 
 	return ok
 }
 
-// Header returns request header value of specified key
+// Header returns request header value of canonicaled specified key
 func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
