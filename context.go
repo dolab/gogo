@@ -131,6 +131,16 @@ func (c *Context) MustGetFinal(key string) interface{} {
 	return value
 }
 
+// RequestURI returns request raw uri
+func (c *Context) RequestURI() string {
+	return c.Request.RequestURI
+}
+
+// RequestID returns x-request-id value
+func (c *Context) RequestID() string {
+	return c.Logger.RequestId()
+}
+
 // HasRawHeader returns true if request sets its header with specified key
 func (c *Context) HasRawHeader(key string) bool {
 	for yek, _ := range c.Request.Header {
