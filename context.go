@@ -220,12 +220,12 @@ func (c *Context) Return(body ...interface{}) error {
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
-func (c *Context) HashedReturn(hashType crypto.Hash, body ...interface{}) error {
+func (c *Context) HashedReturn(hasher crypto.Hash, body ...interface{}) error {
 	if len(body) > 0 {
-		return c.Render(NewHashRender(c.Response, hashType), body[0])
+		return c.Render(NewHashRender(c.Response, hasher), body[0])
 	}
 
-	return c.Render(NewHashRender(c.Response, hashType), "")
+	return c.Render(NewHashRender(c.Response, hasher), "")
 }
 
 // Text returns response with Content-Type: text/plain header

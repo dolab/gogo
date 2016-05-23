@@ -75,7 +75,7 @@ func Test_HashRender(t *testing.T) {
 	render.Render("Hello, world!")
 	assertion.Equal(http.StatusOK, recorder.Code)
 	assertion.Equal(render.ContentType(), recorder.Header().Get("Content-Type"))
-	assertion.Equal("6cd3556deb0da54bca060b4c39479839", recorder.Header().Get("ETag"))
+	assertion.Equal("6cd3556deb0da54bca060b4c39479839", recorder.Header().Get("Etag"))
 	assertion.Equal("Hello, world!", recorder.Body.String())
 }
 
@@ -96,7 +96,7 @@ func Test_HashRenderWithReader(t *testing.T) {
 	assertion.Equal(http.StatusOK, recorder.Code)
 	assertion.Equal(render.ContentType(), recorder.Header().Get("Content-Type"))
 	assertion.Equal(fmt.Sprintf("%d", len(s)), recorder.Header().Get("Content-Length"))
-	assertion.Equal("bc7f283e5babc5ed5e231c9bf961af1a", recorder.Header().Get("ETag"))
+	assertion.Equal("bc7f283e5babc5ed5e231c9bf961af1a", recorder.Header().Get("Etag"))
 	assertion.Equal(s, recorder.Body.String())
 }
 
