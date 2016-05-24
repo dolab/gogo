@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"math"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -130,16 +131,46 @@ func (c *Context) MustGetFinal(key string) interface{} {
 	return value
 }
 
-// HasHeader returns true if request sets its header for specified key
-func (c *Context) HasHeader(key string) bool {
-	key = http.CanonicalHeaderKey(key)
+// RequestURI returns request raw uri
+func (c *Context) RequestURI() string {
+	return c.Request.RequestURI
+}
 
-	_, ok := c.Request.Header[key]
+// RequestID returns x-request-id value
+func (c *Context) RequestID() string {
+	return c.Logger.RequestId()
+}
+
+// HasRawHeader returns true if request sets its header with specified key
+func (c *Context) HasRawHeader(key string) bool {
+	for yek, _ := range c.Request.Header {
+		if key == yek {
+			return true
+		}
+	}
+
+	return false
+}
+
+// RawHeader returns request header value of specified key
+func (c *Context) RawHeader(key string) string {
+	for yek, val := range c.Request.Header {
+		if key == yek {
+			return strings.Join(val, ",")
+		}
+	}
+
+	return ""
+}
+
+// HasHeader returns true if request sets its header for canonicaled specified key
+func (c *Context) HasHeader(key string) bool {
+	_, ok := c.Request.Header[http.CanonicalHeaderKey(key)]
 
 	return ok
 }
 
-// Header returns request header value of specified key
+// Header returns request header value of canonicaled specified key
 func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
@@ -159,26 +190,10 @@ func (c *Context) SetHeader(key, value string) {
 	c.Response.Header().Set(key, value)
 }
 
-// Next executes the remain handlers in the chain.
-// NOTE: It ONLY used in the middlewares!
-func (c *Context) Next() {
-	c.index++
-
-	for c.index < int8(len(c.handlers)) {
-		c.handlers[c.index](c)
-
-		c.index++
-	}
-}
-
-// Abort forces to stop call chain.
-func (c *Context) Abort() {
-	c.index = abortIndex
-}
-
 // Redirect returns a HTTP redirect to the specific location.
 func (c *Context) Redirect(location string) {
-	c.SetHeader("Location", location)
+	// always abort
+	c.Abort()
 
 	// adjust status code, default to 302
 	status := c.Response.Status()
@@ -189,6 +204,8 @@ func (c *Context) Redirect(location string) {
 	default:
 		status = http.StatusFound
 	}
+
+	c.SetHeader("Location", location)
 
 	http.Redirect(c.Response, c.Request, location, status)
 }
@@ -203,12 +220,12 @@ func (c *Context) Return(body ...interface{}) error {
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
-func (c *Context) HashedReturn(hashType crypto.Hash, body ...interface{}) error {
+func (c *Context) HashedReturn(hasher crypto.Hash, body ...interface{}) error {
 	if len(body) > 0 {
-		return c.Render(NewHashRender(c.Response, hashType), body[0])
+		return c.Render(NewHashRender(c.Response, hasher), body[0])
 	}
 
-	return c.Render(NewHashRender(c.Response, hashType), "")
+	return c.Render(NewHashRender(c.Response, hasher), "")
 }
 
 // Text returns response with Content-Type: text/plain header
@@ -232,16 +249,32 @@ func (c *Context) Xml(data interface{}) error {
 }
 
 func (c *Context) Render(w Render, data interface{}) error {
-	err := w.Render(data)
-	if err == nil {
-		return nil
-	}
-
-	// abort
+	// always abort
 	c.Abort()
 
-	c.Logger.Errorf("%T.Render(?): %v", w, err)
-	c.Response.WriteHeader(http.StatusInternalServerError)
+	err := w.Render(data)
+	if err != nil {
+		c.Logger.Errorf("%T.Render(?): %v", w, err)
+
+		c.Response.WriteHeader(http.StatusInternalServerError)
+	}
 
 	return err
+}
+
+// Next executes the remain handlers in the chain.
+// NOTE: It ONLY used in the middlewares!
+func (c *Context) Next() {
+	c.index++
+
+	for c.index < int8(len(c.handlers)) {
+		c.handlers[c.index](c)
+
+		c.index++
+	}
+}
+
+// Abort forces to stop call chain.
+func (c *Context) Abort() {
+	c.index = abortIndex
 }

@@ -3,9 +3,6 @@ package gogo
 import (
 	"bytes"
 	"crypto"
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -62,31 +59,21 @@ func (render *DefaultRender) Render(v interface{}) error {
 	return err
 }
 
-// HashRender responses with ETag header calculated from render data dynamically.
-// Supported hash are [MD5|SHA1|SHA256], default to MD5. Its useful when render data is an io.Reader instance.
-// NOTE: This always write response by copy!!!
+// HashRender responses with Etag header calculated from render data dynamically.
+// NOTE: This always write response by copy if the render data is an io.Reader!!!
 type HashRender struct {
 	response Responser
 	hash     hash.Hash
 }
 
-func NewHashRender(w Responser, hashType crypto.Hash) Render {
-	render := &HashRender{
-		response: w,
+func NewHashRender(w Responser, hasher crypto.Hash) Render {
+	if !hasher.Available() {
+		panic(ErrHash.Error())
 	}
 
-	switch hashType {
-	// case crypto.MD5:
-	// 	render.hash = md5.New()
-
-	case crypto.SHA1:
-		render.hash = sha1.New()
-
-	case crypto.SHA256:
-		render.hash = sha256.New()
-
-	default:
-		render.hash = md5.New()
+	render := &HashRender{
+		response: w,
+		hash:     hasher.New(),
 	}
 
 	return render
@@ -97,56 +84,44 @@ func (render *HashRender) ContentType() string {
 }
 
 func (render *HashRender) Render(v interface{}) error {
-	// reset hash
-	render.hash.Reset()
-
 	if scr, ok := v.(StatusCoder); ok {
 		render.response.WriteHeader(scr.StatusCode())
 	}
 
-	b := []byte("")
+	// reset hash
+	render.hash.Reset()
+
+	// using bytes.Buffer for efficient I/O
+	var bbuf *bytes.Buffer
+
 	switch v.(type) {
 	case []byte:
-		b, _ = v.([]byte)
+		b, _ := v.([]byte)
+		bbuf = bytes.NewBuffer(b)
 
 	case string:
 		s, _ := v.(string)
-
-		b = []byte(s)
+		bbuf = bytes.NewBufferString(s)
 
 	case url.Values:
 		p, _ := v.(url.Values)
-
-		b = []byte(p.Encode())
+		bbuf = bytes.NewBufferString(p.Encode())
 
 	case io.Reader:
 		r, _ := v.(io.Reader)
 
-		// using bytes.Buffer for efficient I/O
-		bbuf := bytes.NewBuffer(nil)
-
+		bbuf = bytes.NewBuffer(nil)
 		_, err := bbuf.ReadFrom(r)
 		if err != nil {
 			return err
 		}
-
-		b = bbuf.Bytes()
-
-		// write to hash
-		bbuf.WriteTo(render.hash)
-
-		// add etag header
-		render.response.Header().Add("ETag", hex.EncodeToString(render.hash.Sum(nil)))
-
-		_, err = render.response.Write(b)
-		return err
 	}
 
 	// add etag header
-	render.hash.Write(b)
-	render.response.Header().Add("ETag", hex.EncodeToString(render.hash.Sum(nil)))
+	render.hash.Write(bbuf.Bytes())
+	render.response.Header().Add("Etag", hex.EncodeToString(render.hash.Sum(nil)))
 
-	_, err := render.response.Write(b)
+	_, err := io.Copy(render.response, bbuf)
 	return err
 }
 

@@ -52,7 +52,7 @@ func (r *Response) WriteHeader(code int) {
 		r.status = code
 
 		if r.HeaderFlushed() {
-			log.Println(ErrHeaderFlushed.Error())
+			log.Println("[WARN] ", ErrHeaderFlushed.Error())
 		}
 	}
 }
