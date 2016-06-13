@@ -11,7 +11,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "gogo"
 	app.Version = "1.0.0"
-	app.Usage = "gogo COMMAND [ARGS]"
+	app.Usage = "gogo COMMAND [ARGS] a"
 
 	app.Authors = []cli.Author{
 		{
@@ -22,6 +22,7 @@ func main() {
 
 	app.Commands = []cli.Command{
 		commands.New.Command(),
+		commands.NewModel.Command(),
 	}
 
 	app.Run(os.Args)

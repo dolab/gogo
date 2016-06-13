@@ -476,6 +476,133 @@ func main() {
     controllers.New(runMode, srcPath).Run()
 }
 `
+	modelTemplate = `
+package models
+
+import (
+    "time"
+
+    "gopkg.in/mgo.v2"
+    "gopkg.in/mgo.v2/bson"
+)
+
+var (
+    {{.Topic}} *_{{.Topic}}
+
+    {{.LowerTopic}}Collection = "api_{{.LowerTopic}}"
+    {{.LowerTopic}}Indexes    = []mgo.Index{
+        {
+            Key:    []string{""},
+            Unique: true,
+        },
+    }
+)
+
+type {{.Topic}}Model struct {
+    Id        bson.ObjectId ` + "`" + `bson:"_id" json:"id"` + "`" + `
+    CreatedAt time.Time     ` + "`" + `bson:"created_at" json:"created_at"` + "`" + `
+
+    isNewRecord bool ` + "`" + `bson:"-" json:"-"` + "`" + `
+}
+
+func New{{.Topic}}Model() *{{.Topic}}Model {
+    return &{{.Topic}}Model{
+        Id:          bson.NewObjectId(),
+        isNewRecord: true,
+    }
+}
+
+func (model *{{.Topic}}Model) IsNewRecord() bool {
+    return model.isNewRecord
+}
+
+func (model *{{.Topic}}Model) Save() (err error) {
+    if !model.Id.Valid() {
+        err = ErrInvalidId
+
+        return
+    }
+    t := time.Now().UTC()
+
+    {{.Topic}}.Query(func(c *mgo.Collection) {
+        if model.IsNewRecord() {
+
+            model.CreatedAt = t
+
+            err = c.Insert(model)
+            if err == nil {
+                model.isNewRecord = false
+            }
+        } else {
+            migrations := bson.M{
+
+                "created_at": t,
+            }
+
+            err = c.UpdateId(model.Id, bson.M{
+                "$set": migrations,
+            })
+        }
+    })
+
+    return
+}
+
+type _{{.Topic}} struct {
+}
+
+func (_ *_{{.Topic}}) Find(id string) (model *{{.Topic}}Model, err error) {
+    if !bson.IsObjectIdHex(id) {
+        return nil, ErrInvalidId
+    }
+
+    {{.Topic}}.Query(func(c *mgo.Collection) {
+        err = c.FindId(bson.ObjectIdHex(id)).One(&model)
+    })
+
+    return
+}
+
+func (_ *_{{.Topic}}) Query(query func(c *mgo.Collection)) {
+    mongo.Query({{.LowerTopic}}Collection, {{.LowerTopic}}Indexes, query)
+}
+`
+	modelTestTemplate = `package models
+
+import (
+    "testing"
+
+    "github.com/stretchr/testify/assert"
+)
+
+func Test_New{{.Topic}}Model(t *testing.T) {
+    assertion := assert.New(t)
+
+    model := New{{.Topic}}Model()
+
+    assertion.True(model.CreateAt.IsZero())
+    assertion.True(model.IsNewRecord())
+}
+
+func Test_{{.Topic}}Model_Save(t *testing.T) {
+    assertion := assert.New(t)
+
+    model := New{{.Topic}}Model()
+    err := model.Save()
+    assertion.Nil(err)
+    assertion.False(model.CreateAt.IsZero())
+    assertion.False(model.IsNewRecord())
+
+    err = model.Save()
+    assertion.Nil(err)
+
+    pmodel, err := {{.Topic}}.Find(model.Id.Hex())
+    assertion.Nil(err)
+
+    assertion.False(pmodel.CreateAt.IsZero())
+
+    assertion.False(pmodel.IsNewRecord())
+}`
 )
 
 type templateData struct {
