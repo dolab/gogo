@@ -580,7 +580,7 @@ func Test_New{{.Topic}}Model(t *testing.T) {
 
     model := New{{.Topic}}Model()
 
-    assertion.True(model.CreateAt.IsZero())
+    assertion.True(model.CreatedAt.IsZero())
     assertion.True(model.IsNewRecord())
 }
 
@@ -590,7 +590,7 @@ func Test_{{.Topic}}Model_Save(t *testing.T) {
     model := New{{.Topic}}Model()
     err := model.Save()
     assertion.Nil(err)
-    assertion.False(model.CreateAt.IsZero())
+    assertion.False(model.CreatedAt.IsZero())
     assertion.False(model.IsNewRecord())
 
     err = model.Save()
@@ -599,7 +599,7 @@ func Test_{{.Topic}}Model_Save(t *testing.T) {
     pmodel, err := {{.Topic}}.Find(model.Id.Hex())
     assertion.Nil(err)
 
-    assertion.False(pmodel.CreateAt.IsZero())
+    assertion.False(pmodel.CreatedAt.IsZero())
 
     assertion.False(pmodel.IsNewRecord())
 }`

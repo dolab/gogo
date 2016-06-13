@@ -11,7 +11,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "gogo"
 	app.Version = "1.0.0"
-	app.Usage = "gogo COMMAND [ARGS] a"
+	app.Usage = "gogo COMMAND [ARGS]"
 
 	app.Authors = []cli.Author{
 		{
