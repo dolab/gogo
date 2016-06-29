@@ -131,7 +131,7 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	assertion.Equal("GET /:tailslash", string(body))
 
 	// with tail slash
-	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/", nil)
+	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/?query", nil)
 
 	response, err = http.DefaultClient.Do(request)
 	assertion.Nil(err)
