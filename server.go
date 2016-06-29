@@ -37,7 +37,7 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 
 	// init router
 	server.router = httprouter.New()
-	server.router.RedirectTrailingSlash = true
+	server.router.RedirectTrailingSlash = false
 	server.router.HandleMethodNotAllowed = false // strict for RESTful
 
 	// overwrite
@@ -144,15 +144,6 @@ func (s *AppServer) Clean() {
 // ServeHTTP implements the http.Handler interface
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
-
-	// NOTE: avoid setting path / to empty!
-	if len(r.URL.Path) > 1 && r.URL.Path[len(r.URL.Path)-1] == '/' {
-		r.URL.Path = strings.TrimRight(r.URL.Path, "/")
-
-		if r.URL.Path == "" {
-			r.URL.Path = "/"
-		}
-	}
 
 	s.router.ServeHTTP(w, r)
 }
