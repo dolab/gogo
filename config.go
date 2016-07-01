@@ -108,8 +108,9 @@ type SectionConfig struct {
 type ServerConfig struct {
 	Addr           string `json:"addr"`
 	Port           int    `json:"port"`
-	RTimeout       int    `json:"request_timeout"`
-	WTimeout       int    `json:"response_timeout"`
+	Throttle       int    `json:"throttle"`         // time in ms
+	RTimeout       int    `json:"request_timeout"`  // time in s
+	WTimeout       int    `json:"response_timeout"` // time in s
 	MaxHeaderBytes int    `json:"max_header_bytes"`
 
 	Ssl     bool   `json:"ssl"`
