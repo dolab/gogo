@@ -27,8 +27,9 @@ var (
 )
 
 type AppConfig struct {
-	Mode RunMode `json:"mode"`
-	Name string  `json:"name"`
+	Mode     RunMode `json:"mode"`
+	Name     string  `json:"name"`
+	Throttle int     `json:"throttle"` // in ms
 
 	Sections map[RunMode]*json.RawMessage `json:"sections"`
 }
@@ -108,7 +109,6 @@ type SectionConfig struct {
 type ServerConfig struct {
 	Addr           string `json:"addr"`
 	Port           int    `json:"port"`
-	Throttle       int    `json:"throttle"`         // time in ms
 	RTimeout       int    `json:"request_timeout"`  // time in s
 	WTimeout       int    `json:"response_timeout"` // time in s
 	MaxHeaderBytes int    `json:"max_header_bytes"`
