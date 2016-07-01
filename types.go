@@ -38,6 +38,8 @@ type Logger interface {
 	SetLevelByName(level string) error
 	SetColor(color bool)
 
+	Print(v ...interface{})
+	Printf(format string, v ...interface{})
 	Debug(v ...interface{})
 	Debugf(format string, v ...interface{})
 	Info(v ...interface{})
