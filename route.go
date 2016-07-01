@@ -46,14 +46,12 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
-
-		t := time.Now()
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
 		ctx.Next()
 		ctx.Response.FlushHeader()
 
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Now().Sub(t).String())
+		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
 
 		r.server.reuse(ctx)
 	})
@@ -66,14 +64,12 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
-
-		t := time.Now()
-		ctx.Logger.Infof(`Started %s "%s"`, req.Method, r.filterParameters(req.URL))
+		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
 		ctx.Next()
 		ctx.Response.FlushHeader()
 
-		ctx.Logger.Infof("Completed %d in %v", ctx.Response.Status(), time.Now().Sub(t))
+		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
 
 		r.server.reuse(ctx)
 	})

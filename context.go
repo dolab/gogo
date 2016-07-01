@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -28,6 +29,8 @@ type Context struct {
 	writer   Response
 	handlers []Middleware
 	index    int8
+
+	startedAt time.Time
 }
 
 func NewContext(server *AppServer) *Context {
@@ -251,6 +254,11 @@ func (c *Context) Xml(data interface{}) error {
 func (c *Context) Render(w Render, data interface{}) error {
 	// always abort
 	c.Abort()
+
+	// NOTE: its only ensure AT LEAST but EQUAL!!!
+	if c.Server.throttle > 0 && time.Since(c.startedAt) < c.Server.throttle {
+		time.Sleep(c.Server.throttle - time.Since(c.startedAt))
+	}
 
 	err := w.Render(data)
 	if err != nil {

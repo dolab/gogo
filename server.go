@@ -19,6 +19,8 @@ type AppServer struct {
 	router *httprouter.Router
 	pool   sync.Pool
 
+	throttle time.Duration // cache for performance
+
 	logger       Logger
 	requestId    string   // request id header name
 	filterParams []string // filter out params when logging
@@ -44,6 +46,9 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	server.pool.New = func() interface{} {
 		return NewContext(server)
 	}
+
+	// throttle
+	server.throttle = time.Duration(config.Throttle) * time.Millisecond
 
 	return server
 }
@@ -170,6 +175,7 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	ctx.writer.reset(w)
 	ctx.handlers = handlers
 	ctx.index = -1
+	ctx.startedAt = time.Now()
 
 	return ctx
 }
