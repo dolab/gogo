@@ -257,7 +257,12 @@ func (c *Context) Render(w Render, data interface{}) error {
 
 	// NOTE: its only ensure AT LEAST but EQUAL!!!
 	if c.Server.throttle > 0 && time.Since(c.startedAt) < c.Server.throttle {
-		time.Sleep(c.Server.throttle - time.Since(c.startedAt))
+		ticker := time.NewTicker(c.Server.throttle - time.Since(c.startedAt))
+
+		select {
+		case <-ticker.C:
+			ticker.Stop()
+		}
 	}
 
 	err := w.Render(data)
