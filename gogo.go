@@ -58,7 +58,7 @@ func New(runMode, srcPath string) *AppServer {
 	logger.SetLevelByName(section.Logger.LevelName)
 	logger.SetColor(!mode.IsProduction())
 
-	logger.Infof("Initialized %s in %s mode", config.Name, config.Mode)
+	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
 
 	return NewAppServer(mode, config, logger)
 }
@@ -78,7 +78,11 @@ func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
 	}
 	config.SetMode(mode)
 
-	logger.Infof("Initialized %s in %s mode", config.Name, config.Mode)
+	// overwrite logger level and colorful
+	logger.SetLevelByName(config.Section().Logger.LevelName)
+	logger.SetColor(!mode.IsProduction())
+
+	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
 
 	return NewAppServer(mode, config, logger)
 }
