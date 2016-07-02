@@ -31,6 +31,7 @@ type Context struct {
 	index    int8
 
 	startedAt time.Time
+	downAfter time.Time
 }
 
 func NewContext(server *AppServer) *Context {
@@ -256,8 +257,8 @@ func (c *Context) Render(w Render, data interface{}) error {
 	c.Abort()
 
 	// NOTE: its only ensure AT LEAST but EQUAL!!!
-	if c.Server.throttle > 0 && time.Since(c.startedAt) < c.Server.throttle {
-		ticker := time.NewTicker(c.Server.throttle - time.Since(c.startedAt))
+	if delta := time.Since(c.downAfter); delta > 0 {
+		ticker := time.NewTicker(delta)
 
 		select {
 		case <-ticker.C:

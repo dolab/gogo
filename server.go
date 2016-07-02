@@ -20,6 +20,7 @@ type AppServer struct {
 	pool   sync.Pool
 
 	throttle time.Duration // cache for performance
+	slowdown time.Duration // cache for performance
 
 	logger       Logger
 	requestId    string   // request id header name
@@ -77,6 +78,11 @@ func (s *AppServer) Run() {
 
 		localAddr string
 	)
+
+	// adjust app server slowdown ms
+	if config.Server.SlowdownMs > 0 {
+		s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
+	}
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
@@ -176,6 +182,11 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	ctx.handlers = handlers
 	ctx.index = -1
 	ctx.startedAt = time.Now()
+
+	// slowdown
+	if s.slowdown > 0 {
+		ctx.downAfter = ctx.startedAt.Add(s.slowdown)
+	}
 
 	return ctx
 }
