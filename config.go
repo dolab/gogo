@@ -117,7 +117,8 @@ type ServerConfig struct {
 	SslCert string `json:"ssl_cert"`
 	SslKey  string `json:"ssl_key"`
 
-	RequestId string `json:"request_id"`
+	RequestId  string `json:"request_id"`
+	SlowdownMs int    `json:"slowdown_ms"` // time in ms
 }
 
 // logger config spec
