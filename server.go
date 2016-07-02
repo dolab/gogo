@@ -19,7 +19,7 @@ type AppServer struct {
 	router *httprouter.Router
 	pool   sync.Pool
 
-	throttle time.Duration // cache for performance
+	throttle *time.Ticker  // time.Ticker for rate limit
 	slowdown time.Duration // cache for performance
 
 	logger       Logger
@@ -49,7 +49,9 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	}
 
 	// throttle
-	server.throttle = time.Duration(config.Throttle) * time.Millisecond
+	if config.Throttle > 0 {
+		server.throttle = time.NewTicker(time.Second / time.Duration(config.Throttle))
+	}
 
 	return server
 }
@@ -155,6 +157,11 @@ func (s *AppServer) Clean() {
 // ServeHTTP implements the http.Handler interface
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
+
+	// rate limit
+	if s.throttle != nil {
+		<-s.throttle.C
+	}
 
 	s.router.ServeHTTP(w, r)
 }
