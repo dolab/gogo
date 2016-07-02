@@ -48,11 +48,6 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 		return NewContext(server)
 	}
 
-	// throttle
-	if config.Throttle > 0 {
-		server.throttle = time.NewTicker(time.Second / time.Duration(config.Throttle))
-	}
-
 	return server
 }
 
@@ -80,6 +75,11 @@ func (s *AppServer) Run() {
 
 		localAddr string
 	)
+
+	// throttle of rate limit
+	if config.Server.Throttle > 0 {
+		s.throttle = time.NewTicker(time.Second / time.Duration(config.Server.Throttle))
+	}
 
 	// adjust app server slowdown ms
 	s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond

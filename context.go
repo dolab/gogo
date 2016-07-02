@@ -258,7 +258,7 @@ func (c *Context) Render(w Render, data interface{}) error {
 	c.Abort()
 
 	// NOTE: its only ensure AT LEAST but EQUAL!!!
-	if delta := time.Since(c.downAfter); delta > minSlowdownMs {
+	if delta := c.downAfter.Sub(time.Now()); delta > minSlowdownMs {
 		ticker := time.NewTicker(delta)
 
 		select {
