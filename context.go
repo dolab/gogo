@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	abortIndex = math.MaxInt8 / 2
+	abortIndex    = math.MaxInt8 / 2
+	minSlowdownMs = 1 * time.Millisecond
 )
 
 type Context struct {
@@ -257,7 +258,7 @@ func (c *Context) Render(w Render, data interface{}) error {
 	c.Abort()
 
 	// NOTE: its only ensure AT LEAST but EQUAL!!!
-	if delta := time.Since(c.downAfter); delta > 0 {
+	if delta := time.Since(c.downAfter); delta > minSlowdownMs {
 		ticker := time.NewTicker(delta)
 
 		select {
