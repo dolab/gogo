@@ -42,13 +42,13 @@ func New(runMode, srcPath string) *AppServer {
 	// adjust app run mode
 	mode := RunMode(runMode)
 	if !mode.IsValid() {
-		log.Fatalf("Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
+		log.Fatalf("[GOGO] Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
 	}
 
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
 	if err != nil {
-		log.Fatalf("NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
+		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
 	config.SetMode(mode)
 
@@ -68,13 +68,13 @@ func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
 	// adjust app run mode
 	mode := RunMode(runMode)
 	if !mode.IsValid() {
-		log.Fatalf("Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
+		log.Fatalf("[GOGO] Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
 	}
 
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
 	if err != nil {
-		log.Fatalf("NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
+		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
 	config.SetMode(mode)
 
