@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	abortIndex = math.MaxInt8 / 2
+	abortIndex    = math.MaxInt8 / 2
+	minSlowdownMs = 1 * time.Millisecond
 )
 
 type Context struct {
@@ -31,6 +32,7 @@ type Context struct {
 	index    int8
 
 	startedAt time.Time
+	downAfter time.Time
 }
 
 func NewContext(server *AppServer) *Context {
@@ -256,8 +258,13 @@ func (c *Context) Render(w Render, data interface{}) error {
 	c.Abort()
 
 	// NOTE: its only ensure AT LEAST but EQUAL!!!
-	if c.Server.throttle > 0 && time.Since(c.startedAt) < c.Server.throttle {
-		time.Sleep(c.Server.throttle - time.Since(c.startedAt))
+	if delta := c.downAfter.Sub(time.Now()); delta > minSlowdownMs {
+		ticker := time.NewTicker(delta)
+
+		select {
+		case <-ticker.C:
+			ticker.Stop()
+		}
 	}
 
 	err := w.Render(data)

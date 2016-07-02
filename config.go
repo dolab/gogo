@@ -27,9 +27,8 @@ var (
 )
 
 type AppConfig struct {
-	Mode     RunMode `json:"mode"`
-	Name     string  `json:"name"`
-	Throttle int     `json:"throttle"` // in ms
+	Mode RunMode `json:"mode"`
+	Name string  `json:"name"`
 
 	Sections map[RunMode]*json.RawMessage `json:"sections"`
 }
@@ -117,7 +116,9 @@ type ServerConfig struct {
 	SslCert string `json:"ssl_cert"`
 	SslKey  string `json:"ssl_key"`
 
-	RequestId string `json:"request_id"`
+	Throttle   int    `json:"throttle"`    // in time.Second/throttle ms
+	SlowdownMs int    `json:"slowdown_ms"` // in ms
+	RequestId  string `json:"request_id"`
 }
 
 // logger config spec

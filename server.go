@@ -19,7 +19,8 @@ type AppServer struct {
 	router *httprouter.Router
 	pool   sync.Pool
 
-	throttle time.Duration // cache for performance
+	throttle *time.Ticker  // time.Ticker for rate limit
+	slowdown time.Duration // cache for performance
 
 	logger       Logger
 	requestId    string   // request id header name
@@ -46,9 +47,6 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	server.pool.New = func() interface{} {
 		return NewContext(server)
 	}
-
-	// throttle
-	server.throttle = time.Duration(config.Throttle) * time.Millisecond
 
 	return server
 }
@@ -77,6 +75,14 @@ func (s *AppServer) Run() {
 
 		localAddr string
 	)
+
+	// throttle of rate limit
+	if config.Server.Throttle > 0 {
+		s.throttle = time.NewTicker(time.Second / time.Duration(config.Server.Throttle))
+	}
+
+	// adjust app server slowdown ms
+	s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
@@ -150,6 +156,11 @@ func (s *AppServer) Clean() {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
+	// rate limit
+	if s.throttle != nil {
+		<-s.throttle.C
+	}
+
 	s.router.ServeHTTP(w, r)
 }
 
@@ -176,6 +187,7 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	ctx.handlers = handlers
 	ctx.index = -1
 	ctx.startedAt = time.Now()
+	ctx.downAfter = ctx.startedAt.Add(s.slowdown)
 
 	return ctx
 }
