@@ -2,9 +2,12 @@ package gogo
 
 import "net/http"
 
-// Middleware represents request filters and resource handler
+// Middleware defines request filters and resource handler
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
 type Middleware func(ctx *Context)
+
+// Dispatcher defines http.Request filter
+type Dispatcher func(r *http.Request)
 
 // Render represents HTTP response render
 type Render interface {
