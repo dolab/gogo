@@ -19,12 +19,13 @@ type AppServer struct {
 	router *httprouter.Router
 	pool   sync.Pool
 
-	throttle *time.Ticker  // time.Ticker for rate limit
-	slowdown time.Duration // cache for performance
+	dispatcher *Dispatcher
 
+	throttle     *time.Ticker  // time.Ticker for rate limit
+	slowdown     time.Duration // cache for performance
+	requestId    string        // request id header name
+	filterParams []string      // filter out params when logging
 	logger       Logger
-	requestId    string   // request id header name
-	filterParams []string // filter out params when logging
 }
 
 func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
@@ -61,8 +62,16 @@ func (s *AppServer) Config() *AppConfig {
 	return s.config
 }
 
-// Run runs the http server
+// Run runs the http server with nil dispatcher
 func (s *AppServer) Run() {
+	s.Dispatch(nil)
+}
+
+// Dispatch runs the http server with dispatcher provided
+func (s *AppServer) Dispatch(dispatcher Dispatcher) {
+	// regist dispatcher
+	s.dispatcher = &dispatcher
+
 	var (
 		config = s.config.Section()
 
@@ -159,6 +168,10 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// rate limit
 	if s.throttle != nil {
 		<-s.throttle.C
+	}
+
+	if s.dispatcher != nil {
+		(*s.dispatcher)(r)
 	}
 
 	s.router.ServeHTTP(w, r)

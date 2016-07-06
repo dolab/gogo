@@ -1,11 +1,13 @@
 package gogo
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 	"github.com/golib/httprouter"
 )
@@ -92,3 +94,26 @@ func Test_ServerReuse(t *testing.T) {
 // 	client.AssertOK()
 // 	client.AssertEmpty()
 // }
+
+func Test_ServerWithDisptacher(t *testing.T) {
+	var dispatcher Dispatcher = func(r *http.Request) {
+		r.URL.Path = "/server/dispatcher"
+	}
+
+	config, _ := newMockConfig("application.json")
+	server := NewAppServer("test", config, NewAppLogger("stderr", ""))
+	server.dispatcher = &dispatcher
+	server.PUT("/server/dispatcher", func(ctx *Context) {
+		ctx.Text("DISPATCHED")
+	})
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	request, _ := http.NewRequest("PUT", ts.URL+"/server/rehctapsid", bytes.NewBufferString("Ping!"))
+
+	client := httptesting.New(ts.URL, false)
+	client.NewRequest(t, request)
+	client.AssertOK()
+	client.AssertContains("DISPATCHED")
+}
