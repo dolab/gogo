@@ -231,7 +231,7 @@ func (t *TestGroupController) Show(ctx *Context) {
 type TestUserController struct{}
 
 func (t *TestUserController) Show(ctx *Context) {
-	ctx.Text(ctx.Params.Get("group") + ":" + ctx.Params.Get("user") + "show")
+	ctx.Text(ctx.Params.Get("id") + ":" + ctx.Params.Get("user") + "show")
 }
 
 func (t *TestUserController) Id() string {
