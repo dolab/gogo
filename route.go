@@ -133,23 +133,25 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 
 	id, ok := controller.(ControllerID)
 	if ok {
-		idSuffix = "/:" + id.Id()
-	} else {
-		// default id key
-		idSuffix = "/:id"
+		idSuffix = strings.TrimSpace(id.Id())
 	}
 
-	resourceSpec = resource + idSuffix
+	// default id key
+	if idSuffix == "" {
+		idSuffix = "id"
+	}
+
+	resourceSpec = resource + "/:" + idSuffix
 
 	index, ok := controller.(ControllerIndex)
 	if ok {
 		r.GET(resource, index.Index)
 	}
 
-	// for POST /
+	// for POST /resource
 	create, ok := controller.(ControllerCreate)
 	if ok {
-		r.POST(resourceSpec, create.Create)
+		r.POST(resource, create.Create)
 	}
 
 	// for GET /resource/:id
