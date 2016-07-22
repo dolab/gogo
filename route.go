@@ -6,7 +6,6 @@ import (
 	"path"
 	"time"
 
-	"fmt"
 	"github.com/golib/httprouter"
 	"strings"
 )
@@ -113,11 +112,13 @@ func (r *AppRoute) OPTIONS(path string, handler Middleware) {
 }
 
 // Router resource controller
-// server := r.Resource("bucket", ServerCI)
+// server := r.Resource("bucket", ServerCI) server is group
 // GET /bucket/:id
-
 // ip := server.Resource("ip", IpCI)
+// SubResource
+// r.Resource("parent", ParentResource).Resource("child", ChildResource)
 // GET /bucket/:bucket/ip/:id
+// note: parent's id key must not be the same with child (panic)
 func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	resource = strings.TrimSuffix(resource, "/")
 	if resource[0] != '/' {
@@ -125,8 +126,10 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	}
 
 	// for common purpose
-	var resourceSpec string
-	var idSuffix string
+	var (
+		resourceSpec string
+		idSuffix     string
+	)
 
 	id, ok := controller.(ControllerID)
 	if ok {
@@ -137,7 +140,6 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	}
 
 	resourceSpec = resource + idSuffix
-	fmt.Println(resourceSpec)
 
 	index, ok := controller.(ControllerIndex)
 	if ok {

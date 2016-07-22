@@ -231,14 +231,14 @@ func (t *TestGroupController) Show(ctx *Context) {
 type TestUserController struct{}
 
 func (t *TestUserController) Show(ctx *Context) {
-	ctx.Text(ctx.Params.Get("user") + "show")
+	ctx.Text(ctx.Params.Get("group") + ":" + ctx.Params.Get("user") + "show")
 }
 
 func (t *TestUserController) Id() string {
 	return "user"
 }
 
-func Test_RestRouteController(t *testing.T) {
+func Test_ResourceController(t *testing.T) {
 	server := newMockServer()
 	route := NewAppRoute("/", server)
 	group := route.Resource("group", &TestGroupController{})
@@ -257,7 +257,7 @@ func Test_RestRouteController(t *testing.T) {
 
 	assertion.Equal("6666show", string(body))
 
-	// test user show /group/:id/user/user
+	// test user show /group/:id/user/:user
 	group.Resource("user", &TestUserController{})
 	res, err = http.Get(ts.URL + "/group/6666/user/82828")
 	assertion.Nil(err)
@@ -265,7 +265,7 @@ func Test_RestRouteController(t *testing.T) {
 	body, err = ioutil.ReadAll(res.Body)
 	res.Body.Close()
 
-	assertion.Equal("82828show", string(body))
+	assertion.Equal("6666:82828show", string(body))
 
 	// test not found
 	res, err = http.Get(ts.URL + "/group/6666/user/")
