@@ -183,6 +183,38 @@ func main() {
 }
 ```
 
+- Use Resource Controller
+You can iml a struct with Index, Show, Create, Update, Destroy, Explore methods
+and using AppServer.Resource("resource", your_struct) to register all it's impl methods to router
+note: when your resource has a inheritance relationship, there must not be two same id key.
+you can iml ControllerID interface to specify a new id key
+```
+type GroupController struct{}
+
+func (t *GroupController) Index(ctx *Context) {
+    ctx.Text(ctx.Params.Get("id") + "all")
+}
+
+func (t *GroupController) Show(ctx *Context) {
+    ctx.Text(ctx.Params.Get("id") + "show")
+}
+
+type UserController struct{}
+
+func (t *UserController) Show(ctx *Context) {
+    ctx.Text(ctx.Params.Get("group") + ":" + ctx.Params.Get("user") + "show")
+}
+
+// iml ControllerID to specify user a new id key
+func (t *UserController) Id() string {
+    return "user"
+}
+
+group := app.Resource("group", &GroupController{})
+user := group.("user", &UserController{)
+
+```
+
 ## TODOs
 
 - [x] server config context

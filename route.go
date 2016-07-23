@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golib/httprouter"
+	"strings"
 )
 
 type AppRoute struct {
@@ -108,6 +109,76 @@ func (r *AppRoute) HEAD(path string, handler Middleware) {
 // OPTIONS is a shortcut of route.Handle("OPTIONS", path, handler)
 func (r *AppRoute) OPTIONS(path string, handler Middleware) {
 	r.Handle("OPTIONS", path, handler)
+}
+
+// Router resource controller
+// server := r.Resource("bucket", ServerCI) server is group
+// GET /bucket/:id
+// ip := server.Resource("ip", IpCI)
+// SubResource
+// r.Resource("parent", ParentResource).Resource("child", ChildResource)
+// GET /bucket/:bucket/ip/:id
+// note: parent's id key must not be the same with child (panic)
+func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
+	resource = strings.TrimSuffix(resource, "/")
+	if resource[0] != '/' {
+		resource = "/" + resource
+	}
+
+	// for common purpose
+	var (
+		resourceSpec string
+		idSuffix     string
+	)
+
+	id, ok := controller.(ControllerID)
+	if ok {
+		idSuffix = strings.TrimSpace(id.Id())
+	}
+
+	// default id key
+	if idSuffix == "" {
+		idSuffix = "id"
+	}
+
+	resourceSpec = resource + "/:" + idSuffix
+
+	index, ok := controller.(ControllerIndex)
+	if ok {
+		r.GET(resource, index.Index)
+	}
+
+	// for POST /resource
+	create, ok := controller.(ControllerCreate)
+	if ok {
+		r.POST(resource, create.Create)
+	}
+
+	// for GET /resource/:id
+	show, ok := controller.(ControllerShow)
+	if ok {
+		r.GET(resourceSpec, show.Show)
+	}
+
+	// for PUT /resource/:id
+	update, ok := controller.(ControllerUpdate)
+	if ok {
+		r.PUT(resourceSpec, update.Update)
+	}
+
+	// for DELETE /resource/:id
+	delete, ok := controller.(ControllerDestroy)
+	if ok {
+		r.DELETE(resourceSpec, delete.Destroy)
+	}
+
+	// for HEAD /resource/:id
+	head, ok := controller.(ControllerExplore)
+	if ok {
+		r.HEAD(resourceSpec, head.Explore)
+	}
+
+	return r.Group(resourceSpec)
 }
 
 // Any is a shortcut for all request methods

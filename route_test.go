@@ -217,3 +217,63 @@ func Test_RouteGroup(t *testing.T) {
 
 	assertion.Equal("testing", string(body))
 }
+
+type TestGroupController struct{}
+
+func (t *TestGroupController) Index(ctx *Context) {
+	ctx.Text(ctx.Params.Get("id") + "all")
+}
+
+func (t *TestGroupController) Show(ctx *Context) {
+	ctx.Text(ctx.Params.Get("id") + "show")
+}
+
+type TestUserController struct{}
+
+func (t *TestUserController) Show(ctx *Context) {
+	ctx.Text(ctx.Params.Get("id") + ":" + ctx.Params.Get("user") + "show")
+}
+
+func (t *TestUserController) Id() string {
+	return "user"
+}
+
+func Test_ResourceController(t *testing.T) {
+	server := newMockServer()
+	route := NewAppRoute("/", server)
+	group := route.Resource("group", &TestGroupController{})
+	assertion := assert.New(t)
+
+	// start server
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// test show group /group/:id
+	res, err := http.Get(ts.URL + "/group/6666")
+	assertion.Nil(err)
+
+	body, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+
+	assertion.Equal("6666show", string(body))
+
+	// test user show /group/:id/user/:user
+	group.Resource("user", &TestUserController{})
+	res, err = http.Get(ts.URL + "/group/6666/user/82828")
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(res.Body)
+	res.Body.Close()
+
+	assertion.Equal("6666:82828show", string(body))
+
+	// test not found
+	res, err = http.Get(ts.URL + "/group/6666/user/")
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(res.Body)
+	res.Body.Close()
+
+	assertion.Equal("404 page not found\n", string(body))
+	assertion.Equal(http.StatusNotFound, res.StatusCode)
+}
