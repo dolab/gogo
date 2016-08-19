@@ -22,14 +22,14 @@ type Responser interface {
 	http.ResponseWriter
 	http.Flusher
 
-	Before(filter func(w Responser)) // register before filter
-	Size() int                       // return the size of response body
-	Status() int                     // response status code
-	HeaderFlushed() bool             // whether response header has been sent?
-	FlushHeader()                    // send response header
+	Before(filter ResponseFilter) // register before filter
+	Size() int                    // return the size of response body
+	Status() int                  // response status code
+	HeaderFlushed() bool          // whether response header has been sent?
+	FlushHeader()                 // send response header
 }
 
-type ResponseFilter func(Responser)
+type ResponseFilter func(w Responser, b []byte) []byte
 
 // Logger defines interface of application log apis.
 type Logger interface {
