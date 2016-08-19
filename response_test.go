@@ -48,11 +48,15 @@ func Test_ResponseFlushHeader(t *testing.T) {
 func Test_ResponseFulshHeaderWithFilters(t *testing.T) {
 	counter := 0
 	recorder := httptest.NewRecorder()
-	filter1 := func(w Responser) {
+	filter1 := func(r Responser, b []byte) []byte {
 		counter += 1
+
+		return b
 	}
-	filter2 := func(w Responser) {
+	filter2 := func(r Responser, b []byte) []byte {
 		counter += 2
+
+		return b
 	}
 	assertion := assert.New(t)
 
@@ -60,8 +64,7 @@ func Test_ResponseFulshHeaderWithFilters(t *testing.T) {
 	response.Before(filter1)
 	response.Before(filter2)
 
-	response.WriteHeader(http.StatusRequestTimeout)
-	response.FlushHeader()
+	response.Write([]byte(""))
 	assertion.Equal(3, counter)
 }
 
