@@ -29,7 +29,7 @@ func NewResponse(w http.ResponseWriter) Responser {
 }
 
 // Before registers filters which invoked before response has written
-func (r *Response) Before(filter func(w Responser)) {
+func (r *Response) Before(filter ResponseFilter) {
 	r.filters = append(r.filters, filter)
 }
 
@@ -63,16 +63,16 @@ func (r *Response) FlushHeader() {
 		return
 	}
 
-	// filters
-	for i := len(r.filters) - 1; i >= 0; i-- {
-		r.filters[i](r)
-	}
-
 	r.size = 0
 	r.ResponseWriter.WriteHeader(r.status)
 }
 
 func (r *Response) Write(data []byte) (size int, err error) {
+	// apply filters
+	for i := len(r.filters) - 1; i >= 0; i-- {
+		data = r.filters[i](r, data)
+	}
+
 	r.FlushHeader()
 
 	size, err = r.ResponseWriter.Write(data)
