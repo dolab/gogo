@@ -2,12 +2,14 @@ package gogo
 
 import (
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"time"
 
-	"github.com/golib/httprouter"
 	"strings"
+
+	"github.com/golib/httprouter"
 )
 
 type AppRoute struct {
@@ -44,6 +46,30 @@ func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
 func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	uri := r.calculatePrefix(path)
 	handlers := r.combineHandlers(handler)
+
+	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
+		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
+
+		ctx.Next()
+		ctx.Response.FlushHeader()
+
+		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
+
+		r.server.reuse(ctx)
+	})
+}
+
+// ProxyHandle registers a new resource with its handler
+func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
+	uri := r.calculatePrefix(path)
+	handlers := r.combineHandlers(func(ctx *Context) {
+		for _, filter := range filters {
+			ctx.Response.Before(filter)
+		}
+
+		proxy.ServeHTTP(ctx.Response, ctx.Request)
+	})
 
 	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)

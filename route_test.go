@@ -4,6 +4,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/golib/assert"
@@ -162,6 +165,51 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	response.Body.Close()
 
 	assertion.Equal("GET /:tailslash/*extraargs", string(body))
+}
+
+func Test_RouteProxyHandle(t *testing.T) {
+	server := newMockServer()
+	route := NewAppRoute("/", server)
+	assertion := assert.New(t)
+
+	// proxied handler
+	route.Use(func(ctx *Context) {
+		ctx.Logger.Warn("v ...interface{}")
+	})
+	route.Handle("GET", "/proxy", func(ctx *Context) {
+		ctx.Text("Proxied!")
+	})
+
+	proxy := &httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			r.URL.Scheme = "http"
+			r.URL.Host = r.Host
+			r.URL.Path = "/proxy"
+			r.URL.RawPath = "/proxy"
+		},
+	}
+	route.ProxyHandle("GET", "/mock", proxy, func(w Responser, b []byte) []byte {
+		s := strings.ToUpper(string(b))
+
+		w.Header().Set("Content-Length", strconv.Itoa(len(s)*2))
+
+		return []byte(s + s)
+	})
+
+	// start server
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// testing by http request
+	request, _ := http.NewRequest("GET", ts.URL+"/mock", nil)
+
+	res, err := http.DefaultClient.Do(request)
+	assertion.Nil(err)
+
+	body, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+	assertion.Nil(err)
+	assertion.Equal("PROXIED!PROXIED!", string(body))
 }
 
 func Test_RouteMockHandle(t *testing.T) {
