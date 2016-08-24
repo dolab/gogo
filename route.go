@@ -71,7 +71,7 @@ func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.Rever
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
 	})
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	handler := func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -81,7 +81,19 @@ func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.Rever
 		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
 
 		r.server.reuse(ctx)
-	})
+	}
+
+	if method == "Any" {
+		r.server.router.Handle("GET", uri, handler)
+		r.server.router.Handle("POST", uri, handler)
+		r.server.router.Handle("PUT", uri, handler)
+		r.server.router.Handle("PATCH", uri, handler)
+		r.server.router.Handle("DELETE", uri, handler)
+		r.server.router.Handle("HEAD", uri, handler)
+		r.server.router.Handle("OPTIONS", uri, handler)
+	} else {
+		r.server.router.Handle(method, uri, handler)
+	}
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
