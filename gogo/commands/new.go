@@ -75,12 +75,13 @@ func (_ *_New) Flags() []cli.Flag {
 	}
 }
 
-func (_ *_New) Action() func(*cli.Context) {
-	return func(ctx *cli.Context) {
+func (_ *_New) Action() cli.ActionFunc {
+	return func(ctx *cli.Context) error {
 		root, err := os.Getwd()
 		if err != nil {
 			stderr.Error(err.Error())
-			return
+
+			return err
 		}
 
 		appName := path.Clean(ctx.Args().First())
@@ -92,12 +93,14 @@ func (_ *_New) Action() func(*cli.Context) {
 		files, err := ioutil.ReadDir(root)
 		if err != nil && !os.IsNotExist(err) {
 			stderr.Error(err.Error())
-			return
+
+			return err
 		}
 
 		if len(files) > 0 {
-			stderr.Warn("Can't initialize a new gogo application within the unempty directory, please change to an empty directory first.")
-			return
+			stderr.Warn(ErrNoneEmptyDirectory.Error())
+
+			return ErrNoneEmptyDirectory
 		}
 
 		appRoot := path.Join(root, "gogo")
@@ -106,7 +109,8 @@ func (_ *_New) Action() func(*cli.Context) {
 		err = os.MkdirAll(appRoot, os.ModePerm)
 		if err != nil {
 			stderr.Error(err.Error())
-			return
+
+			return err
 		}
 
 		// generate app struct
@@ -115,13 +119,16 @@ func (_ *_New) Action() func(*cli.Context) {
 
 			err := os.MkdirAll(absPath, os.ModePerm)
 			if err != nil {
-				println(err.Error())
-				return
+				stderr.Error(err.Error())
+
+				return err
 			}
 
 			err = ioutil.WriteFile(path.Join(absPath, ".keep"), []byte(""), os.ModePerm)
 			if err != nil {
-				println(err.Error())
+				stderr.Error(err.Error())
+
+				return err
 			}
 		}
 
@@ -152,6 +159,7 @@ func (_ *_New) Action() func(*cli.Context) {
 		// if !ctx.Bool("skip-install") {
 		// 	New.getDependences()
 		// }
+		return nil
 	}
 }
 

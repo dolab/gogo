@@ -55,7 +55,7 @@ gobuild: goclean goinstall
 gorebuild: goclean goreinstall
 
 goclean:
-    rm -rf ./bin ./pkg
+    go clean ./...
 
 goinstall:
     go get -t -v {{.Namespace}}/{{.Application}}
