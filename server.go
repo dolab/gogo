@@ -61,8 +61,13 @@ func (s *AppServer) Config() *AppConfig {
 	return s.config
 }
 
-// Run runs the http server
+// Run runs the http server with default handler
 func (s *AppServer) Run() {
+	s.RunWithHandler(s)
+}
+
+// RunWithHandler runs the http server with given handler
+func (s *AppServer) RunWithHandler(handler http.Handler) {
 	var (
 		config = s.config.Section()
 
@@ -116,7 +121,7 @@ func (s *AppServer) Run() {
 
 	server := &http.Server{
 		Addr:           localAddr,
-		Handler:        s,
+		Handler:        handler,
 		ReadTimeout:    time.Duration(rtimeout) * time.Second,
 		WriteTimeout:   time.Duration(wtimeout) * time.Second,
 		MaxHeaderBytes: maxheaderbytes,
@@ -127,17 +132,17 @@ func (s *AppServer) Run() {
 		if network != "tcp" {
 			// This limitation is just to reduce complexity, since it is standard
 			// to terminate SSL upstream when using unix domain sockets.
-			s.logger.Fatal("=> SSL is only supported for TCP sockets.")
+			s.logger.Fatal("[GOGO]=> SSL is only supported for TCP sockets.")
 		}
 
-		s.logger.Fatal("=> Failed to listen:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
+		s.logger.Fatal("[GOGO]=> Failed to listen:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
 	} else {
 		listener, err := net.Listen(network, localAddr)
 		if err != nil {
-			s.logger.Fatal("=> Failed to listen:", err)
+			s.logger.Fatal("[GOGO]=> Failed to listen:", err)
 		}
 
-		s.logger.Fatal("=> Failed to serve:", server.Serve(listener))
+		s.logger.Fatal("[GOGO]=> Failed to serve:", server.Serve(listener))
 	}
 }
 
