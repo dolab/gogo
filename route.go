@@ -13,17 +13,16 @@ import (
 )
 
 type AppRoute struct {
+	server   *AppServer
+	prefix   string
 	Handlers []Middleware
-
-	prefix string
-	server *AppServer
 }
 
 // NewAppRoute creates a new app route with specified prefix and server
 func NewAppRoute(prefix string, server *AppServer) *AppRoute {
 	return &AppRoute{
-		prefix: prefix,
 		server: server,
+		prefix: prefix,
 	}
 }
 
@@ -36,9 +35,9 @@ func (r *AppRoute) Use(middlewares ...Middleware) {
 // Group returns a new app route group which has the same prefix path and middlewares
 func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
 	return &AppRoute{
-		Handlers: r.combineHandlers(middlewares...),
-		prefix:   r.calculatePrefix(prefix),
 		server:   r.server,
+		prefix:   r.calculatePrefix(prefix),
+		Handlers: r.combineHandlers(middlewares...),
 	}
 }
 
@@ -62,25 +61,12 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 // ProxyHandle registers a new resource with its handler
 func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
-	uri := r.calculatePrefix(path)
-	handlers := r.combineHandlers(func(ctx *Context) {
+	r.Handle(method, path, func(ctx *Context) {
 		for _, filter := range filters {
 			ctx.Response.Before(filter)
 		}
 
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
-	})
-
-	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
-		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
-
-		ctx.Next()
-		ctx.Response.FlushHeader()
-
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-		r.server.reuse(ctx)
 	})
 }
 
