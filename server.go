@@ -154,9 +154,14 @@ func (s *AppServer) Use(middlewares ...Middleware) {
 	s.AppRoute.Use(middlewares...)
 }
 
+// Handlers returns registered middlewares of app route
+func (s *AppServer) Handlers() []Middleware {
+	return s.AppRoute.handlers
+}
+
 // Clean removes all registered middlewares, it useful in testing cases.
 func (s *AppServer) Clean() {
-	s.Handlers = []Middleware{}
+	s.AppRoute.handlers = []Middleware{}
 }
 
 // ServeHTTP implements the http.Handler interface

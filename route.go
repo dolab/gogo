@@ -15,7 +15,7 @@ import (
 type AppRoute struct {
 	server   *AppServer
 	prefix   string
-	Handlers []Middleware
+	handlers []Middleware
 }
 
 // NewAppRoute creates a new app route with specified prefix and server
@@ -29,7 +29,7 @@ func NewAppRoute(prefix string, server *AppServer) *AppRoute {
 // Use registers new middlewares to the route
 // TODO: ignore duplicated middlewares?
 func (r *AppRoute) Use(middlewares ...Middleware) {
-	r.Handlers = append(r.Handlers, middlewares...)
+	r.handlers = append(r.handlers, middlewares...)
 }
 
 // Group returns a new app route group which has the same prefix path and middlewares
@@ -37,7 +37,7 @@ func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
 	return &AppRoute{
 		server:   r.server,
 		prefix:   r.calculatePrefix(prefix),
-		Handlers: r.combineHandlers(middlewares...),
+		handlers: r.combineHandlers(middlewares...),
 	}
 }
 
@@ -215,8 +215,8 @@ func (r *AppRoute) Static(path, root string) {
 }
 
 func (r *AppRoute) combineHandlers(handlers ...Middleware) []Middleware {
-	combined := make([]Middleware, 0, len(r.Handlers)+len(handlers))
-	combined = append(combined, r.Handlers...)
+	combined := make([]Middleware, 0, len(r.handlers)+len(handlers))
+	combined = append(combined, r.handlers...)
 	combined = append(combined, handlers...)
 
 	return combined
