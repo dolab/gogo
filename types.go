@@ -1,6 +1,18 @@
 package gogo
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/golib/httprouter"
+)
+
+// Handler represents server handlers
+type Handler interface {
+	http.Handler
+
+	Handle(string, string, httprouter.Handle)
+	ServeFiles(string, http.FileSystem)
+}
 
 // Middleware represents request filters and resource handler
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
