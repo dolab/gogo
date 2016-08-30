@@ -13,32 +13,31 @@ import (
 )
 
 type AppRoute struct {
-	Handlers []Middleware
-
-	prefix string
-	server *AppServer
+	server   *AppServer
+	prefix   string
+	handlers []Middleware
 }
 
 // NewAppRoute creates a new app route with specified prefix and server
 func NewAppRoute(prefix string, server *AppServer) *AppRoute {
 	return &AppRoute{
-		prefix: prefix,
 		server: server,
+		prefix: prefix,
 	}
 }
 
 // Use registers new middlewares to the route
 // TODO: ignore duplicated middlewares?
 func (r *AppRoute) Use(middlewares ...Middleware) {
-	r.Handlers = append(r.Handlers, middlewares...)
+	r.handlers = append(r.handlers, middlewares...)
 }
 
 // Group returns a new app route group which has the same prefix path and middlewares
 func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
 	return &AppRoute{
-		Handlers: r.combineHandlers(middlewares...),
-		prefix:   r.calculatePrefix(prefix),
 		server:   r.server,
+		prefix:   r.calculatePrefix(prefix),
+		handlers: r.combineHandlers(middlewares...),
 	}
 }
 
@@ -47,7 +46,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	uri := r.calculatePrefix(path)
 	handlers := r.combineHandlers(handler)
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -62,25 +61,12 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 // ProxyHandle registers a new resource with its handler
 func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
-	uri := r.calculatePrefix(path)
-	handlers := r.combineHandlers(func(ctx *Context) {
+	r.Handle(method, path, func(ctx *Context) {
 		for _, filter := range filters {
 			ctx.Response.Before(filter)
 		}
 
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
-	})
-
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
-		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
-
-		ctx.Next()
-		ctx.Response.FlushHeader()
-
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-		r.server.reuse(ctx)
 	})
 }
 
@@ -89,7 +75,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	uri := r.calculatePrefix(path)
 	handlers := r.combineHandlers(handler)
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -225,12 +211,12 @@ func (r *AppRoute) Static(path, root string) {
 	}
 	path += "*filepath"
 
-	r.server.router.ServeFiles(path, http.Dir(root))
+	r.server.handler.ServeFiles(path, http.Dir(root))
 }
 
 func (r *AppRoute) combineHandlers(handlers ...Middleware) []Middleware {
-	combined := make([]Middleware, 0, len(r.Handlers)+len(handlers))
-	combined = append(combined, r.Handlers...)
+	combined := make([]Middleware, 0, len(r.handlers)+len(handlers))
+	combined = append(combined, r.handlers...)
 	combined = append(combined, handlers...)
 
 	return combined

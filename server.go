@@ -14,14 +14,14 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	mode   RunMode
-	config *AppConfig
-	router *httprouter.Router
-	pool   sync.Pool
+	mode    RunMode
+	handler Handler
+	pool    sync.Pool
 
 	throttle *time.Ticker  // time.Ticker for rate limit
 	slowdown time.Duration // cache for performance
 
+	config       *AppConfig
 	logger       Logger
 	requestId    string   // request id header name
 	filterParams []string // filter out params when logging
@@ -38,10 +38,11 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	// init Route
 	server.AppRoute = NewAppRoute("/", server)
 
-	// init router
-	server.router = httprouter.New()
-	server.router.RedirectTrailingSlash = false
-	server.router.HandleMethodNotAllowed = false // strict for RESTful
+	// init default handler with httprouter.Router
+	handler := httprouter.New()
+	handler.RedirectTrailingSlash = false
+	handler.HandleMethodNotAllowed = false // strict for RESTful
+	server.handler = handler
 
 	// overwrite
 	server.pool.New = func() interface{} {
@@ -61,11 +62,10 @@ func (s *AppServer) Config() *AppConfig {
 	return s.config
 }
 
-// Run runs the http server
+// Run runs the http server with httprouter.Router handler
 func (s *AppServer) Run() {
 	var (
-		config = s.config.Section()
-
+		config         = s.config.Section()
 		network        = "tcp"
 		addr           = config.Server.Addr
 		port           = config.Server.Port
@@ -127,18 +127,25 @@ func (s *AppServer) Run() {
 		if network != "tcp" {
 			// This limitation is just to reduce complexity, since it is standard
 			// to terminate SSL upstream when using unix domain sockets.
-			s.logger.Fatal("=> SSL is only supported for TCP sockets.")
+			s.logger.Fatal("[GOGO]=> SSL is only supported for TCP sockets.")
 		}
 
-		s.logger.Fatal("=> Failed to listen:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
+		s.logger.Fatal("[GOGO]=> Failed to listen:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
 	} else {
 		listener, err := net.Listen(network, localAddr)
 		if err != nil {
-			s.logger.Fatal("=> Failed to listen:", err)
+			s.logger.Fatal("[GOGO]=> Failed to listen:", err)
 		}
 
-		s.logger.Fatal("=> Failed to serve:", server.Serve(listener))
+		s.logger.Fatal("[GOGO]=> Failed to serve:", server.Serve(listener))
 	}
+}
+
+// RunWithHandler runs the http server with given handler
+func (s *AppServer) RunWithHandler(handler Handler) {
+	s.handler = handler
+
+	s.Run()
 }
 
 // Use applies middlewares to app route
@@ -147,9 +154,14 @@ func (s *AppServer) Use(middlewares ...Middleware) {
 	s.AppRoute.Use(middlewares...)
 }
 
+// Handlers returns registered middlewares of app route
+func (s *AppServer) Handlers() []Middleware {
+	return s.AppRoute.handlers
+}
+
 // Clean removes all registered middlewares, it useful in testing cases.
 func (s *AppServer) Clean() {
-	s.Handlers = []Middleware{}
+	s.AppRoute.handlers = []Middleware{}
 }
 
 // ServeHTTP implements the http.Handler interface
@@ -161,7 +173,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		<-s.throttle.C
 	}
 
-	s.router.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 // new returns a new context for the server

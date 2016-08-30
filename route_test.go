@@ -18,7 +18,7 @@ func Test_NewAppRoute(t *testing.T) {
 	assertion := assert.New(t)
 
 	route := NewAppRoute(prefix, server)
-	assertion.Empty(route.Handlers)
+	assertion.Empty(route.handlers)
 	assertion.Equal(prefix, route.prefix)
 	assertion.Equal(server, route.server)
 }
