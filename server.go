@@ -14,14 +14,14 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	mode   RunMode
-	config *AppConfig
-	router *httprouter.Router
-	pool   sync.Pool
+	mode    RunMode
+	handler Handler
+	pool    sync.Pool
 
 	throttle *time.Ticker  // time.Ticker for rate limit
 	slowdown time.Duration // cache for performance
 
+	config       *AppConfig
 	logger       Logger
 	requestId    string   // request id header name
 	filterParams []string // filter out params when logging
@@ -38,10 +38,11 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	// init Route
 	server.AppRoute = NewAppRoute("/", server)
 
-	// init router
-	server.router = httprouter.New()
-	server.router.RedirectTrailingSlash = false
-	server.router.HandleMethodNotAllowed = false // strict for RESTful
+	// init default handler with httprouter.Router
+	handler := httprouter.New()
+	handler.RedirectTrailingSlash = false
+	handler.HandleMethodNotAllowed = false // strict for RESTful
+	server.handler = handler
 
 	// overwrite
 	server.pool.New = func() interface{} {
@@ -61,16 +62,10 @@ func (s *AppServer) Config() *AppConfig {
 	return s.config
 }
 
-// Run runs the http server with default handler
+// Run runs the http server with httprouter.Router handler
 func (s *AppServer) Run() {
-	s.RunWithHandler(s)
-}
-
-// RunWithHandler runs the http server with given handler
-func (s *AppServer) RunWithHandler(handler http.Handler) {
 	var (
-		config = s.config.Section()
-
+		config         = s.config.Section()
 		network        = "tcp"
 		addr           = config.Server.Addr
 		port           = config.Server.Port
@@ -121,7 +116,7 @@ func (s *AppServer) RunWithHandler(handler http.Handler) {
 
 	server := &http.Server{
 		Addr:           localAddr,
-		Handler:        handler,
+		Handler:        s,
 		ReadTimeout:    time.Duration(rtimeout) * time.Second,
 		WriteTimeout:   time.Duration(wtimeout) * time.Second,
 		MaxHeaderBytes: maxheaderbytes,
@@ -146,6 +141,13 @@ func (s *AppServer) RunWithHandler(handler http.Handler) {
 	}
 }
 
+// RunWithHandler runs the http server with given handler
+func (s *AppServer) RunWithHandler(handler Handler) {
+	s.handler = handler
+
+	s.Run()
+}
+
 // Use applies middlewares to app route
 // NOTE: It dispatch to Route.Use by overwrite
 func (s *AppServer) Use(middlewares ...Middleware) {
@@ -166,7 +168,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		<-s.throttle.C
 	}
 
-	s.router.ServeHTTP(w, r)
+	s.handler.ServeHTTP(w, r)
 }
 
 // new returns a new context for the server

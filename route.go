@@ -47,7 +47,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	uri := r.calculatePrefix(path)
 	handlers := r.combineHandlers(handler)
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -71,7 +71,7 @@ func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.Rever
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
 	})
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -89,7 +89,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	uri := r.calculatePrefix(path)
 	handlers := r.combineHandlers(handler)
 
-	r.server.router.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 
@@ -225,7 +225,7 @@ func (r *AppRoute) Static(path, root string) {
 	}
 	path += "*filepath"
 
-	r.server.router.ServeFiles(path, http.Dir(root))
+	r.server.handler.ServeFiles(path, http.Dir(root))
 }
 
 func (r *AppRoute) combineHandlers(handlers ...Middleware) []Middleware {
