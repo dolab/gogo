@@ -148,7 +148,7 @@ func (c *Context) RequestID() string {
 
 // HasRawHeader returns true if request sets its header with specified key
 func (c *Context) HasRawHeader(key string) bool {
-	for yek, _ := range c.Request.Header {
+	for yek := range c.Request.Header {
 		if key == yek {
 			return true
 		}

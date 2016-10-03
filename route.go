@@ -123,14 +123,19 @@ func (r *AppRoute) OPTIONS(path string, handler Middleware) {
 	r.Handle("OPTIONS", path, handler)
 }
 
-// Router resource controller
-// server := r.Resource("bucket", ServerCI) server is group
-// GET /bucket/:id
-// ip := server.Resource("ip", IpCI)
-// SubResource
-// r.Resource("parent", ParentResource).Resource("child", ChildResource)
-// GET /bucket/:bucket/ip/:id
-// note: parent's id key must not be the same with child (panic)
+// Resource generates routes with controller interfaces, and returns a group route
+// with resource name.
+//
+// Example:
+//
+// 	article := r.Resource("article")
+// 		GET		/article			Article.Index
+// 		POST	/article			Article.Create
+// 		HEAD	/article/:article	Article.Explore
+// 		GET		/article/:article	Article.Show
+// 		PUT		/article/:article	Article.Update
+// 		DELETE	/article/:article	Article.Destroy
+//
 func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	resource = strings.TrimSuffix(resource, "/")
 	if resource[0] != '/' {
@@ -139,22 +144,24 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 
 	// for common purpose
 	var (
-		resourceSpec string
 		idSuffix     string
+		resourceSpec string
 	)
 
 	id, ok := controller.(ControllerID)
 	if ok {
-		idSuffix = strings.TrimSpace(id.Id())
+		idSuffix = strings.TrimSpace(id.ID())
 	}
 
-	// default id key
+	// default to resource name
+	// NOTE: it's a trick for nested resource
 	if idSuffix == "" {
-		idSuffix = "id"
+		idSuffix = strings.ToLower(strings.Trim(resource, "/"))
 	}
 
 	resourceSpec = resource + "/:" + idSuffix
 
+	// for GET /resource
 	index, ok := controller.(ControllerIndex)
 	if ok {
 		r.GET(resource, index.Index)
@@ -166,28 +173,28 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 		r.POST(resource, create.Create)
 	}
 
-	// for GET /resource/:id
+	// for HEAD /resource/:resource
+	head, ok := controller.(ControllerExplore)
+	if ok {
+		r.HEAD(resourceSpec, head.Explore)
+	}
+
+	// for GET /resource/:resource
 	show, ok := controller.(ControllerShow)
 	if ok {
 		r.GET(resourceSpec, show.Show)
 	}
 
-	// for PUT /resource/:id
+	// for PUT /resource/:resource
 	update, ok := controller.(ControllerUpdate)
 	if ok {
 		r.PUT(resourceSpec, update.Update)
 	}
 
-	// for DELETE /resource/:id
+	// for DELETE /resource/:resource
 	delete, ok := controller.(ControllerDestroy)
 	if ok {
 		r.DELETE(resourceSpec, delete.Destroy)
-	}
-
-	// for HEAD /resource/:id
-	head, ok := controller.(ControllerExplore)
-	if ok {
-		r.HEAD(resourceSpec, head.Explore)
 	}
 
 	return r.Group(resourceSpec)
