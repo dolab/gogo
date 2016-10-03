@@ -269,59 +269,63 @@ func Test_RouteGroup(t *testing.T) {
 type TestGroupController struct{}
 
 func (t *TestGroupController) Index(ctx *Context) {
-	ctx.Text(ctx.Params.Get("id") + "all")
+	ctx.Text("GET /group")
 }
 
 func (t *TestGroupController) Show(ctx *Context) {
-	ctx.Text(ctx.Params.Get("id") + "show")
+	ctx.Text("GET /group/" + ctx.Params.Get("group"))
 }
 
 type TestUserController struct{}
 
-func (t *TestUserController) Show(ctx *Context) {
-	ctx.Text(ctx.Params.Get("id") + ":" + ctx.Params.Get("user") + "show")
+func (t *TestUserController) ID() string {
+	return "id"
 }
 
-func (t *TestUserController) Id() string {
-	return "user"
+func (t *TestUserController) Show(ctx *Context) {
+	ctx.Text("GET /group/" + ctx.Params.Get("group") + "/user/" + ctx.Params.Get("id"))
 }
 
 func Test_ResourceController(t *testing.T) {
 	server := newMockServer()
 	route := NewAppRoute("/", server)
-	group := route.Resource("group", &TestGroupController{})
 	assertion := assert.New(t)
 
 	// start server
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	// test show group /group/:id
-	res, err := http.Get(ts.URL + "/group/6666")
+	// group resource
+	group := route.Resource("group", &TestGroupController{})
+
+	// should work for GET /group/:group
+	res, err := http.Get(ts.URL + "/group/my-group")
 	assertion.Nil(err)
 
 	body, err := ioutil.ReadAll(res.Body)
 	res.Body.Close()
 
-	assertion.Equal("6666show", string(body))
+	assertion.Equal("GET /group/my-group", string(body))
 
-	// test user show /group/:id/user/:user
+	// user resource
 	group.Resource("user", &TestUserController{})
-	res, err = http.Get(ts.URL + "/group/6666/user/82828")
+
+	// should work for GET /group/:group/user/:id
+	res, err = http.Get(ts.URL + "/group/my-group/user/my-user")
 	assertion.Nil(err)
 
 	body, err = ioutil.ReadAll(res.Body)
 	res.Body.Close()
 
-	assertion.Equal("6666:82828show", string(body))
+	assertion.Equal("GET /group/my-group/user/my-user", string(body))
 
-	// test not found
-	res, err = http.Get(ts.URL + "/group/6666/user/")
+	// error for not found
+	res, err = http.Get(ts.URL + "/group/my-group/user/")
 	assertion.Nil(err)
 
 	body, err = ioutil.ReadAll(res.Body)
 	res.Body.Close()
 
-	assertion.Equal("404 page not found\n", string(body))
 	assertion.Equal(http.StatusNotFound, res.StatusCode)
+	assertion.Contains(string(body), "404 page not found")
 }

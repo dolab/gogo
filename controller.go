@@ -1,7 +1,7 @@
 package gogo
 
 type ControllerID interface {
-	Id() string
+	ID() string
 }
 type ControllerIndex interface {
 	Index(c *Context)
