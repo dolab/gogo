@@ -184,35 +184,54 @@ func main() {
 ```
 
 - Use Resource Controller
-You can iml a struct with Index, Show, Create, Update, Destroy, Explore methods
-and using AppServer.Resource("resource", your_struct) to register all it's impl methods to router
-note: when your resource has a inheritance relationship, there must not be two same id key.
-you can iml ControllerID interface to specify a new id key
-```
+
+You can implement a *controller* with optional `Index`, `Create`, `Explore`, `Show`, `Update` and `Destroy` methods, 
+and use `app.Resource("resourceName", &YourController)` to register all RESTful routes auto.
+
+NOTE: When your resource has a inheritance relationship, there MUST NOT be two same id key.
+you can overwrite default id key by implementing `ControllerID` interface.
+
+```go
+package main
+
+import "github.com/dolab/gogo"
+
 type GroupController struct{}
 
-func (t *GroupController) Index(ctx *Context) {
-    ctx.Text(ctx.Params.Get("id") + "all")
+// GET /group
+func (t *GroupController) Index(ctx *gogo.Context) {
+	ctx.Text("GET /group")
 }
 
-func (t *GroupController) Show(ctx *Context) {
-    ctx.Text(ctx.Params.Get("id") + "show")
+// GET /group/:group
+func (t *GroupController) Show(ctx *gogo.Context) {
+	ctx.Text("GET /group/" + ctx.Params.Get("group"))
 }
 
 type UserController struct{}
 
-func (t *UserController) Show(ctx *Context) {
-    ctx.Text(ctx.Params.Get("group") + ":" + ctx.Params.Get("user") + "show")
+// overwrite default :user key with :id
+func (t *UserController) ID() string {
+	return "id"
 }
 
-// iml ControllerID to specify user a new id key
-func (t *UserController) Id() string {
-    return "user"
+// GET /group/:group/user/:id
+func (t *UserController) Show(ctx *gogo.Context) {
+	ctx.Text("GET /group/" + ctx.Params.Get("group") + "/user/" + ctx.Params.Get("id"))
 }
 
-group := app.Resource("group", &GroupController{})
-user := group.("user", &UserController{)
+func main() {
+	app := gogo.New("development", "/path/to/your/config")
 
+	// register group controller with default :group key
+	group := app.Resource("group", &GroupController{})
+
+	// nested user controller within group resource
+	// NOTE: it overwrites default :user key by implmenting ControllerID interface.
+	group.Resource("user", &UserController{})
+
+	app.Run()
+}
 ```
 
 ## TODOs
