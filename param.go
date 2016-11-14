@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"sync"
 
 	"gopkg.in/mgo.v2/bson"
 
@@ -15,9 +16,12 @@ import (
 )
 
 type AppParams struct {
+	mux     sync.RWMutex
 	request *http.Request
 	params  httprouter.Params
 	rawBody []byte
+	rawErr  error
+	readed  bool
 }
 
 func NewAppParams(r *http.Request, params httprouter.Params) *AppParams {
@@ -41,6 +45,23 @@ func (p *AppParams) HasForm(name string) bool {
 	_, ok := p.request.PostForm[name]
 
 	return ok
+}
+
+func (p *AppParams) RawBody() ([]byte, error) {
+	if !p.readed {
+		p.mux.Lock()
+		if !p.readed {
+			p.rawBody, p.rawErr = ioutil.ReadAll(p.request.Body)
+
+			// close the request.Body
+			p.request.Body.Close()
+
+			p.readed = true
+		}
+		p.mux.Unlock()
+	}
+
+	return p.rawBody, p.rawErr
 }
 
 // Get returns the first value for the named component of the request.
@@ -68,56 +89,40 @@ func (p *AppParams) File(name string) (multipart.File, *multipart.FileHeader, er
 
 // Json unmarshals request body with json codec
 func (p *AppParams) Json(v interface{}) error {
-	defer p.request.Body.Close()
-
-	data, err := ioutil.ReadAll(p.request.Body)
+	data, err := p.RawBody()
 	if err != nil {
 		return err
 	}
-
-	p.rawBody = data
 
 	return json.Unmarshal(data, v)
 }
 
 // Xml unmarshals request body with xml codec
 func (p *AppParams) Xml(v interface{}) error {
-	defer p.request.Body.Close()
-
-	data, err := ioutil.ReadAll(p.request.Body)
+	data, err := p.RawBody()
 	if err != nil {
 		return err
 	}
-
-	p.rawBody = data
 
 	return xml.Unmarshal(data, v)
 }
 
 // Gob decode request body with gob codec
 func (p *AppParams) Gob(v interface{}) error {
-	defer p.request.Body.Close()
-
-	data, err := ioutil.ReadAll(p.request.Body)
+	data, err := p.RawBody()
 	if err != nil {
 		return err
 	}
-
-	p.rawBody = data
 
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
 }
 
 // Bson unmarshals request body with bson codec
 func (p *AppParams) Bson(v interface{}) error {
-	defer p.request.Body.Close()
-
-	data, err := ioutil.ReadAll(p.request.Body)
+	data, err := p.RawBody()
 	if err != nil {
 		return err
 	}
-
-	p.rawBody = data
 
 	return bson.Unmarshal(data, v)
 }
