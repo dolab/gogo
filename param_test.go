@@ -41,6 +41,25 @@ func Test_AppParamsHasForm(t *testing.T) {
 	assertion.False(p.HasForm("un-existed-key"))
 }
 
+func Test_AppParamsRawBody(t *testing.T) {
+	params := url.Values{}
+	params.Add("key", "name")
+
+	request, _ := http.NewRequest("PUT", "/path/to/resource?test&key=url_value", bytes.NewBufferString(params.Encode()))
+	assertion := assert.New(t)
+
+	p := NewAppParams(request, httprouter.Params{})
+
+	body, err := p.RawBody()
+	assertion.Nil(err)
+	assertion.Equal(params.Encode(), string(body))
+
+	// safe to invoke more than one time
+	body, err = p.RawBody()
+	assertion.Nil(err)
+	assertion.Equal(params.Encode(), string(body))
+}
+
 func Test_AppParamsGet(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	routeParams := httprouter.Params{
