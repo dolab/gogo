@@ -142,7 +142,7 @@ func main() {
         if !strings.HasPrefix(auth, "Basic ") {
             ctx.Abort()
 
-            ctx.WriteHeader(http.StatusForbidden)
+            ctx.SetStatus(http.StatusForbidden)
             ctx.Return()
             return
         }
@@ -152,7 +152,7 @@ func main() {
             ctx.Logger.Errorf("Base64 decode error: %v", err)
             ctx.Abort()
 
-            ctx.WriteHeader(http.StatusForbidden)
+            ctx.SetStatus(http.StatusForbidden)
             ctx.Return()
             return
         }
@@ -161,7 +161,7 @@ func main() {
         if len(tmp) != 2 || tmp[0] != "gogo" || tmp[1] != "ogog" {
             ctx.Abort()
 
-            ctx.WriteHeader(http.StatusForbidden)
+            ctx.SetStatus(http.StatusForbidden)
             ctx.Return()
             return
         }
