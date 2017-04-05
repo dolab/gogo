@@ -42,6 +42,8 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	handler := httprouter.New()
 	handler.RedirectTrailingSlash = false
 	handler.HandleMethodNotAllowed = false // strict for RESTful
+	handler.NotFound = http.HandlerFunc(server.AppRoute.notFoundHandle)
+
 	server.handler = handler
 
 	// overwrite
