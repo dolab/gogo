@@ -262,3 +262,11 @@ func (r *AppRoute) filterParameters(lru *url.URL) string {
 
 	return s
 }
+
+func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
+	r.server.logger.Print("Started ", req.Method, " ", req.URL)
+	r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
+
+	resp.WriteHeader(http.StatusNotFound)
+	resp.Write([]byte("404 page not found"))
+}
