@@ -156,7 +156,9 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	// default to resource name
 	// NOTE: it's a trick for nested resource
 	if idSuffix == "" {
-		idSuffix = strings.ToLower(strings.Trim(resource, "/"))
+		suffixes := strings.Split(strings.Trim(resource, "/"), "/")
+
+		idSuffix = strings.ToLower(suffixes[len(suffixes)-1])
 	}
 
 	resourceSpec = resource + "/:" + idSuffix

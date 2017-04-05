@@ -329,3 +329,45 @@ func Test_ResourceController(t *testing.T) {
 	assertion.Equal(http.StatusNotFound, res.StatusCode)
 	assertion.Contains(string(body), "404 page not found")
 }
+
+type TestGroupMemberController struct{}
+
+func (t *TestGroupMemberController) Index(ctx *Context) {
+	ctx.Text("GET /group/member")
+}
+
+func (t *TestGroupMemberController) Show(ctx *Context) {
+	ctx.Text("GET /group/member/" + ctx.Params.Get("member"))
+}
+
+func Test_ResourceControllerWithSubPath(t *testing.T) {
+	server := newMockServer()
+	route := NewAppRoute("/", server)
+	assertion := assert.New(t)
+
+	// start server
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// member resource
+	route.Resource("group/member", &TestGroupMemberController{})
+
+	// should work for GET /group/member/:group
+	res, err := http.Get(ts.URL + "/group/member/my-group")
+	assertion.Nil(err)
+
+	body, err := ioutil.ReadAll(res.Body)
+	res.Body.Close()
+
+	assertion.Equal("GET /group/member/my-group", string(body))
+
+	// error for not found
+	res, err = http.Get(ts.URL + "/group/member/my-group/user")
+	assertion.Nil(err)
+
+	body, err = ioutil.ReadAll(res.Body)
+	res.Body.Close()
+
+	assertion.Equal(http.StatusNotFound, res.StatusCode)
+	assertion.Contains(string(body), "404 page not found")
+}
