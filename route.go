@@ -270,3 +270,13 @@ func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
 	resp.WriteHeader(http.StatusNotFound)
 	resp.Write([]byte("404 page not found"))
 }
+
+func (r *AppRoute) methodNotAllowed(resp http.ResponseWriter, req *http.Request) {
+	err := http.StatusText(http.StatusMethodNotAllowed)
+
+	r.server.logger.Print("Started ", req.Method, " ", req.URL)
+	r.server.logger.Print("Completed ", http.StatusMethodNotAllowed, " ", err)
+
+	resp.WriteHeader(http.StatusNotFound)
+	resp.Write([]byte("405 request method not allowed"))
+}
