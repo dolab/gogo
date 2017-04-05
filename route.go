@@ -156,7 +156,9 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	// default to resource name
 	// NOTE: it's a trick for nested resource
 	if idSuffix == "" {
-		idSuffix = strings.ToLower(strings.Trim(resource, "/"))
+		suffixes := strings.Split(strings.Trim(resource, "/"), "/")
+
+		idSuffix = strings.ToLower(suffixes[len(suffixes)-1])
 	}
 
 	resourceSpec = resource + "/:" + idSuffix
@@ -259,4 +261,18 @@ func (r *AppRoute) filterParameters(lru *url.URL) string {
 	}
 
 	return s
+}
+
+func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
+	r.server.logger.Print("Started ", req.Method, " ", req.URL)
+	r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
+
+	http.NotFound(resp, req)
+}
+
+func (r *AppRoute) methodNotAllowed(resp http.ResponseWriter, req *http.Request) {
+	r.server.logger.Print("Started ", req.Method, " ", req.URL)
+	r.server.logger.Print("Completed ", http.StatusMethodNotAllowed, " ", http.StatusText(http.StatusMethodNotAllowed))
+
+	http.Error(resp, "405 request method not allowed", http.StatusMethodNotAllowed)
 }

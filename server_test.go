@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 	"github.com/golib/httprouter"
 )
@@ -61,6 +62,31 @@ func Test_ServerReuse(t *testing.T) {
 	newCtx := server.new(recorder, request, params, nil)
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
+
+func Test_ServerWithNotFound(t *testing.T) {
+	server := newMockServer()
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	request := httptesting.New(ts.URL, false).New(t)
+	request.Get("/not/found", nil)
+	request.AssertNotFound()
+}
+
+// func Test_ServerWithMethodNotAllowed(t *testing.T) {
+// 	server := newMockServer()
+// 	server.Any("/not/allowed", func(c *Context) {
+// 		c.Return("/not/allowed")
+// 	})
+
+// 	ts := httptest.NewServer(server)
+// 	defer ts.Close()
+
+// 	request := httptesting.New(ts.URL, false).New(t)
+// 	request.Invoke("Method", "/not/allowed", "application/json", nil)
+// 	request.AssertStatus(http.StatusMethodNotAllowed)
+// }
 
 // // TODO: implements this later!
 // func Test_ServerWithRequestTimeout(t *testing.T) {
