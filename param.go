@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"gopkg.in/mgo.v2/bson"
@@ -75,6 +76,111 @@ func (p *AppParams) Get(name string) string {
 	}
 
 	return value
+}
+
+func (p *AppParams) GetInt(name string) (int, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	return strconv.Atoi(value)
+}
+
+func (p *AppParams) GetInt8(name string) (int8, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseInt(value, 10, 8)
+	return int8(result), err
+}
+
+func (p *AppParams) GetUint8(name string) (uint8, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseUint(value, 10, 8)
+	return uint8(result), err
+}
+
+func (p *AppParams) GetInt16(name string) (int16, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseInt(value, 10, 16)
+	return int16(result), err
+}
+
+func (p *AppParams) GetUint16(name string) (uint16, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseUint(value, 10, 16)
+	return uint16(result), err
+}
+
+func (p *AppParams) GetUint32(name string) (uint32, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseUint(value, 10, 32)
+	return uint32(result), err
+}
+
+func (p *AppParams) GetInt32(name string) (int32, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	result, err := strconv.ParseInt(value, 10, 32)
+	return int32(result), err
+}
+
+func (p *AppParams) GetInt64(name string) (int64, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	return strconv.ParseInt(value, 10, 64)
+}
+
+func (p *AppParams) GetUint64(name string) (uint64, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	return strconv.ParseUint(value, 10, 64)
+}
+
+func (p *AppParams) GetFloat(name string) (float64, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	return strconv.ParseFloat(value, 64)
+}
+
+func (p *AppParams) GetBool(name string) (bool, error) {
+	value := p.params.ByName(name)
+	if value == "" {
+		value = p.request.URL.Query().Get(name)
+	}
+
+	return strconv.ParseBool(value)
 }
 
 // Post returns the named comonent of the request by calling http.Request.FormValue()
