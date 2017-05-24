@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"gopkg.in/mgo.v2/bson"
@@ -75,6 +76,56 @@ func (p *AppParams) Get(name string) string {
 	}
 
 	return value
+}
+
+func (p *AppParams) GetInt(name string) (int, error) {
+	return strconv.Atoi(p.Get(name))
+}
+
+func (p *AppParams) GetInt8(name string) (int8, error) {
+	result, err := strconv.ParseInt(p.Get(name), 10, 8)
+	return int8(result), err
+}
+
+func (p *AppParams) GetUint8(name string) (uint8, error) {
+	result, err := strconv.ParseUint(p.Get(name), 10, 8)
+	return uint8(result), err
+}
+
+func (p *AppParams) GetInt16(name string) (int16, error) {
+	result, err := strconv.ParseInt(p.Get(name), 10, 16)
+	return int16(result), err
+}
+
+func (p *AppParams) GetUint16(name string) (uint16, error) {
+	result, err := strconv.ParseUint(p.Get(name), 10, 16)
+	return uint16(result), err
+}
+
+func (p *AppParams) GetUint32(name string) (uint32, error) {
+	result, err := strconv.ParseUint(p.Get(name), 10, 32)
+	return uint32(result), err
+}
+
+func (p *AppParams) GetInt32(name string) (int32, error) {
+	result, err := strconv.ParseInt(p.Get(name), 10, 32)
+	return int32(result), err
+}
+
+func (p *AppParams) GetInt64(name string) (int64, error) {
+	return strconv.ParseInt(p.Get(name), 10, 64)
+}
+
+func (p *AppParams) GetUint64(name string) (uint64, error) {
+	return strconv.ParseUint(p.Get(name), 10, 64)
+}
+
+func (p *AppParams) GetFloat(name string) (float64, error) {
+	return strconv.ParseFloat(p.Get(name), 64)
+}
+
+func (p *AppParams) GetBool(name string) (bool, error) {
+	return strconv.ParseBool(p.Get(name))
 }
 
 // Post returns the named comonent of the request by calling http.Request.FormValue()
