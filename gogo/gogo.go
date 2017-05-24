@@ -22,6 +22,7 @@ func main() {
 
 	app.Commands = []cli.Command{
 		commands.New.Command(),
+		commands.NewModel.Command(),
 	}
 
 	app.Run(os.Args)
