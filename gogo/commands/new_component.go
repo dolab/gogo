@@ -78,7 +78,7 @@ func (_ *_NewComponent) Action() cli.ActionFunc {
 }
 
 func (_ *_NewComponent) genModelFile(file, name string) {
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(file, name+".go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
@@ -96,7 +96,7 @@ func (_ *_NewComponent) genModelFile(file, name string) {
 }
 
 func (_ *_NewComponent) genModelTestFile(file, name string) {
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(file, name+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
@@ -114,7 +114,7 @@ func (_ *_NewComponent) genModelTestFile(file, name string) {
 }
 
 func (_ *_NewComponent) genControllerFile(file, name string) {
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(file, name+".go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
@@ -132,7 +132,7 @@ func (_ *_NewComponent) genControllerFile(file, name string) {
 }
 
 func (_ *_NewComponent) genControllerTestFile(file, name string) {
-	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path.Join(file, name+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
