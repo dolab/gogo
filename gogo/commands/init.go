@@ -476,6 +476,186 @@ func main() {
     controllers.New(runMode, srcPath).Run()
 }
 `
+
+	modelTemplate = `
+package models
+
+var (
+    {{.Name}} *_{{.Name}}
+
+    {{.LowerCaseName}}Collection = "{{.LowerCaseName}}"
+    {{.LowerCaseName}}Indexes = []mgo.Index{}
+)
+
+type _{{.Name}} struct{}
+
+type {{.Name}}Model struct {
+    ID bson.ObjectId    ` + "`" + `bson:"_id"` + "`" + ` 
+    CreatedAt time.Time ` + "`" + `bson:"created_at"` + "`" + `
+    UpdatedAt time.Time ` + "`" + `bson:"updated_at"` + "`" + `
+
+    isNewRecord bool   ` + "`" + `bson:"-"` + "`" + `
+}
+
+func New{{.Name}}Model() *{{.Name}}Model {
+    return &{{.Name}}Model{
+        ID:          bson.NewObjectId(),
+        isNewRecord: true,
+    }
+}
+
+func ({{.LowerCaseName}} *{{.Name}}Model) IsNewRecord() bool {
+    return {{.LowerCaseName}}.isNewRecord
+}
+
+func ({{.LowerCaseName}} *{{.Name}}Model) Save() (err error) {
+    if !{{.LowerCaseName}}.ID.Valid() {
+        err = errors.New("Invalid bson id")
+        return
+    }
+
+    {{.Name}}.Query(func(c *mgo.Collection){
+        if {{.LowerCaseName}}.IsNewRecord() {
+            err = c.Insert({{.LowerCaseName}})
+            if err == nil {
+                {{.LowerCaseName}}.isNewRecord = false
+            }
+        } else {
+            update := bson.M{}
+
+            err = c.UpdateId({{.LowerCaseName}}.ID, update)
+        }
+    })
+
+    return
+}
+
+func (_ *_{{.Name}}) Find(id string) ({{.LowerCaseName}} *{{.Name}}Model, err error) {
+    if !bson.IsObjectIdHex(id) {
+        err = errors.New("Invalid bson id")
+        return
+    }
+
+    query := bson.M{
+        "_id": bson.ObjectIdHex(id)
+    }
+
+    {{.Name}}.Query(func(c *mgo.Collection){
+        err = c.Find(query).One(&user)
+    })
+    
+    return
+}
+
+func ({{.LowerCaseName}} *{{.Name}}Model) Remove() (err error) {
+    if !{{.LowerCaseName}}.ID.Valid() {
+        return ErrInvalidID
+    }
+
+    {{.Name}}.Query(func(c *mgo.Collection) {
+        err = c.RemoveId({{.LowerCaseName}}.ID)
+    })
+
+    return
+}
+
+func (_ *_{{.Name}}) Query(query func(c *mgo.Collection)) {
+    mongo.Query({{.LowerCaseName}}Collection, {{.LowerCaseName}}Indexes, query)
+}
+`
+
+	modelTestTemplate = `
+package models
+
+import(
+    "testing"
+    "github.com/golib/assert"
+)
+
+func Test_{{.Name}}(t *testing.T) {
+    assertion := assert.New(t)
+
+    model := New{{.Name}}Model()
+    assertion.True(model.IsNewRecord())
+
+    err := model.Save()
+    assertion.Nil(err)
+    assertion.False(model.IsNewRecord())
+
+    res, err := {{.Name}}.Find(model.ID.Hex())
+    assertion.Nil(err)
+
+    err = res.Remove()
+    assertion.Nil(err)
+}
+`
+
+	controllerTemplate = `
+package controllers
+
+var (
+    {{.Name}} *_{{.Name}}
+)
+
+func (_ *_{{.Name}}) ID() string {
+    return "id"
+}
+
+type _{{.Name}} struct{}
+
+func (_ *_{{.Name}}) Index(ctx *gogo.Context) {
+    ctx.SetStatus(http.StatusNotImplemented)
+    ctx.Return()
+}
+
+func (_ *_{{.Name}}) Create(ctx *gogo.Context) {
+    ctx.SetStatus(http.StatusNotImplemented)
+    ctx.Return()
+}
+
+func (_ *_{{.Name}}) Show(ctx *gogo.Context) {
+    ctx.SetStatus(http.StatusNotImplemented)
+    ctx.Return()
+}
+
+func (_ *_{{.Name}}) Update(ctx *gogo.Context) {
+    ctx.SetStatus(http.StatusNotImplemented)
+    ctx.Return()
+}
+
+func (_ *_{{.Name}}) Destroy(ctx *gogo.Context) {
+    ctx.SetStatus(http.StatusNotImplemented)
+    ctx.Return()
+}	
+`
+
+	controllerTestTemplate = `
+package controllers
+
+import(
+    "testing"
+)
+
+func Test_Create_{{.Name}}(t *testing.T){
+
+}
+
+func Test_Index_{{.Name}}(t *testing.T) {
+    
+}
+
+func Test_Show_{{.Name}}(t *testing.T) {
+
+}
+
+func Test_Update_{{.Name}}(t *testing.T) {
+    
+}
+
+func Test_Destroy_{{.Name}}(t *testing.T) {
+
+}
+`
 )
 
 type templateData struct {
