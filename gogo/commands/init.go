@@ -548,7 +548,7 @@ func (_ *_{{.Name}}) Find(id string) ({{.LowerCaseName}} *{{.Name}}Model, err er
     }
 
     {{.Name}}.Query(func(c *mgo.Collection){
-        err = c.Find(query).One(&user)
+        err = c.Find(query).One(&{{.LowerCaseName}})
     })
     
     return
