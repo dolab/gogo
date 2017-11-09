@@ -544,7 +544,7 @@ func (_ *_{{.Name}}) Find(id string) ({{.LowerCaseName}} *{{.Name}}Model, err er
     }
 
     query := bson.M{
-        "_id": bson.ObjectIdHex(id)
+        "_id": bson.ObjectIdHex(id),
     }
 
     {{.Name}}.Query(func(c *mgo.Collection){
