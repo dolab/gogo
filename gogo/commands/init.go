@@ -481,6 +481,7 @@ func main() {
 package models
 
 import (
+    "errors"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
