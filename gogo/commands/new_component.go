@@ -69,23 +69,24 @@ func (_ *_NewComponent) Action() cli.ActionFunc {
 		controllerPath := path.Join(root, "controllers")
 
 		componentName := path.Clean(ctx.Args().First())
-		NewComponent.genControllerFile(controllerPath, componentName)
-		NewComponent.genControllerTestFile(controllerPath, componentName)
-		NewComponent.genModelFile(modelPath, componentName)
-		NewComponent.genModelTestFile(modelPath, componentName)
+		capitalName, lowercaseName := NewComponent.getNames(componentName)
+
+		NewComponent.genControllerFile(controllerPath, capitalName, lowercaseName)
+		NewComponent.genControllerTestFile(controllerPath, capitalName, lowercaseName)
+		NewComponent.genModelFile(modelPath, capitalName, lowercaseName)
+		NewComponent.genModelTestFile(modelPath, capitalName, lowercaseName)
 		return nil
 	}
 }
 
-func (_ *_NewComponent) genModelFile(file, name string) {
-	f, err := os.OpenFile(path.Join(file, name+".go"), os.O_CREATE|os.O_WRONLY, 0644)
+func (_ *_NewComponent) genModelFile(file, capitalName, lowercaseName string) {
+	f, err := os.OpenFile(path.Join(file, lowercaseName+".go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
 		return
 	}
 
-	capitalName, lowercaseName := NewComponent.getNames(name)
 	err = model.Execute(f, &TemplateModel{
 		Name:          capitalName,
 		LowerCaseName: lowercaseName,
@@ -95,15 +96,14 @@ func (_ *_NewComponent) genModelFile(file, name string) {
 	}
 }
 
-func (_ *_NewComponent) genModelTestFile(file, name string) {
-	f, err := os.OpenFile(path.Join(file, name+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
+func (_ *_NewComponent) genModelTestFile(file, capitalName, lowercaseName string) {
+	f, err := os.OpenFile(path.Join(file, lowercaseName+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
 		return
 	}
 
-	capitalName, lowercaseName := NewComponent.getNames(name)
 	err = modelTest.Execute(f, &TemplateModel{
 		Name:          capitalName,
 		LowerCaseName: lowercaseName,
@@ -113,15 +113,14 @@ func (_ *_NewComponent) genModelTestFile(file, name string) {
 	}
 }
 
-func (_ *_NewComponent) genControllerFile(file, name string) {
-	f, err := os.OpenFile(path.Join(file, name+".go"), os.O_CREATE|os.O_WRONLY, 0644)
+func (_ *_NewComponent) genControllerFile(file, capitalName, lowercaseName string) {
+	f, err := os.OpenFile(path.Join(file, lowercaseName+".go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
 		return
 	}
 
-	capitalName, lowercaseName := NewComponent.getNames(name)
 	err = controller.Execute(f, &TemplateModel{
 		Name:          capitalName,
 		LowerCaseName: lowercaseName,
@@ -131,15 +130,14 @@ func (_ *_NewComponent) genControllerFile(file, name string) {
 	}
 }
 
-func (_ *_NewComponent) genControllerTestFile(file, name string) {
-	f, err := os.OpenFile(path.Join(file, name+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
+func (_ *_NewComponent) genControllerTestFile(file, capitalName, lowercaseName string) {
+	f, err := os.OpenFile(path.Join(file, lowercaseName+"_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 
 		return
 	}
 
-	capitalName, lowercaseName := NewComponent.getNames(name)
 	err = controllerTest.Execute(f, &TemplateModel{
 		Name:          capitalName,
 		LowerCaseName: lowercaseName,
