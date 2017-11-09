@@ -593,6 +593,12 @@ func Test_{{.Name}}(t *testing.T) {
 	controllerTemplate = `
 package controllers
 
+import (
+	"net/http"
+
+	"github.com/dolab/gogo"
+)
+
 var (
     {{.Name}} *_{{.Name}}
 )
