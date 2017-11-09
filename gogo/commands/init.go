@@ -480,6 +480,13 @@ func main() {
 	modelTemplate = `
 package models
 
+import (
+	"time"
+
+	mgo "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+)
+
 var (
     {{.Name}} *_{{.Name}}
 
@@ -592,6 +599,12 @@ func Test_{{.Name}}(t *testing.T) {
 
 	controllerTemplate = `
 package controllers
+
+import (
+	"net/http"
+
+	"github.com/dolab/gogo"
+)
 
 var (
     {{.Name}} *_{{.Name}}
