@@ -163,6 +163,15 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 
 	resourceSpec = resource + "/:" + idSuffix
 
+	// for user-defined dispatch route
+	dispatch, ok := controller.(ControllerDispatch)
+	if ok {
+		r.Any(resource, dispatch.DISPATCH)
+		r.Any(resourceSpec, dispatch.DISPATCH)
+
+		return r.Group(resourceSpec)
+	}
+
 	// for GET /resource
 	index, ok := controller.(ControllerIndex)
 	if ok {

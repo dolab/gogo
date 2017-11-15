@@ -3,6 +3,11 @@ package gogo
 type ControllerID interface {
 	ID() string
 }
+
+type ControllerDispatch interface {
+	DISPATCH(c *Context)
+}
+
 type ControllerIndex interface {
 	Index(c *Context)
 }
