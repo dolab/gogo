@@ -481,6 +481,7 @@ func main() {
 package models
 
 import (
+    "errors"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
@@ -530,7 +531,9 @@ func ({{.LowerCaseName}} *{{.Name}}Model) Save() (err error) {
         } else {
             update := bson.M{}
 
-            err = c.UpdateId({{.LowerCaseName}}.ID, update)
+            err = c.UpdateId({{.LowerCaseName}}.ID, bson.M{ 
+               "$set":  update,
+            })
         }
     })
 
