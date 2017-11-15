@@ -531,7 +531,9 @@ func ({{.LowerCaseName}} *{{.Name}}Model) Save() (err error) {
         } else {
             update := bson.M{}
 
-            err = c.UpdateId({{.LowerCaseName}}.ID, update)
+            err = c.UpdateId({{.LowerCaseName}}.ID, bson.M{ 
+               "$set":  update,
+            })
         }
     })
 
