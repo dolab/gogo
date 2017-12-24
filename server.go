@@ -1,6 +1,8 @@
 package gogo
 
 import (
+	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golib/httprouter"
+	"golang.org/x/time/rate"
 )
 
 type AppServer struct {
@@ -18,8 +21,8 @@ type AppServer struct {
 	handler Handler
 	pool    sync.Pool
 
-	throttle *time.Ticker  // time.Ticker for rate limit
-	slowdown time.Duration // cache for performance
+	throttle *rate.Limiter // time.Rate for rate limit, its about throughput
+	slowdown time.Duration // time.Rate for rate limit, its about concurrency
 
 	config       *AppConfig
 	logger       Logger
@@ -79,13 +82,16 @@ func (s *AppServer) Run() {
 		localAddr string
 	)
 
-	// throttle of rate limit
+	// throughput of rate limit
+	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
-		s.throttle = time.NewTicker(time.Second / time.Duration(config.Server.Throttle))
+		limit := rate.Every(time.Second / time.Duration(config.Server.Throttle))
+
+		s.throttle = rate.NewLimiter(limit, config.Server.Throttle*10/100)
 	}
 
 	// adjust app server slowdown ms
-	s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
+	// s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
@@ -171,9 +177,17 @@ func (s *AppServer) Clean() {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
-	// rate limit
+	// throughput by rate limit
+	// TODO: should we try to apply timeout for context?
 	if s.throttle != nil {
-		<-s.throttle.C
+		err := s.throttle.Wait(context.Background())
+		if err != nil {
+			s.logger.Errorf("server.throttle.Wait(context.Background()): %v", err)
+
+			w.Header().Set("Retry-After", fmt.Sprintf("%vms", s.throttle.Limit()))
+			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
+			return
+		}
 	}
 
 	s.handler.ServeHTTP(w, r)

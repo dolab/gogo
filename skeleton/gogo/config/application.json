@@ -16,14 +16,16 @@
             "logger": {
                 "output": "stdout",
                 "level": "debug",
-                "filter_params": ["password", "password_confirmation"]
+                "filter_params": [
+                    "password",
+                    "password_confirmation"
+                ]
             },
             "domain": "https://example.com",
             "getting_start": {
                 "greeting": "Hello, gogo!"
             }
         },
-
         "test": {
             "server": {
                 "addr": "localhost",
@@ -38,14 +40,16 @@
             "logger": {
                 "output": "stdout",
                 "level": "info",
-                "filter_params": ["password", "password_confirmation"]
+                "filter_params": [
+                    "password",
+                    "password_confirmation"
+                ]
             },
             "domain": "https://example.com",
             "getting_start": {
                 "greeting": "Hello, gogo!"
             }
         },
-
         "production": {
             "server": {
                 "addr": "localhost",
@@ -60,7 +64,10 @@
             "logger": {
                 "output": "stdout",
                 "level": "warn",
-                "filter_params": ["password", "password_confirmation"]
+                "filter_params": [
+                    "password",
+                    "password_confirmation"
+                ]
             }
         }
     }

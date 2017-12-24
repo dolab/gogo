@@ -14,7 +14,7 @@ import (
 var (
 	newMockServer = func() *AppServer {
 		config, _ := newMockConfig("application.json")
-		logger := NewAppLogger(config.Section().Logger.Output, "")
+		logger := NewAppLogger("stdout", "")
 
 		return NewAppServer("test", config, logger)
 	}
@@ -73,6 +73,38 @@ func Test_ServerWithNotFound(t *testing.T) {
 	request.Get("/not/found", nil)
 	request.AssertNotFound()
 }
+
+// func Test_ServerWithThrottle(t *testing.T) {
+// 	config, _ := newMockConfig("application.throttle.json")
+// 	logger := NewAppLogger("stdout", "")
+
+// 	server := NewAppServer("test", config, logger)
+// 	server.GET("/server/throttle", func(ctx *Context) {
+// 		ctx.Text("OK")
+// 	})
+
+// 	ts := httptest.NewServer(server)
+// 	defer ts.Close()
+
+// 	startedAt := time.Now()
+
+// 	var wg sync.WaitGroup
+// 	wg.Add(2)
+
+// 	for i := 0; i < 2; i++ {
+// 		go func() {
+// 			defer wg.Done()
+
+// 			request := httptesting.New(ts.URL, false).New(t)
+// 			request.Get("/server/throttle", nil)
+// 			request.AssertContains("OK")
+// 		}()
+// 	}
+
+// 	wg.Wait()
+
+// 	assert.Empty(t, startedAt.Sub(time.Now()))
+// }
 
 // func Test_ServerWithMethodNotAllowed(t *testing.T) {
 // 	server := newMockServer()

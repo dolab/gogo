@@ -26,6 +26,7 @@ var (
 	}
 )
 
+// AppConfig defines gogo config
 type AppConfig struct {
 	Mode RunMode `json:"mode"`
 	Name string  `json:"name"`
@@ -40,11 +41,11 @@ func NewAppConfig(filename string) (*AppConfig, error) {
 		return nil, err
 	}
 
-	return NewStringAppConfig(string(b))
+	return NewAppConfigFromString(string(b))
 }
 
-// NewStringAppConfig returns app config by parsing json string
-func NewStringAppConfig(s string) (*AppConfig, error) {
+// NewAppConfigFromString returns app config by parsing json string
+func NewAppConfigFromString(s string) (*AppConfig, error) {
 	var config *AppConfig
 
 	err := json.Unmarshal([]byte(s), &config)
@@ -98,30 +99,29 @@ func (config *AppConfig) UnmarshalJSON(v interface{}) error {
 	return json.Unmarshal([]byte(*section), &v)
 }
 
-// app server and logger config
+// SectionConfig defines config spec for internal usage
 type SectionConfig struct {
 	Server *ServerConfig `json:"server"`
 	Logger *LoggerConfig `json:"logger"`
 }
 
-// server config spec
+// ServerConfig defines config spec of AppServer
 type ServerConfig struct {
 	Addr           string `json:"addr"`
 	Port           int    `json:"port"`
-	RTimeout       int    `json:"request_timeout"`  // time in s
-	WTimeout       int    `json:"response_timeout"` // time in s
-	MaxHeaderBytes int    `json:"max_header_bytes"`
+	RTimeout       int    `json:"request_timeout"`  // unit in second
+	WTimeout       int    `json:"response_timeout"` // unit in second
+	MaxHeaderBytes int    `json:"max_header_bytes"` // unit in byte
 
 	Ssl     bool   `json:"ssl"`
 	SslCert string `json:"ssl_cert"`
 	SslKey  string `json:"ssl_key"`
 
-	Throttle   int    `json:"throttle"`    // in time.Second/throttle ms
-	SlowdownMs int    `json:"slowdown_ms"` // in ms
-	RequestId  string `json:"request_id"`
+	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
+	RequestId string `json:"request_id"`
 }
 
-// logger config spec
+// LoggerConfig defines config spec of AppLogger
 type LoggerConfig struct {
 	Output    string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
 	LevelName string `json:"level"`  // valid values [debug|info|warn|error]
@@ -129,6 +129,7 @@ type LoggerConfig struct {
 	FilterParams []string `json:"filter_params"`
 }
 
+// Level returns logger.Level by its name
 func (l *LoggerConfig) Level() logger.Level {
 	return logger.ResolveLevelByName(l.LevelName)
 }
