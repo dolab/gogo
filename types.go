@@ -41,12 +41,14 @@ type Responser interface {
 	FlushHeader()                 // send response header
 }
 
+// ResponseFilter defines filter interface applied to response
 type ResponseFilter func(w Responser, b []byte) []byte
 
 // Logger defines interface of application log apis.
 type Logger interface {
 	New(requestID string) Logger
-	RequestId() string
+	Reuse(log Logger)
+	RequestID() string
 	SetLevelByName(level string) error
 	SetColor(color bool)
 

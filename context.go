@@ -143,7 +143,7 @@ func (c *Context) RequestURI() string {
 
 // RequestID returns x-request-id value
 func (c *Context) RequestID() string {
-	return c.Logger.RequestId()
+	return c.Logger.RequestID()
 }
 
 // HasRawHeader returns true if request sets its header with specified key

@@ -26,7 +26,7 @@ var (
 	}
 )
 
-// AppConfig defines gogo config
+// AppConfig defines config component of gogo
 type AppConfig struct {
 	Mode RunMode `json:"mode"`
 	Name string  `json:"name"`
@@ -34,7 +34,7 @@ type AppConfig struct {
 	Sections map[RunMode]*json.RawMessage `json:"sections"`
 }
 
-// NewAppConfig returns app config by parsing application.json
+// NewAppConfig returns *AppConfig by parsing application.json
 func NewAppConfig(filename string) (*AppConfig, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -44,7 +44,7 @@ func NewAppConfig(filename string) (*AppConfig, error) {
 	return NewAppConfigFromString(string(b))
 }
 
-// NewAppConfigFromString returns app config by parsing json string
+// NewAppConfigFromString returns *AppConfig by parsing json string
 func NewAppConfigFromString(s string) (*AppConfig, error) {
 	var config *AppConfig
 

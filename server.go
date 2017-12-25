@@ -14,6 +14,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// AppServer defines server component of gogo
 type AppServer struct {
 	*AppRoute
 
@@ -30,6 +31,7 @@ type AppServer struct {
 	filterParams []string // filter out params when logging
 }
 
+// NewAppServer returns *AppServer inited with args
 func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
 		mode:      mode,
@@ -194,9 +196,9 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handler.ServeHTTP(w, r)
 }
 
-// new returns a new context for the server
+// new returns a new context for the request
 func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
-	// adjust request id
+	// hijack request id
 	requestID := r.Header.Get(s.requestID)
 	if requestID == "" {
 		requestID = NewGID().Hex()
@@ -207,13 +209,15 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	w.Header().Set(s.requestID, requestID)
 
 	ctx := s.pool.Get().(*Context)
+	ctx.writer.reset(w)
 	ctx.Request = r
 	ctx.Response = &ctx.writer
 	ctx.Params = params
 	ctx.Logger = s.logger.New(requestID)
+
+	// internal
 	ctx.settings = nil
 	ctx.frozenSettings = nil
-	ctx.writer.reset(w)
 	ctx.handlers = handlers
 	ctx.index = -1
 	ctx.startedAt = time.Now()
@@ -224,5 +228,7 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 
 // reuse puts the context back to pool for later usage
 func (s *AppServer) reuse(ctx *Context) {
+	s.logger.Reuse(ctx.Logger)
+
 	s.pool.Put(ctx)
 }
