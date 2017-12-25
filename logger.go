@@ -11,7 +11,7 @@ import (
 type AppLogger struct {
 	*logger.Logger
 
-	requestId string
+	requestID string
 }
 
 func NewAppLogger(output, filename string) *AppLogger {
@@ -36,15 +36,15 @@ func NewAppLogger(output, filename string) *AppLogger {
 	return logger
 }
 
-// New returns a new Logger with provided requestId which shared writer with current logger
-func (l *AppLogger) New(requestId string) Logger {
+// New returns a new Logger with provided requestID which shared writer with current logger
+func (l *AppLogger) New(requestID string) Logger {
 	copied := *l
-	copied.Logger = copied.Logger.New(requestId)
-	copied.requestId = requestId
+	copied.Logger = copied.Logger.New(requestID)
+	copied.requestID = requestID
 
 	return &copied
 }
 
 func (l *AppLogger) RequestId() string {
-	return l.requestId
+	return l.requestID
 }

@@ -37,7 +37,7 @@ func Test_ServerNew(t *testing.T) {
 	server := newMockServer()
 	ctx := server.new(recorder, request, params, nil)
 	assertion.Equal(request, ctx.Request)
-	assertion.Equal(recorder.Header().Get(server.requestId), ctx.Response.Header().Get(server.requestId))
+	assertion.Equal(recorder.Header().Get(server.requestID), ctx.Response.Header().Get(server.requestID))
 	assertion.Equal(params, ctx.Params)
 	assertion.Nil(ctx.settings)
 	assertion.Nil(ctx.frozenSettings)

@@ -18,15 +18,15 @@ type AppServer struct {
 	*AppRoute
 
 	mode    RunMode
-	handler Handler
 	pool    sync.Pool
+	handler Handler
 
 	throttle *rate.Limiter // time.Rate for rate limit, its about throughput
 	slowdown time.Duration // time.Rate for rate limit, its about concurrency
 
 	config       *AppConfig
 	logger       Logger
-	requestId    string   // request id header name
+	requestID    string   // request id header name
 	filterParams []string // filter out params when logging
 }
 
@@ -35,7 +35,12 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 		mode:      mode,
 		config:    config,
 		logger:    logger,
-		requestId: DefaultHttpRequestId,
+		requestID: DefaultHttpRequestId,
+	}
+
+	// init Context pool
+	server.pool.New = func() interface{} {
+		return NewContext(server)
 	}
 
 	// init Route
@@ -50,17 +55,12 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 
 	server.handler = handler
 
-	// overwrite
-	server.pool.New = func() interface{} {
-		return NewContext(server)
-	}
-
 	return server
 }
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return string(s.mode)
+	return s.mode.String()
 }
 
 // Config returns app config of the app server
@@ -95,7 +95,7 @@ func (s *AppServer) Run() {
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
-		s.requestId = config.Server.RequestId
+		s.requestID = config.Server.RequestId
 	}
 
 	// adjust app logger filter parameters
@@ -151,6 +151,7 @@ func (s *AppServer) Run() {
 }
 
 // RunWithHandler runs the http server with given handler
+// It's useful for embbedding third-party golang applications.
 func (s *AppServer) RunWithHandler(handler Handler) {
 	s.handler = handler
 
@@ -168,12 +169,12 @@ func (s *AppServer) Handlers() []Middleware {
 	return s.AppRoute.handlers
 }
 
-// Clean removes all registered middlewares, it useful in testing cases.
+// Clean removes all registered middlewares, it's useful in testing cases.
 func (s *AppServer) Clean() {
 	s.AppRoute.handlers = []Middleware{}
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface with throughput.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
@@ -196,20 +197,20 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // new returns a new context for the server
 func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
 	// adjust request id
-	requestId := r.Header.Get(s.requestId)
-	if requestId == "" {
-		requestId = NewObjectId().Hex()
+	requestID := r.Header.Get(s.requestID)
+	if requestID == "" {
+		requestID = NewGID().Hex()
 
 		// inject request header with new request id
-		r.Header.Set(s.requestId, requestId)
+		r.Header.Set(s.requestID, requestID)
 	}
-	w.Header().Set(s.requestId, requestId)
+	w.Header().Set(s.requestID, requestID)
 
 	ctx := s.pool.Get().(*Context)
 	ctx.Request = r
 	ctx.Response = &ctx.writer
 	ctx.Params = params
-	ctx.Logger = s.logger.New(requestId)
+	ctx.Logger = s.logger.New(requestID)
 	ctx.settings = nil
 	ctx.frozenSettings = nil
 	ctx.writer.reset(w)
