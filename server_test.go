@@ -28,7 +28,7 @@ func Test_NewAppServer(t *testing.T) {
 	assertion.IsType(&Context{}, server.pool.Get())
 }
 
-func Test_ServerNew(t *testing.T) {
+func Test_ServerNewContext(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httprouter.Params{})
@@ -49,7 +49,7 @@ func Test_ServerNew(t *testing.T) {
 	assertion.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
-func Test_ServerReuse(t *testing.T) {
+func Test_ServerReuseContext(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httprouter.Params{})
@@ -61,6 +61,39 @@ func Test_ServerReuse(t *testing.T) {
 
 	newCtx := server.newContext(recorder, request, params, nil)
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
+}
+
+func Test_ServerWithReturn(t *testing.T) {
+	server := newMockServer()
+	server.GET("/return", func(ctx *Context) {
+		ctx.Return("OK!")
+	})
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// default render
+	request := httptesting.New(ts.URL, false).New(t)
+	request.Get("/return", nil)
+	request.AssertOK()
+	request.AssertHeader("Content-Type", "text/plain; charset=utf-8")
+	request.AssertContains(`OK!`)
+
+	// json render
+	request = httptesting.New(ts.URL, false).New(t)
+	request.WithHeader("Accept", "application/json, text/xml, */*; q=0.01")
+	request.Get("/return", nil)
+	request.AssertOK()
+	request.AssertHeader("Content-Type", "application/json")
+	request.AssertContains(`"OK!"`)
+
+	// xml render
+	request = httptesting.New(ts.URL, false).New(t)
+	request.WithHeader("Accept", "appication/json, text/xml, */*; q=0.01")
+	request.Get("/return", nil)
+	request.AssertOK()
+	request.AssertHeader("Content-Type", "text/xml")
+	request.AssertContains("<string>OK!</string>")
 }
 
 func Test_ServerWithNotFound(t *testing.T) {

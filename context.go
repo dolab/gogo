@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-const (
-	minSlowdownMs = 1 * time.Millisecond
-)
-
 // Context defines context of a request
 type Context struct {
 	Response Responser
@@ -33,6 +29,7 @@ type Context struct {
 	cursor    int8
 }
 
+// NewContext returns a *Context with *AppServer
 func NewContext(server *AppServer) *Context {
 	return &Context{
 		Server: server,
@@ -204,13 +201,35 @@ func (c *Context) Redirect(location string) {
 	http.Redirect(c.Response, c.Request, location, status)
 }
 
-// Return returns response following default Content-Type header
+// Return returns response with auto detected Content-Type
 func (c *Context) Return(body ...interface{}) error {
-	if len(body) > 0 {
-		return c.Render(NewDefaultRender(c.Response), body[0])
+	var render Render
+
+	// auto detect response content-type from request accept header
+	accept := c.Request.Header.Get("Accept")
+	for _, enc := range strings.Split(accept, ",") {
+		switch strings.TrimSpace(enc) {
+		case "application/json":
+			render = NewJsonRender(c.Response)
+
+		case "text/xml":
+			render = NewXmlRender(c.Response)
+
+		}
+		if render != nil {
+			break
+		}
 	}
 
-	return c.Render(NewDefaultRender(c.Response), "")
+	if render == nil {
+		render = NewDefaultRender(c.Response)
+	}
+
+	if len(body) > 0 {
+		return c.Render(render, body[0])
+	}
+
+	return c.Render(render, "")
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
