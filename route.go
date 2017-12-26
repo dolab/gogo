@@ -5,13 +5,13 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"path"
-	"time"
-
 	"strings"
+	"time"
 
 	"github.com/golib/httprouter"
 )
 
+// AppRoute defines route component of gogo
 type AppRoute struct {
 	server   *AppServer
 	prefix   string
@@ -47,19 +47,21 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	handlers := r.combineHandlers(handler)
 
 	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.new(resp, req, NewAppParams(req, params), handlers)
+		ctx := r.server.newContext(resp, req, NewAppParams(req, params), handlers)
+
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
+		defer func() {
+			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
+
+			r.server.reuseContext(ctx)
+		}()
 
 		ctx.Next()
 		ctx.Response.FlushHeader()
-
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-		r.server.reuse(ctx)
 	})
 }
 
-// ProxyHandle registers a new resource with its handler
+// ProxyHandle registers a new resource with a proxy
 func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
 	r.Handle(method, path, func(ctx *Context) {
 		for _, filter := range filters {
@@ -76,15 +78,17 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	handlers := r.combineHandlers(handler)
 
 	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.new(response, req, NewAppParams(req, params), handlers)
+		ctx := r.server.newContext(response, req, NewAppParams(req, params), handlers)
+
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
+		defer func() {
+			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
+
+			r.server.reuseContext(ctx)
+		}()
 
 		ctx.Next()
 		ctx.Response.FlushHeader()
-
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-		r.server.reuse(ctx)
 	})
 }
 
@@ -123,7 +127,7 @@ func (r *AppRoute) OPTIONS(path string, handler Middleware) {
 	r.Handle("OPTIONS", path, handler)
 }
 
-// Resource generates routes with controller interfaces, and returns a group route
+// Resource generates routes with controller interfaces, and returns a group routes
 // with resource name.
 //
 // Example:
@@ -213,9 +217,9 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 
 // Any is a shortcut for all request methods
 func (r *AppRoute) Any(path string, handler Middleware) {
-	r.Handle("PUT", path, handler)
-	r.Handle("POST", path, handler)
 	r.Handle("GET", path, handler)
+	r.Handle("POST", path, handler)
+	r.Handle("PUT", path, handler)
 	r.Handle("PATCH", path, handler)
 	r.Handle("DELETE", path, handler)
 	r.Handle("HEAD", path, handler)
@@ -274,14 +278,14 @@ func (r *AppRoute) filterParameters(lru *url.URL) string {
 
 func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
 	r.server.logger.Print("Started ", req.Method, " ", req.URL)
-	r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
+	defer r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
 
 	http.NotFound(resp, req)
 }
 
 func (r *AppRoute) methodNotAllowed(resp http.ResponseWriter, req *http.Request) {
 	r.server.logger.Print("Started ", req.Method, " ", req.URL)
-	r.server.logger.Print("Completed ", http.StatusMethodNotAllowed, " ", http.StatusText(http.StatusMethodNotAllowed))
+	defer r.server.logger.Print("Completed ", http.StatusMethodNotAllowed, " ", http.StatusText(http.StatusMethodNotAllowed))
 
 	http.Error(resp, "405 request method not allowed", http.StatusMethodNotAllowed)
 }

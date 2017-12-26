@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	abortIndex    = math.MaxInt8 / 2
 	minSlowdownMs = 1 * time.Millisecond
 )
 
+// Context defines context of a request
 type Context struct {
 	Response Responser
 	Request  *http.Request
@@ -27,22 +27,20 @@ type Context struct {
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
 
-	writer   Response
-	handlers []Middleware
-	index    int8
-
+	writer    Response
+	handlers  []Middleware
 	startedAt time.Time
-	downAfter time.Time
+	cursor    int8
 }
 
 func NewContext(server *AppServer) *Context {
 	return &Context{
 		Server: server,
-		index:  -1,
+		cursor: -1,
 	}
 }
 
-// Set associates a new value with key for the context
+// Set binds a new value with key for the context
 func (c *Context) Set(key string, value interface{}) {
 	c.mux.Lock()
 
@@ -78,7 +76,7 @@ func (c *Context) MustGet(key string) interface{} {
 	return value
 }
 
-// SetFinal associates a value with key for the context and freezes following update
+// SetFinal binds a value with key for the context and freezes it
 func (c *Context) SetFinal(key string, value interface{}) error {
 	c.mux.Lock()
 	defer c.mux.Unlock()
@@ -109,24 +107,15 @@ func (c *Context) GetFinal(key string) (interface{}, bool) {
 	return value, ok
 }
 
-// MustSetFinal associates a value with key for the context and freezes following update,
-// it panics if key is duplicated.
+// MustSetFinal likes SetFinal, but it panics if key is duplicated.
 func (c *Context) MustSetFinal(key string, value interface{}) {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
-	if c.frozenSettings == nil {
-		c.frozenSettings = make(map[string]interface{})
+	err := c.SetFinal(key, value)
+	if err != nil {
+		c.Logger.Panicf("Freese key %s duplicated!", key)
 	}
-
-	if _, ok := c.frozenSettings[key]; ok {
-		c.Logger.Panicf("Freeze key %s duplicated!", key)
-	}
-
-	c.frozenSettings[key] = value
 }
 
-// MustGetFinal returns a frozen value of key or panic when key doesn't exist
+// MustGetFinal returns a frozen value of key or panic when it doesn't exist
 func (c *Context) MustGetFinal(key string) interface{} {
 	value, ok := c.GetFinal(key)
 	if !ok {
@@ -136,14 +125,14 @@ func (c *Context) MustGetFinal(key string) interface{} {
 	return value
 }
 
-// RequestURI returns request raw uri
-func (c *Context) RequestURI() string {
-	return c.Request.RequestURI
-}
-
-// RequestID returns x-request-id value
+// RequestID returns request id of the Context
 func (c *Context) RequestID() string {
 	return c.Logger.RequestID()
+}
+
+// RequestURI returns request raw uri of http.Request
+func (c *Context) RequestURI() string {
+	return c.Request.RequestURI
 }
 
 // HasRawHeader returns true if request sets its header with specified key
@@ -180,19 +169,19 @@ func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
 
-// SetStatus sets response status code
-func (c *Context) SetStatus(code int) {
-	c.Response.WriteHeader(code)
-}
-
 // AddHeader adds response header with key/value pair
 func (c *Context) AddHeader(key, value string) {
 	c.Response.Header().Add(key, value)
 }
 
-// SetHeaders sets response header with key/value pair
+// SetHeader sets response header with key/value pair
 func (c *Context) SetHeader(key, value string) {
 	c.Response.Header().Set(key, value)
+}
+
+// SetStatus sets response status code
+func (c *Context) SetStatus(code int) {
+	c.Response.WriteHeader(code)
 }
 
 // Redirect returns a HTTP redirect to the specific location.
@@ -253,19 +242,10 @@ func (c *Context) Xml(data interface{}) error {
 	return c.Render(NewXmlRender(c.Response), data)
 }
 
+// Render responses client with data rendered by Render
 func (c *Context) Render(w Render, data interface{}) error {
 	// always abort
 	c.Abort()
-
-	// NOTE: its only ensure AT LEAST but EQUAL!!!
-	if delta := c.downAfter.Sub(time.Now()); delta > minSlowdownMs {
-		ticker := time.NewTicker(delta)
-
-		select {
-		case <-ticker.C:
-			ticker.Stop()
-		}
-	}
 
 	err := w.Render(data)
 	if err != nil {
@@ -280,16 +260,16 @@ func (c *Context) Render(w Render, data interface{}) error {
 // Next executes the remain handlers in the chain.
 // NOTE: It ONLY used in the middlewares!
 func (c *Context) Next() {
-	c.index++
+	c.cursor++
 
-	for c.index < int8(len(c.handlers)) {
-		c.handlers[c.index](c)
-
-		c.index++
+	if c.cursor < int8(len(c.handlers)) {
+		c.handlers[c.cursor](c)
+	} else {
+		c.Logger.Warn("No more executer in the chain.")
 	}
 }
 
 // Abort forces to stop call chain.
 func (c *Context) Abort() {
-	c.index = abortIndex
+	c.cursor = math.MaxInt8 / 2
 }

@@ -197,7 +197,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // new returns a new context for the request
-func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
+func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
 	// hijack request id
 	requestID := r.Header.Get(s.requestID)
 	if requestID == "" {
@@ -219,15 +219,14 @@ func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParam
 	ctx.settings = nil
 	ctx.frozenSettings = nil
 	ctx.handlers = handlers
-	ctx.index = -1
 	ctx.startedAt = time.Now()
-	ctx.downAfter = ctx.startedAt.Add(s.slowdown)
+	ctx.cursor = -1
 
 	return ctx
 }
 
 // reuse puts the context back to pool for later usage
-func (s *AppServer) reuse(ctx *Context) {
+func (s *AppServer) reuseContext(ctx *Context) {
 	s.logger.Reuse(ctx.Logger)
 
 	s.pool.Put(ctx)

@@ -17,7 +17,7 @@ func Test_NewContext(t *testing.T) {
 	server := newMockServer()
 	ctx := NewContext(server)
 	assertion.Equal(server, ctx.Server)
-	assertion.EqualValues(-1, ctx.index)
+	assertion.EqualValues(-1, ctx.cursor)
 
 	// settings
 	assertion.Empty(ctx.settings)
@@ -77,7 +77,7 @@ func Test_Context_RequestHeader(t *testing.T) {
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.new(recorder, request, params, nil)
+	ctx := server.newContext(recorder, request, params, nil)
 	assertion.True(ctx.HasRawHeader("X-Canonical-Key"))
 	assertion.False(ctx.HasRawHeader("x-canonical-key"))
 	assertion.True(ctx.HasHeader("X-Canonical-Key"))
@@ -104,18 +104,19 @@ func Test_Context_Next(t *testing.T) {
 		ctx.Next()
 	}
 	middleware2 := func(ctx *Context) {
-		counter += 2
+		counter += 1
 
 		ctx.Next()
 	}
 	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
+	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.handlers = append(ctx.handlers, middleware1, middleware2)
 	ctx.Next()
 
-	assertion.EqualValues(4, ctx.index)
-	assertion.Equal(3, counter)
+	assertion.EqualValues(2, ctx.cursor)
+	assertion.Equal(2, counter)
 }
 
 func Test_Context_Abort(t *testing.T) {
@@ -133,11 +134,12 @@ func Test_Context_Abort(t *testing.T) {
 	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
+	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.handlers = append(ctx.handlers, middleware1, middleware2)
 	ctx.Abort()
 	ctx.Next()
 
-	assertion.EqualValues(64, ctx.index)
+	assertion.EqualValues(64, ctx.cursor)
 	assertion.Equal(0, counter)
 }
 
@@ -168,6 +170,7 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
 	}
+	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.handlers = []Middleware{
 		func(ctx *Context) {
 			ctx.Redirect(location)
@@ -238,6 +241,7 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
 	}
+	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.handlers = []Middleware{
 		func(ctx *Context) {
 			ctx.Render(NewDefaultRender(ctx.Response), "render")
