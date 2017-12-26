@@ -11,11 +11,10 @@ import (
 	"strconv"
 	"sync"
 
-	"gopkg.in/mgo.v2/bson"
-
 	"github.com/golib/httprouter"
 )
 
+// AppParams defines params component of gogo
 type AppParams struct {
 	mux     sync.RWMutex
 	request *http.Request
@@ -25,6 +24,7 @@ type AppParams struct {
 	readed  bool
 }
 
+// NewAppParams returns an *AppParams with *http.Request and httprouter.Params
 func NewAppParams(r *http.Request, params httprouter.Params) *AppParams {
 	return &AppParams{
 		request: r,
@@ -48,19 +48,27 @@ func (p *AppParams) HasForm(name string) bool {
 	return ok
 }
 
+// RawBody returns request body and error if exist while reading.
 func (p *AppParams) RawBody() ([]byte, error) {
-	if !p.readed {
-		p.mux.Lock()
-		if !p.readed {
-			p.rawBody, p.rawErr = ioutil.ReadAll(p.request.Body)
+	p.mux.RLock()
+	if p.readed {
+		p.mux.RUnlock()
 
-			// close the request.Body
-			p.request.Body.Close()
-
-			p.readed = true
-		}
-		p.mux.Unlock()
+		return p.rawBody, p.rawErr
 	}
+	p.mux.RUnlock()
+
+	p.mux.Lock()
+	defer p.mux.Unlock()
+
+	p.rawBody, p.rawErr = ioutil.ReadAll(p.request.Body)
+
+	// close the request.Body
+	if p.rawErr == nil {
+		p.request.Body.Close()
+	}
+
+	p.readed = true
 
 	return p.rawBody, p.rawErr
 }
@@ -166,14 +174,4 @@ func (p *AppParams) Gob(v interface{}) error {
 	}
 
 	return gob.NewDecoder(bytes.NewBuffer(data)).Decode(v)
-}
-
-// Bson unmarshals request body with bson codec
-func (p *AppParams) Bson(v interface{}) error {
-	data, err := p.RawBody()
-	if err != nil {
-		return err
-	}
-
-	return bson.Unmarshal(data, v)
 }
