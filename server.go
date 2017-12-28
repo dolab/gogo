@@ -2,7 +2,6 @@ package gogo
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strconv"
@@ -180,14 +179,16 @@ func (s *AppServer) Clean() {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
-	// throughput by rate limit
-	// TODO: should we try to apply timeout for context?
+	// throughput by rate limit, timeout after 1s
 	if s.throttle != nil {
-		err := s.throttle.Wait(context.Background())
+		ctx, done := context.WithTimeout(context.Background(), time.Second)
+		defer done()
+
+		err := s.throttle.Wait(ctx)
 		if err != nil {
 			s.logger.Errorf("server.throttle.Wait(context.Background()): %v", err)
 
-			w.Header().Set("Retry-After", fmt.Sprintf("%vms", s.throttle.Limit()))
+			w.Header().Set("Retry-After", "1s")
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 			return
 		}
