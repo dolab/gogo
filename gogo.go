@@ -39,50 +39,36 @@ var (
 
 // New creates application server with config resolved of run mode.
 func New(runMode, srcPath string) *AppServer {
-	// adjust app run mode
-	mode := RunMode(runMode)
-	if !mode.IsValid() {
-		log.Fatalf("[GOGO] Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
-	}
-
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
 	if err != nil {
 		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
-	config.SetMode(mode)
 
 	// init default logger
 	section := config.Section()
 	logger := NewAppLogger(section.Logger.Output, runMode)
 	logger.SetLevelByName(section.Logger.LevelName)
-	logger.SetColor(!mode.IsProduction())
+	logger.SetColor(!config.Mode.IsProduction())
 
 	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
 
-	return NewAppServer(mode, config, logger)
+	return NewAppServer(config, logger)
 }
 
 // NewWithLogger creates application server with provided Logger
 func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
-	// adjust app run mode
-	mode := RunMode(runMode)
-	if !mode.IsValid() {
-		log.Fatalf("[GOGO] Invalid run mode, valid values are [%s|%s|%s]", Development, Test, Production)
-	}
-
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
 	if err != nil {
 		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
-	config.SetMode(mode)
 
 	// overwrite logger level and colorful
 	logger.SetLevelByName(config.Section().Logger.LevelName)
-	logger.SetColor(!mode.IsProduction())
+	logger.SetColor(!config.Mode.IsProduction())
 
 	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
 
-	return NewAppServer(mode, config, logger)
+	return NewAppServer(config, logger)
 }

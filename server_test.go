@@ -16,7 +16,7 @@ var (
 		config, _ := newMockConfig("application.json")
 		logger := NewAppLogger("stdout", "")
 
-		return NewAppServer("test", config, logger)
+		return NewAppServer(config, logger)
 	}
 )
 

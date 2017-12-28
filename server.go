@@ -17,7 +17,6 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	mode    RunMode
 	pool    sync.Pool
 	handler Handler
 
@@ -33,9 +32,8 @@ type AppServer struct {
 }
 
 // NewAppServer returns *AppServer inited with args
-func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
+func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
-		mode:      mode,
 		config:    config,
 		logger:    logger,
 		requestID: DefaultHttpRequestId,
@@ -63,7 +61,7 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return s.mode.String()
+	return s.config.Mode.String()
 }
 
 // Config returns app config of the app server

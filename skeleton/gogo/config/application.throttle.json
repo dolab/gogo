@@ -2,7 +2,7 @@
     "name": "for throttle",
     "mode": "test",
     "sections": {
-        "development": {
+        "test": {
             "server": {
                 "addr": "localhost",
                 "port": 9090,

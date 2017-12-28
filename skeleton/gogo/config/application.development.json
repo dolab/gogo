@@ -2,7 +2,7 @@
     "name": "for development",
     "mode": "test",
     "sections": {
-        "development": {
+        "test": {
             "server": {
                 "addr": "localhost",
                 "port": 9090,
