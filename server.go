@@ -223,7 +223,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // new returns a new context for the request
-func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
+func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
 	// hijack request id
 	requestID := r.Header.Get(s.requestID)
 	if requestID == "" {
@@ -232,21 +232,11 @@ func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *A
 		// inject request header with new request id
 		r.Header.Set(s.requestID, requestID)
 	}
-	w.Header().Set(s.requestID, requestID)
 
 	ctx := s.pool.Get().(*Context)
-	ctx.writer.reset(w)
 	ctx.Request = r
-	ctx.Response = &ctx.writer
 	ctx.Params = params
 	ctx.Logger = s.logger.New(requestID)
-
-	// internal
-	ctx.settings = nil
-	ctx.frozenSettings = nil
-	ctx.handlers = handlers
-	ctx.startedAt = time.Now()
-	ctx.cursor = -1
 
 	return ctx
 }

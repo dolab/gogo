@@ -292,3 +292,21 @@ func (c *Context) Next() {
 func (c *Context) Abort() {
 	c.cursor = math.MaxInt8 / 2
 }
+
+// run starting request chan with new envs.
+func (c *Context) run(w http.ResponseWriter, handlers []Middleware) {
+	c.writer.reset(w)
+	defer c.writer.FlushHeader()
+
+	// reset ResponseWriter
+	c.Response = &c.writer
+
+	// reset internal
+	c.settings = nil
+	c.frozenSettings = nil
+	c.handlers = handlers
+	c.startedAt = time.Now()
+	c.cursor = -1
+
+	c.Next()
+}

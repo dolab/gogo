@@ -35,31 +35,34 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.newContext(recorder, request, params, nil)
+	ctx := server.newContext(request, params)
+	ctx.run(recorder, nil)
+
 	assertion.Equal(request, ctx.Request)
 	assertion.Equal(recorder.Header().Get(server.requestID), ctx.Response.Header().Get(server.requestID))
 	assertion.Equal(params, ctx.Params)
 	assertion.Nil(ctx.settings)
 	assertion.Nil(ctx.frozenSettings)
 	assertion.Empty(ctx.handlers)
-	assertion.EqualValues(-1, ctx.cursor)
+	assertion.EqualValues(0, ctx.cursor)
 
 	// creation
-	newCtx := server.newContext(recorder, request, params, nil)
+	newCtx := server.newContext(request, params)
+	newCtx.run(recorder, nil)
+
 	assertion.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
 func Test_ServerReuseContext(t *testing.T) {
-	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httprouter.Params{})
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.newContext(recorder, request, params, nil)
+	ctx := server.newContext(request, params)
 	server.reuseContext(ctx)
 
-	newCtx := server.newContext(recorder, request, params, nil)
+	newCtx := server.newContext(request, params)
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
