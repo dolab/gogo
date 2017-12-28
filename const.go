@@ -35,3 +35,7 @@ func (mode RunMode) IsTest() bool {
 func (mode RunMode) IsProduction() bool {
 	return mode == Production
 }
+
+func (mode RunMode) String() string {
+	return string(mode)
+}

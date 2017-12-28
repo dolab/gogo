@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"strconv"
@@ -9,30 +10,38 @@ import (
 	"time"
 
 	"github.com/golib/httprouter"
+	"golang.org/x/time/rate"
 )
 
+// AppServer defines server component of gogo
 type AppServer struct {
 	*AppRoute
 
 	mode    RunMode
-	handler Handler
 	pool    sync.Pool
+	handler Handler
 
-	throttle *time.Ticker  // time.Ticker for rate limit
-	slowdown time.Duration // cache for performance
+	throttle *rate.Limiter // time.Rate for rate limit, its about throughput
+	slowdown time.Duration // time.Rate for rate limit, its about concurrency
 
 	config       *AppConfig
 	logger       Logger
-	requestId    string   // request id header name
+	requestID    string   // request id header name
 	filterParams []string // filter out params when logging
 }
 
+// NewAppServer returns *AppServer inited with args
 func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
 		mode:      mode,
 		config:    config,
 		logger:    logger,
-		requestId: DefaultHttpRequestId,
+		requestID: DefaultHttpRequestId,
+	}
+
+	// init Context pool
+	server.pool.New = func() interface{} {
+		return NewContext(server)
 	}
 
 	// init Route
@@ -47,17 +56,12 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 
 	server.handler = handler
 
-	// overwrite
-	server.pool.New = func() interface{} {
-		return NewContext(server)
-	}
-
 	return server
 }
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return string(s.mode)
+	return s.mode.String()
 }
 
 // Config returns app config of the app server
@@ -79,17 +83,20 @@ func (s *AppServer) Run() {
 		localAddr string
 	)
 
-	// throttle of rate limit
+	// throughput of rate limit
+	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
-		s.throttle = time.NewTicker(time.Second / time.Duration(config.Server.Throttle))
+		limit := rate.Every(time.Second / time.Duration(config.Server.Throttle))
+
+		s.throttle = rate.NewLimiter(limit, config.Server.Throttle*10/100)
 	}
 
 	// adjust app server slowdown ms
-	s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
+	// s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
-		s.requestId = config.Server.RequestId
+		s.requestID = config.Server.RequestId
 	}
 
 	// adjust app logger filter parameters
@@ -145,6 +152,7 @@ func (s *AppServer) Run() {
 }
 
 // RunWithHandler runs the http server with given handler
+// It's useful for embbedding third-party golang applications.
 func (s *AppServer) RunWithHandler(handler Handler) {
 	s.handler = handler
 
@@ -162,52 +170,65 @@ func (s *AppServer) Handlers() []Middleware {
 	return s.AppRoute.handlers
 }
 
-// Clean removes all registered middlewares, it useful in testing cases.
+// Clean removes all registered middlewares, it's useful in testing cases.
 func (s *AppServer) Clean() {
 	s.AppRoute.handlers = []Middleware{}
 }
 
-// ServeHTTP implements the http.Handler interface
+// ServeHTTP implements the http.Handler interface with throughput.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
-	// rate limit
+	// throughput by rate limit, timeout after 1s
 	if s.throttle != nil {
-		<-s.throttle.C
+		ctx, done := context.WithTimeout(context.Background(), time.Second)
+		defer done()
+
+		err := s.throttle.Wait(ctx)
+		if err != nil {
+			s.logger.Errorf("server.throttle.Wait(context.Background()): %v", err)
+
+			w.Header().Set("Retry-After", "1s")
+			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
+			return
+		}
 	}
 
 	s.handler.ServeHTTP(w, r)
 }
 
-// new returns a new context for the server
-func (s *AppServer) new(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
-	// adjust request id
-	requestId := r.Header.Get(s.requestId)
-	if requestId == "" {
-		requestId = NewObjectId().Hex()
+// new returns a new context for the request
+func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
+	// hijack request id
+	requestID := r.Header.Get(s.requestID)
+	if requestID == "" {
+		requestID = NewGID().Hex()
 
 		// inject request header with new request id
-		r.Header.Set(s.requestId, requestId)
+		r.Header.Set(s.requestID, requestID)
 	}
-	w.Header().Set(s.requestId, requestId)
+	w.Header().Set(s.requestID, requestID)
 
 	ctx := s.pool.Get().(*Context)
+	ctx.writer.reset(w)
 	ctx.Request = r
 	ctx.Response = &ctx.writer
 	ctx.Params = params
-	ctx.Logger = s.logger.New(requestId)
+	ctx.Logger = s.logger.New(requestID)
+
+	// internal
 	ctx.settings = nil
 	ctx.frozenSettings = nil
-	ctx.writer.reset(w)
 	ctx.handlers = handlers
-	ctx.index = -1
 	ctx.startedAt = time.Now()
-	ctx.downAfter = ctx.startedAt.Add(s.slowdown)
+	ctx.cursor = -1
 
 	return ctx
 }
 
 // reuse puts the context back to pool for later usage
-func (s *AppServer) reuse(ctx *Context) {
+func (s *AppServer) reuseContext(ctx *Context) {
+	s.logger.Reuse(ctx.Logger)
+
 	s.pool.Put(ctx)
 }

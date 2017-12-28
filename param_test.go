@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/mgo.v2/bson"
-
 	"github.com/golib/assert"
 	"github.com/golib/httprouter"
 )
@@ -205,30 +203,5 @@ func Test_AppParamsGob(t *testing.T) {
 	err = p.Gob(&temp)
 	assertion.Nil(err)
 	assertion.Equal("gob_value", temp.Key)
-	assertion.True(temp.Test)
-}
-
-func Test_AppParamsBson(t *testing.T) {
-	type data struct {
-		Key  string `bson:"key"`
-		Test bool   `bson:"test"`
-	}
-
-	params := data{
-		Key:  "bson_value",
-		Test: true,
-	}
-	b, _ := bson.Marshal(params)
-
-	request, _ := http.NewRequest("POST", "/path/to/resource?key=url_value&test=url_true", strings.NewReader(string(b)))
-	request.Header.Set("Content-Type", "application/bson")
-	assertion := assert.New(t)
-
-	p := NewAppParams(request, httprouter.Params{})
-
-	var temp data
-	err := p.Bson(&temp)
-	assertion.Nil(err)
-	assertion.Equal("bson_value", temp.Key)
 	assertion.True(temp.Test)
 }

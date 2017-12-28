@@ -1,5 +1,5 @@
 {
-    "name": "for development",
+    "name": "for throttle",
     "mode": "test",
     "sections": {
         "development": {
@@ -7,10 +7,7 @@
                 "addr": "localhost",
                 "port": 9090,
                 "ssl": false,
-                "ssl_cert": "/path/to/ssl/cert",
-                "ssl_key": "/path/to/ssl/key",
-                "request_timeout": 30,
-                "response_timeout": 30,
+                "throttle": 1,
                 "request_id": "X-Request-Id"
             },
             "logger": {
@@ -20,10 +17,6 @@
                     "password",
                     "password_confirmation"
                 ]
-            },
-            "domain": "https://example.com",
-            "getting_start": {
-                "greeting": "Hello, gogo!"
             }
         }
     }

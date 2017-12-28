@@ -28,7 +28,7 @@ func Test_NewConfig(t *testing.T) {
 
 func Test_NewConfigWithoutMode(t *testing.T) {
 	assertion := assert.New(t)
-	config, _ := NewStringAppConfig(`{
+	config, _ := NewAppConfigFromString(`{
     "name": "testing"
 }`)
 
@@ -37,7 +37,7 @@ func Test_NewConfigWithoutMode(t *testing.T) {
 
 func Test_NewConfigWithoutName(t *testing.T) {
 	assertion := assert.New(t)
-	config, _ := NewStringAppConfig(`{
+	config, _ := NewAppConfigFromString(`{
     "mode": "test"
 }`)
 

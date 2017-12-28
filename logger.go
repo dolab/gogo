@@ -3,17 +3,21 @@ package gogo
 import (
 	"log"
 	"path"
+	"sync"
 
 	"github.com/dolab/logger"
 )
 
-// AppLogger implements Logger interface
+// AppLogger defines log component of gogo, it implements Logger interface
+// with pool support
 type AppLogger struct {
 	*logger.Logger
 
-	requestId string
+	pool      sync.Pool
+	requestID string
 }
 
+// NewAppLogger returns *AppLogger inited with args
 func NewAppLogger(output, filename string) *AppLogger {
 	switch output {
 	case "stdout", "stderr", "null", "nil":
@@ -25,26 +29,43 @@ func NewAppLogger(output, filename string) *AppLogger {
 		}
 	}
 
-	l, err := logger.New(output)
+	lg, err := logger.New(output)
 	if err != nil {
-		log.Printf("logger.New(%s): %v\n", output, err)
-
-		return nil
+		log.Panicf("logger.New(%s): %v\n", output, err)
 	}
 
-	logger := &AppLogger{l, ""}
-	return logger
+	al := &AppLogger{
+		Logger: lg,
+	}
+	al.pool.New = func() interface{} {
+		return &AppLogger{
+			Logger: lg.New(),
+		}
+	}
+
+	return al
 }
 
-// New returns a new Logger with provided requestId which shared writer with current logger
-func (l *AppLogger) New(requestId string) Logger {
-	copied := *l
-	copied.Logger = copied.Logger.New(requestId)
-	copied.requestId = requestId
+// New returns a new Logger with provided requestID which shared writer with current logger
+func (al *AppLogger) New(requestID string) Logger {
+	// shortcut
+	if al.requestID == requestID {
+		return al
+	}
 
-	return &copied
+	nl := al.pool.Get().(*AppLogger)
+	nl.SetTags(requestID)
+	nl.requestID = requestID
+
+	return nl
 }
 
-func (l *AppLogger) RequestId() string {
-	return l.requestId
+// RequestID returns request id binded to the logger
+func (al *AppLogger) RequestID() string {
+	return al.requestID
+}
+
+// Reuse puts the Logger back to pool for later usage
+func (al *AppLogger) Reuse(lg Logger) {
+	al.pool.Put(lg)
 }

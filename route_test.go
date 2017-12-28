@@ -174,9 +174,11 @@ func Test_RouteProxyHandle(t *testing.T) {
 
 	// proxied handler
 	route.Use(func(ctx *Context) {
-		ctx.Logger.Warn("v ...interface{}")
+		ctx.Logger.Warn("proxy middleware")
+
+		ctx.Next()
 	})
-	route.Handle("GET", "/proxy", func(ctx *Context) {
+	route.Handle("GET", "/backend", func(ctx *Context) {
 		ctx.Text("Proxied!")
 	})
 
@@ -184,11 +186,11 @@ func Test_RouteProxyHandle(t *testing.T) {
 		Director: func(r *http.Request) {
 			r.URL.Scheme = "http"
 			r.URL.Host = r.Host
-			r.URL.Path = "/proxy"
-			r.URL.RawPath = "/proxy"
+			r.URL.Path = "/backend"
+			r.URL.RawPath = "/backend"
 		},
 	}
-	route.ProxyHandle("GET", "/mock", proxy, func(w Responser, b []byte) []byte {
+	route.ProxyHandle("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
 		s := strings.ToUpper(string(b))
 
 		w.Header().Set("Content-Length", strconv.Itoa(len(s)*2))
@@ -201,7 +203,7 @@ func Test_RouteProxyHandle(t *testing.T) {
 	defer ts.Close()
 
 	// testing by http request
-	request, _ := http.NewRequest("GET", ts.URL+"/mock", nil)
+	request, _ := http.NewRequest("GET", ts.URL+"/proxy", nil)
 
 	res, err := http.DefaultClient.Do(request)
 	assertion.Nil(err)
