@@ -234,6 +234,25 @@ func main() {
 }
 ```
 
+## Configures
+
+- Server
+
+```json
+{
+    "addr": "localhost",
+    "port": 9090,
+    "request_timeout": 30,
+    "response_timeout": 30,
+    "throttle": 3000, // RPS, throughput of per-seconds
+    "slowdown": 30000, // TPS, concurrency of server
+    "ssl": false,
+    "ssl_cert": "/path/to/ssl/cert",
+    "ssl_key": "/path/to/ssl/key",
+    "request_id": "X-Request-Id"
+}
+```
+
 ## TODOs
 
 - [x] server config context
