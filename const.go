@@ -8,7 +8,7 @@ const (
 	DefaultMaxMultiformBytes = 32 << 20 // 32M
 	DefaultMaxHeaderBytes    = 64 << 10 // 64k
 
-	DefaultHttpRequestId       = "X-Request-Id"
+	DefaultHttpRequestID       = "X-Request-Id"
 	DefaultHttpRequestTimeout  = 30 // 30s
 	DefaultHttpResponseTimeout = 30 // 30s
 )

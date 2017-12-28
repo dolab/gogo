@@ -36,7 +36,7 @@ func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
 		config:    config,
 		logger:    logger,
-		requestID: DefaultHttpRequestId,
+		requestID: DefaultHttpRequestID,
 	}
 
 	// init Context pool
@@ -87,19 +87,18 @@ func (s *AppServer) Run() {
 	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
 		s.throttleTimeout = time.Second / time.Duration(config.Server.Throttle)
-
 		s.throttle = rate.NewLimiter(rate.Every(s.throttleTimeout), config.Server.Throttle*10/100)
 	}
 
 	// concurrency of rate limit
 	if config.Server.Slowdown > 0 {
+		s.slowdownTimeout = time.Duration(config.Server.RTimeout) * time.Second
 		s.slowdown = make(chan bool, config.Server.Slowdown)
-		s.slowdownTimeout = time.Duration(config.Server.RTimeout+config.Server.WTimeout) * time.Second
 	}
 
 	// adjust app server request id
-	if config.Server.RequestId != "" {
-		s.requestID = config.Server.RequestId
+	if config.Server.RequestID != "" {
+		s.requestID = config.Server.RequestID
 	}
 
 	// adjust app logger filter parameters
