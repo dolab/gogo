@@ -118,6 +118,7 @@ type ServerConfig struct {
 	SslKey  string `json:"ssl_key"`
 
 	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
+	Slowdown  int    `json:"slowdown"`
 	RequestId string `json:"request_id"`
 }
 

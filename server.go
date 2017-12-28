@@ -21,8 +21,10 @@ type AppServer struct {
 	pool    sync.Pool
 	handler Handler
 
-	throttle *rate.Limiter // time.Rate for rate limit, its about throughput
-	slowdown time.Duration // time.Rate for rate limit, its about concurrency
+	throttle        *rate.Limiter // time.Rate for rate limit, its about throughput
+	throttleTimeout time.Duration // time.Duration for throughput timeout
+	slowdown        chan bool     // chain for rate limit, its about concurrency
+	slowdownTimeout time.Duration // time.Duration for concurrency timeout
 
 	config       *AppConfig
 	logger       Logger
@@ -86,13 +88,16 @@ func (s *AppServer) Run() {
 	// throughput of rate limit
 	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
-		limit := rate.Every(time.Second / time.Duration(config.Server.Throttle))
+		s.throttleTimeout = time.Second / time.Duration(config.Server.Throttle)
 
-		s.throttle = rate.NewLimiter(limit, config.Server.Throttle*10/100)
+		s.throttle = rate.NewLimiter(rate.Every(s.throttleTimeout), config.Server.Throttle*10/100)
 	}
 
-	// adjust app server slowdown ms
-	// s.slowdown = time.Duration(config.Server.SlowdownMs) * time.Millisecond
+	// concurrency of rate limit
+	if config.Server.Slowdown > 0 {
+		s.slowdown = make(chan bool, config.Server.Slowdown)
+		s.slowdownTimeout = time.Duration(config.Server.RTimeout+config.Server.WTimeout) * time.Second
+	}
 
 	// adjust app server request id
 	if config.Server.RequestId != "" {
@@ -179,16 +184,39 @@ func (s *AppServer) Clean() {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
-	// throughput by rate limit, timeout after 1s
+	// throughput by rate limit, timeout after time.Second/throttle
 	if s.throttle != nil {
-		ctx, done := context.WithTimeout(context.Background(), time.Second)
-		defer done()
-
+		ctx, done := context.WithTimeout(context.Background(), s.throttleTimeout)
 		err := s.throttle.Wait(ctx)
-		if err != nil {
-			s.logger.Errorf("server.throttle.Wait(context.Background()): %v", err)
+		done()
 
-			w.Header().Set("Retry-After", "1s")
+		if err != nil {
+			s.logger.Warnf("Exceed server throughput: %v", err)
+
+			w.Header().Set("Retry-After", s.throttleTimeout.String())
+			http.Error(w, http.StatusText(http.StatusTeapot), http.StatusTeapot)
+			return
+		}
+	}
+
+	// concurrency by channel, timeout after request+response timeouts
+	if s.slowdown != nil {
+		ticker := time.NewTicker(s.slowdownTimeout)
+
+		select {
+		case <-s.slowdown:
+			ticker.Stop()
+
+			defer func() {
+				s.slowdown <- true
+			}()
+
+		case <-ticker.C:
+			ticker.Stop()
+
+			s.logger.Warnf("Exceed server concurrency: %v timeout", s.slowdownTimeout)
+
+			w.Header().Set("Retry-After", s.slowdownTimeout.String())
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 			return
 		}
