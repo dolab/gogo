@@ -17,7 +17,6 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	mode    RunMode
 	pool    sync.Pool
 	handler Handler
 
@@ -33,12 +32,11 @@ type AppServer struct {
 }
 
 // NewAppServer returns *AppServer inited with args
-func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
+func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 	server := &AppServer{
-		mode:      mode,
 		config:    config,
 		logger:    logger,
-		requestID: DefaultHttpRequestId,
+		requestID: DefaultHttpRequestID,
 	}
 
 	// init Context pool
@@ -63,7 +61,7 @@ func NewAppServer(mode RunMode, config *AppConfig, logger Logger) *AppServer {
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return s.mode.String()
+	return s.config.Mode.String()
 }
 
 // Config returns app config of the app server
@@ -89,19 +87,18 @@ func (s *AppServer) Run() {
 	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
 		s.throttleTimeout = time.Second / time.Duration(config.Server.Throttle)
-
 		s.throttle = rate.NewLimiter(rate.Every(s.throttleTimeout), config.Server.Throttle*10/100)
 	}
 
 	// concurrency of rate limit
 	if config.Server.Slowdown > 0 {
+		s.slowdownTimeout = time.Duration(config.Server.RTimeout) * time.Second
 		s.slowdown = make(chan bool, config.Server.Slowdown)
-		s.slowdownTimeout = time.Duration(config.Server.RTimeout+config.Server.WTimeout) * time.Second
 	}
 
 	// adjust app server request id
-	if config.Server.RequestId != "" {
-		s.requestID = config.Server.RequestId
+	if config.Server.RequestID != "" {
+		s.requestID = config.Server.RequestID
 	}
 
 	// adjust app logger filter parameters
@@ -226,7 +223,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // new returns a new context for the request
-func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *AppParams, handlers []Middleware) *Context {
+func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
 	// hijack request id
 	requestID := r.Header.Get(s.requestID)
 	if requestID == "" {
@@ -235,21 +232,11 @@ func (s *AppServer) newContext(w http.ResponseWriter, r *http.Request, params *A
 		// inject request header with new request id
 		r.Header.Set(s.requestID, requestID)
 	}
-	w.Header().Set(s.requestID, requestID)
 
 	ctx := s.pool.Get().(*Context)
-	ctx.writer.reset(w)
 	ctx.Request = r
-	ctx.Response = &ctx.writer
 	ctx.Params = params
 	ctx.Logger = s.logger.New(requestID)
-
-	// internal
-	ctx.settings = nil
-	ctx.frozenSettings = nil
-	ctx.handlers = handlers
-	ctx.startedAt = time.Now()
-	ctx.cursor = -1
 
 	return ctx
 }

@@ -47,7 +47,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	handlers := r.combineHandlers(handler)
 
 	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.newContext(resp, req, NewAppParams(req, params), handlers)
+		ctx := r.server.newContext(req, NewAppParams(req, params))
 
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 		defer func() {
@@ -56,20 +56,29 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 			r.server.reuseContext(ctx)
 		}()
 
-		ctx.Next()
-		ctx.Response.FlushHeader()
+		resp.Header().Set(r.server.requestID, ctx.RequestID())
+		ctx.run(resp, handlers)
 	})
 }
 
 // ProxyHandle registers a new resource with a proxy
 func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
-	r.Handle(method, path, func(ctx *Context) {
+	handler := func(ctx *Context) {
 		for _, filter := range filters {
 			ctx.Response.Before(filter)
 		}
 
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
-	})
+	}
+
+	switch method {
+	case "*":
+		r.Any(path, handler)
+
+	default:
+		r.Handle(method, path, handler)
+
+	}
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
@@ -78,7 +87,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	handlers := r.combineHandlers(handler)
 
 	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
-		ctx := r.server.newContext(response, req, NewAppParams(req, params), handlers)
+		ctx := r.server.newContext(req, NewAppParams(req, params))
 
 		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
 		defer func() {
@@ -87,8 +96,8 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 			r.server.reuseContext(ctx)
 		}()
 
-		ctx.Next()
-		ctx.Response.FlushHeader()
+		resp.Header().Set(r.server.requestID, ctx.RequestID())
+		ctx.run(response, handlers)
 	})
 }
 

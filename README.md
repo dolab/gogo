@@ -2,9 +2,9 @@
 
 [![Build Status](https://travis-ci.org/dolab/gogo.svg?branch=master&style=flat)](https://travis-ci.org/dolab/gogo)
 
-RESTful api framework of golang.
+gogo is an open source, high performance RESTful api framework for the golang programming language.
 
-It's heavily inspired from [neko](https://github.com/rocwong/neko) which created by [RocWong](https://github.com/rocwong).
+It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
 
 ## Installation
 
@@ -34,21 +34,6 @@ $ make godev
 $ make
 ```
 
-- Create application from skeleton
-
-> **DEPRECATED**!!! Please using scaffold way.
-
-```bash
-$ cp -r $GOPATH/src/github.com/dolab/gogo/skeleton myapp
-
-# fix application import path
-$ cd myapp
-$ source fix.sh
-$ source env.sh
-
-# run development server
-$ make godev
-```
 
 ## Getting Started
 

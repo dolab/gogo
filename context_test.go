@@ -77,7 +77,9 @@ func Test_Context_RequestHeader(t *testing.T) {
 	assertion := assert.New(t)
 
 	server := newMockServer()
-	ctx := server.newContext(recorder, request, params, nil)
+	ctx := server.newContext(request, params)
+	ctx.run(recorder, nil)
+
 	assertion.True(ctx.HasRawHeader("X-Canonical-Key"))
 	assertion.False(ctx.HasRawHeader("x-canonical-key"))
 	assertion.True(ctx.HasHeader("X-Canonical-Key"))
