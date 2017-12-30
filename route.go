@@ -63,13 +63,22 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 
 // ProxyHandle registers a new resource with a proxy
 func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
-	r.Handle(method, path, func(ctx *Context) {
+	handler := func(ctx *Context) {
 		for _, filter := range filters {
 			ctx.Response.Before(filter)
 		}
 
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
-	})
+	}
+
+	switch method {
+	case "*":
+		r.Any(path, handler)
+
+	default:
+		r.Handle(method, path, handler)
+
+	}
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
