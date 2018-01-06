@@ -14,25 +14,21 @@ type Context struct {
 	Response Responser
 	Request  *http.Request
 	Params   *AppParams
+	Logger   Logger
 
-	Server *AppServer
-	Config *AppConfig
-	Logger Logger
+	mux    sync.RWMutex
+	writer Response
+	cursor int8
 
-	mux            sync.RWMutex
+	middlewares    []Middleware
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
-
-	writer    Response
-	handlers  []Middleware
-	startedAt time.Time
-	cursor    int8
+	startedAt      time.Time
 }
 
 // NewContext returns a *Context with *AppServer
-func NewContext(server *AppServer) *Context {
+func NewContext() *Context {
 	return &Context{
-		Server: server,
 		cursor: -1,
 	}
 }
@@ -287,13 +283,13 @@ func (c *Context) Render(w Render, data interface{}) error {
 	return err
 }
 
-// Next executes the remain handlers in the chain.
+// Next executes the remain middlewares in the chain.
 // NOTE: It ONLY used in the middlewares!
 func (c *Context) Next() {
 	c.cursor++
 
-	if c.cursor < int8(len(c.handlers)) {
-		c.handlers[c.cursor](c)
+	if c.cursor < int8(len(c.middlewares)) {
+		c.middlewares[c.cursor](c)
 	} else {
 		c.Logger.Warn("No more executer in the chain.")
 	}
@@ -305,7 +301,7 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(w http.ResponseWriter, handlers []Middleware) {
+func (c *Context) run(w http.ResponseWriter, middlewares []Middleware) {
 	// hijack with correct http.ResponseWriter
 	c.writer.reset(w)
 
@@ -315,7 +311,7 @@ func (c *Context) run(w http.ResponseWriter, handlers []Middleware) {
 	// reset internal
 	c.settings = nil
 	c.frozenSettings = nil
-	c.handlers = handlers
+	c.middlewares = middlewares
 	c.startedAt = time.Now()
 	c.cursor = -1
 
