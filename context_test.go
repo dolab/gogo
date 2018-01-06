@@ -11,6 +11,14 @@ import (
 	"github.com/golib/httprouter"
 )
 
+type testContextStatusCoder struct {
+	code int
+}
+
+func (statusCoder testContextStatusCoder) StatusCode() int {
+	return statusCoder.code
+}
+
 func Test_NewContext(t *testing.T) {
 	assertion := assert.New(t)
 
@@ -69,12 +77,13 @@ func Test_NewContext(t *testing.T) {
 }
 
 func Test_Context_RequestHeader(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	request.Header.Add("X-Canonical-Key", "Canonical-Value")
 	request.Header["x-normal-key"] = []string{"normal value"}
+
 	params := NewAppParams(request, httprouter.Params{})
-	assertion := assert.New(t)
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)
@@ -99,18 +108,19 @@ func Test_Context_RequestHeader(t *testing.T) {
 }
 
 func Test_Context_Next(t *testing.T) {
+	assertion := assert.New(t)
+
 	counter := 0
 	middleware1 := func(ctx *Context) {
-		counter += 1
+		counter++
 
 		ctx.Next()
 	}
 	middleware2 := func(ctx *Context) {
-		counter += 1
+		counter++
 
 		ctx.Next()
 	}
-	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
 	ctx.Logger = NewAppLogger("stderr", "")
@@ -122,9 +132,11 @@ func Test_Context_Next(t *testing.T) {
 }
 
 func Test_Context_Abort(t *testing.T) {
+	assertion := assert.New(t)
+
 	counter := 0
 	middleware1 := func(ctx *Context) {
-		counter += 1
+		counter++
 
 		ctx.Next()
 	}
@@ -133,7 +145,6 @@ func Test_Context_Abort(t *testing.T) {
 
 		ctx.Next()
 	}
-	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
 	ctx.Logger = NewAppLogger("stderr", "")
@@ -146,10 +157,10 @@ func Test_Context_Abort(t *testing.T) {
 }
 
 func Test_Context_Redirect(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
-	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
 	ctx.Request = request
@@ -159,13 +170,14 @@ func Test_Context_Redirect(t *testing.T) {
 	ctx.Redirect(location)
 
 	assertion.Equal(location, recorder.Header().Get("Location"))
+	assertion.EqualValues(63, ctx.cursor)
 }
 
 func Test_Context_RedirectWithAbort(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
-	assertion := assert.New(t)
 
 	ctx := NewContext(newMockServer())
 	ctx.Request = request
@@ -189,10 +201,85 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	assertion.NotContains(recorder.Body.String(), "next render")
 }
 
-func Test_Context_Render(t *testing.T) {
+func Test_Context_Return(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+
+	// return with sample string
+	s := "Hello, world!"
+
+	err := ctx.Return(s)
+	assertion.Nil(err)
+	assertion.Equal(http.StatusOK, recorder.Code)
+	assertion.Equal(RenderDefaultContentType, recorder.Header().Get("Content-Type"))
+	assertion.Equal(s, recorder.Body.String())
+}
+
+func Test_Context_ReturnWithJson(t *testing.T) {
 	assertion := assert.New(t)
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+	request.Header.Set("Accept", "application/json, text/xml; charset=utf-8")
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+
+	// return with complex data type
+	data := struct {
+		Name string
+		Age  int
+	}{"gogo", 5}
+
+	err := ctx.Return(data)
+	assertion.Nil(err)
+	assertion.Equal(http.StatusOK, recorder.Code)
+	assertion.Equal("application/json", recorder.Header().Get("Content-Type"))
+	assertion.Contains(recorder.Body.String(), `{"Name":"gogo","Age":5}`)
+}
+
+func Test_Context_ReturnWithXml(t *testing.T) {
+	assertion := assert.New(t)
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+	request.Header.Set("Accept", "appication/json, text/xml; charset=utf-8")
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+
+	// render with complex data type
+	data := struct {
+		XMLName xml.Name `xml:"Response"`
+		Success bool     `xml:"Result>Success"`
+		Content string   `xml:"Result>Content"`
+	}{
+		Success: true,
+		Content: "Hello, world!",
+	}
+
+	err := ctx.Return(data)
+	assertion.Nil(err)
+	assertion.Equal(http.StatusOK, recorder.Code)
+	assertion.Equal("text/xml", recorder.Header().Get("Content-Type"))
+	assertion.Contains(recorder.Body.String(), `<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>`)
+}
+
+func Test_Context_Render(t *testing.T) {
+	assertion := assert.New(t)
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
 	ctx := NewContext(newMockServer())
 	ctx.Request = request
@@ -201,42 +288,89 @@ func Test_Context_Render(t *testing.T) {
 	}
 
 	testCases := map[string]struct {
-		w    Render
-		data interface{}
+		w           Render
+		contentType string
+		data        interface{}
 	}{
-		"default render": {NewDefaultRender(ctx.Response), "default render"},
-		"hashed render":  {NewHashRender(ctx.Response, crypto.MD5), "hashed render"},
-		"text render":    {NewTextRender(ctx.Response), "text render"},
-		`{"success":false,"error":"not found"}`: {NewJsonRender(ctx.Response), struct {
-			Success bool   `json:"success"`
-			Error   string `json:"error"`
-		}{false, "not found"}},
-		`js_callback({"success":true,"data":123});`: {NewJsonpRender(ctx.Response, "js_callback"), struct {
-			Success bool `json:"success"`
-			Data    int  `json:"data"`
-		}{true, 123}},
-		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Result><Success>true</Success><Data>123</Data></Result>": {NewXmlRender(ctx.Response), struct {
-			XMLName xml.Name `xml:"Result"`
-			Success bool     `xml:"Success"`
-			Data    int      `xml:"Data"`
-		}{
-			Success: true,
-			Data:    123,
-		}},
+		"default render": {
+			NewDefaultRender(ctx.Response),
+			RenderDefaultContentType,
+			"default render",
+		},
+		"hashed render": {
+			NewHashRender(ctx.Response, crypto.MD5),
+			RenderDefaultContentType,
+			"hashed render",
+		},
+		"text render": {
+			NewTextRender(ctx.Response),
+			RenderDefaultContentType,
+			"text render",
+		},
+		`{"success":false,"error":"not found"}`: {
+			NewJsonRender(ctx.Response),
+			"application/json",
+			struct {
+				Success bool   `json:"success"`
+				Error   string `json:"error"`
+			}{false, "not found"},
+		},
+		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Result><Success>true</Success><Data>123</Data></Result>": {
+			NewXmlRender(ctx.Response),
+			"text/xml",
+			struct {
+				XMLName xml.Name `xml:"Result"`
+				Success bool     `xml:"Success"`
+				Data    int      `xml:"Data"`
+			}{
+				Success: true,
+				Data:    123,
+			},
+		},
+		`js_callback({"success":true,"data":123});`: {
+			NewJsonpRender(ctx.Response, "js_callback"),
+			"application/javascript",
+			struct {
+				Success bool `json:"success"`
+				Data    int  `json:"data"`
+			}{true, 123},
+		},
 	}
 	for expected, testCase := range testCases {
+		recorder.HeaderMap = http.Header{}
 		recorder.Body.Reset()
 
 		err := ctx.Render(testCase.w, testCase.data)
 		assertion.Nil(err)
-		assertion.Equal(expected, recorder.Body.String())
+		assertion.Equal(testCase.contentType, recorder.Header().Get("Content-Type"))
+		assertion.Contains(recorder.Body.String(), expected)
 	}
 }
 
-func Test_Context_RenderWithAbort(t *testing.T) {
+func Test_Context_RenderWithStatusCoder(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
+
+	ctx := NewContext(newMockServer())
+	ctx.Request = request
+	ctx.Response = &Response{
+		ResponseWriter: recorder,
+	}
+	ctx.Logger = NewAppLogger("stderr", "")
+
+	data := testContextStatusCoder{
+		code: 123,
+	}
+	ctx.Render(NewDefaultRender(ctx.Response), data)
+
+	assertion.Equal(123, ctx.Response.Status())
+}
+
+func Test_Context_RenderWithAbort(t *testing.T) {
 	assertion := assert.New(t)
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
 	ctx := NewContext(newMockServer())
 	ctx.Request = request
@@ -257,4 +391,5 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	ctx.Next()
 
 	assertion.Equal("render", recorder.Body.String())
+	assertion.EqualValues(64, ctx.cursor)
 }
