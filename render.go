@@ -14,7 +14,7 @@ import (
 
 // DefaultRender responses with default Content-Type header
 type DefaultRender struct {
-	response Responser
+	w Responser
 }
 
 func NewDefaultRender(w Responser) Render {
@@ -24,46 +24,54 @@ func NewDefaultRender(w Responser) Render {
 }
 
 func (render *DefaultRender) ContentType() string {
-	return render.response.Header().Get("Content-Type")
+	contentType := render.w.Header().Get("Content-Type")
+	if contentType == "" {
+		contentType = RenderDefaultContentType
+	}
+
+	return contentType
 }
 
 func (render *DefaultRender) Render(v interface{}) error {
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
-	}
+	var (
+		err error
+	)
 
-	b := []byte("")
 	switch v.(type) {
 	case []byte:
-		b, _ = v.([]byte)
+		_, err = render.w.Write(v.([]byte))
 
 	case string:
-		s, _ := v.(string)
-
-		b = []byte(s)
+		_, err = render.w.Write([]byte(v.(string)))
 
 	case url.Values:
-		p, _ := v.(url.Values)
-
-		b = []byte(p.Encode())
+		_, err = render.w.Write([]byte(v.(url.Values).Encode()))
 
 	case io.Reader:
-		r, _ := v.(io.Reader)
-
 		// optimized for io.Reader
-		_, err := io.Copy(render.response, r)
-		return err
+		_, err = io.Copy(render.w, v.(io.Reader))
+
+	default:
+		switch render.ContentType() {
+		case RenderJsonContentType, RenderJsonPContentType:
+			err = json.NewEncoder(render.w).Encode(v)
+
+		case RednerXmlContentType:
+			err = xml.NewEncoder(render.w).Encode(v)
+
+		default:
+			_, err = render.w.Write([]byte(fmt.Sprintf("%v", v)))
+		}
 	}
 
-	_, err := render.response.Write(b)
 	return err
 }
 
 // HashRender responses with Etag header calculated from render data dynamically.
 // NOTE: This always write response by copy if the render data is an io.Reader!!!
 type HashRender struct {
-	response Responser
-	hash     hash.Hash
+	w    Responser
+	hash hash.Hash
 }
 
 func NewHashRender(w Responser, hasher crypto.Hash) Render {
@@ -72,63 +80,79 @@ func NewHashRender(w Responser, hasher crypto.Hash) Render {
 	}
 
 	render := &HashRender{
-		response: w,
-		hash:     hasher.New(),
+		w:    w,
+		hash: hasher.New(),
 	}
 
 	return render
 }
 
 func (render *HashRender) ContentType() string {
-	return render.response.Header().Get("Content-Type")
+	contentType := render.w.Header().Get("Content-Type")
+	if contentType == "" {
+		contentType = RenderDefaultContentType
+	}
+
+	return contentType
 }
 
 func (render *HashRender) Render(v interface{}) error {
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
-	}
-
-	// reset hash
-	render.hash.Reset()
-
-	// using bytes.Buffer for efficient I/O
-	var bbuf *bytes.Buffer
+	var (
+		// using bytes.Buffer for efficient I/O
+		buf *bytes.Buffer
+		err error
+	)
 
 	switch v.(type) {
 	case []byte:
-		b, _ := v.([]byte)
-		bbuf = bytes.NewBuffer(b)
+		buf = bytes.NewBuffer(v.([]byte))
 
 	case string:
-		s, _ := v.(string)
-		bbuf = bytes.NewBufferString(s)
+		buf = bytes.NewBufferString(v.(string))
 
 	case url.Values:
-		p, _ := v.(url.Values)
-		bbuf = bytes.NewBufferString(p.Encode())
+		buf = bytes.NewBufferString(v.(url.Values).Encode())
 
 	case io.Reader:
-		r, _ := v.(io.Reader)
+		buf = bytes.NewBuffer(nil)
+		_, err = buf.ReadFrom(v.(io.Reader))
 
-		bbuf = bytes.NewBuffer(nil)
-		_, err := bbuf.ReadFrom(r)
-		if err != nil {
-			return err
+	default:
+		switch render.ContentType() {
+		case RenderJsonContentType, RenderJsonPContentType:
+			buf = bytes.NewBuffer(nil)
+			err = json.NewEncoder(buf).Encode(v)
+
+		case RednerXmlContentType:
+			buf = bytes.NewBuffer(nil)
+			err = xml.NewEncoder(buf).Encode(v)
+
+		default:
+			buf = bytes.NewBufferString(fmt.Sprintf("%v", v))
 		}
 	}
 
-	// add etag header
-	render.hash.Write(bbuf.Bytes())
-	render.response.Header().Add("Etag", hex.EncodeToString(render.hash.Sum(nil)))
+	if err != nil {
+		return err
+	}
 
-	_, err := io.Copy(render.response, bbuf)
+	// hijack response header of etag
+	render.hash.Reset()
+	_, err = render.hash.Write(buf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	render.w.Header().Set("Etag", hex.EncodeToString(render.hash.Sum(nil)))
+
+	_, err = io.Copy(render.w, buf)
 	return err
 }
 
 // TextRender responses with Content-Type: text/plain header
 // It transform response data by stringify.
 type TextRender struct {
-	response Responser
+	w Responser
 }
 
 func NewTextRender(w Responser) Render {
@@ -138,24 +162,39 @@ func NewTextRender(w Responser) Render {
 }
 
 func (render *TextRender) ContentType() string {
-	return "text/plain"
+	return RenderDefaultContentType
 }
 
 func (render *TextRender) Render(v interface{}) error {
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
+	var (
+		err error
+	)
+
+	switch v.(type) {
+	case []byte:
+		_, err = render.w.Write(v.([]byte))
+
+	case string:
+		_, err = render.w.Write([]byte(v.(string)))
+
+	case url.Values:
+		_, err = render.w.Write([]byte(v.(url.Values).Encode()))
+
+	case io.Reader:
+		// optimized for io.Reader
+		_, err = io.Copy(render.w, v.(io.Reader))
+
+	default:
+		_, err = render.w.Write([]byte(fmt.Sprintf("%v", v)))
 	}
 
-	render.response.Header().Set("Content-Type", render.ContentType())
-
-	_, err := render.response.Write([]byte(fmt.Sprintf("%v", v)))
 	return err
 }
 
 // JsonRender responses with Content-Type: application/json header
 // It transform response data by json.Marshal.
 type JsonRender struct {
-	response Responser
+	w Responser
 }
 
 func NewJsonRender(w Responser) Render {
@@ -165,73 +204,53 @@ func NewJsonRender(w Responser) Render {
 }
 
 func (render *JsonRender) ContentType() string {
-	return "application/json"
+	return RenderJsonContentType
 }
 
 func (render *JsonRender) Render(v interface{}) error {
-	data, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
-	}
-
-	render.response.Header().Set("Content-Type", render.ContentType())
-
-	_, err = render.response.Write(data)
-	return err
+	return json.NewEncoder(render.w).Encode(v)
 }
 
 // XmlRender responses with Content-Type: text/xml header
 // It transform response data by xml.Marshal.
 type XmlRender struct {
-	response Responser
+	w      Responser
+	header []byte
 }
 
 func NewXmlRender(w Responser) Render {
-	render := &XmlRender{w}
+	render := &XmlRender{
+		w:      w,
+		header: []byte(xml.Header),
+	}
 
 	return render
 }
 
 func (render *XmlRender) ContentType() string {
-	return "text/xml"
+	return RednerXmlContentType
 }
 
 func (render *XmlRender) Render(v interface{}) error {
-	data, err := xml.Marshal(v)
+	// hijack xml header
+	_, err := render.w.Write(render.header)
 	if err != nil {
 		return err
 	}
 
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
-	}
-
-	render.response.Header().Set("Content-Type", render.ContentType())
-
-	// write xml header
-	_, err = render.response.Write([]byte(xml.Header))
-	if err != nil {
-		return err
-	}
-
-	_, err = render.response.Write(data)
-	return err
+	return xml.NewEncoder(render.w).Encode(v)
 }
 
 // JsonpRender responses with Content-Type: application/javascript header
 // It transform response data by json.Marshal.
 type JsonpRender struct {
-	response Responser
+	w        Responser
 	callback string
 }
 
 func NewJsonpRender(w Responser, callback string) Render {
 	render := &JsonpRender{
-		response: w,
+		w:        w,
 		callback: callback,
 	}
 
@@ -239,7 +258,7 @@ func NewJsonpRender(w Responser, callback string) Render {
 }
 
 func (render *JsonpRender) ContentType() string {
-	return "application/javascript"
+	return RenderJsonPContentType
 }
 
 func (render *JsonpRender) Render(v interface{}) error {
@@ -248,21 +267,23 @@ func (render *JsonpRender) Render(v interface{}) error {
 		return err
 	}
 
-	if scr, ok := v.(StatusCoder); ok {
-		render.response.WriteHeader(scr.StatusCode())
-	}
+	buf := bytes.NewBufferString(render.callback)
 
-	render.response.Header().Set("Content-Type", render.ContentType())
-
-	if _, err := render.response.Write([]byte(render.callback + "(")); err != nil {
-		return err
-	}
-	if _, err := render.response.Write(data); err != nil {
-		return err
-	}
-	if _, err := render.response.Write([]byte(");")); err != nil {
+	err = buf.WriteByte('(')
+	if err != nil {
 		return err
 	}
 
-	return nil
+	_, err = buf.Write(data)
+	if err != nil {
+		return err
+	}
+
+	_, err = buf.WriteString(");")
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(render.w, buf)
+	return err
 }
