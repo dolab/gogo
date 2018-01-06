@@ -8,6 +8,7 @@
                 "port": 9090,
                 "ssl": false,
                 "throttle": 1,
+                "slowdown": 1,
                 "request_id": "X-Request-Id"
             },
             "logger": {

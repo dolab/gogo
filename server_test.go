@@ -1,10 +1,14 @@
 package gogo
 
 import (
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
@@ -29,10 +33,10 @@ func Test_NewAppServer(t *testing.T) {
 }
 
 func Test_ServerNewContext(t *testing.T) {
+	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httprouter.Params{})
-	assertion := assert.New(t)
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)
@@ -54,9 +58,9 @@ func Test_ServerNewContext(t *testing.T) {
 }
 
 func Test_ServerReuseContext(t *testing.T) {
+	assertion := assert.New(t)
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httprouter.Params{})
-	assertion := assert.New(t)
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)
@@ -66,10 +70,67 @@ func Test_ServerReuseContext(t *testing.T) {
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
+func Test_Server(t *testing.T) {
+	config, _ := newMockConfig("application.json")
+	logger := NewAppLogger("stdout", "")
+
+	server := NewAppServer(config, logger)
+
+	server.GET("/server", func(ctx *Context) {
+		ctx.SetStatus(http.StatusNoContent)
+		ctx.Return()
+	})
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	request := httptesting.New(ts.URL, false).New(t)
+	request.Get("/server", nil)
+	request.AssertStatus(http.StatusNoContent)
+	request.AssertEmpty()
+}
+
+func Benchmark_Server(b *testing.B) {
+	config, _ := newMockConfig("application.json")
+	logger := NewAppLogger("stdout", "")
+
+	server := NewAppServer(config, logger)
+	server.GET("/server/benchmark", func(ctx *Context) {
+		ctx.SetStatus(http.StatusNoContent)
+		ctx.Return()
+	})
+
+	ts := httptest.NewServer(server)
+	defer ts.Close()
+
+	// NOTE: there is 37 allocs/op for client
+	request, _ := http.NewRequest("GET", ts.URL+"/server/benchmark", nil)
+	for i := 0; i < b.N; i++ {
+		resp, _ := http.DefaultClient.Do(request)
+		resp.Body.Close()
+	}
+}
+
 func Test_ServerWithReturn(t *testing.T) {
 	server := newMockServer()
 	server.GET("/return", func(ctx *Context) {
-		ctx.Return("OK!")
+		if contentType := ctx.Params.Get("content-type"); contentType != "" {
+			ctx.SetHeader("Content-Type", contentType)
+		}
+
+		data := struct {
+			XMLName xml.Name `json:"-"`
+			Name    string   `xml:"Name"`
+			Age     int      `xml:"Age"`
+		}{
+			XMLName: xml.Name{
+				Local: "Result",
+			},
+			Name: "gogo",
+			Age:  5,
+		}
+
+		ctx.Return(data)
 	})
 
 	ts := httptest.NewServer(server)
@@ -80,23 +141,43 @@ func Test_ServerWithReturn(t *testing.T) {
 	request.Get("/return", nil)
 	request.AssertOK()
 	request.AssertHeader("Content-Type", "text/plain; charset=utf-8")
-	request.AssertContains(`OK!`)
+	request.AssertContains(`{{ Result} gogo 5}`)
 
-	// json render
+	// json render with request header of accept
 	request = httptesting.New(ts.URL, false).New(t)
 	request.WithHeader("Accept", "application/json, text/xml, */*; q=0.01")
 	request.Get("/return", nil)
 	request.AssertOK()
 	request.AssertHeader("Content-Type", "application/json")
-	request.AssertContains(`"OK!"`)
+	request.AssertContains(`{"Name":"gogo","Age":5}`)
 
-	// xml render
+	// default render with request query of content-Type=application/json
+	params := url.Values{}
+	params.Add("content-type", "application/json")
+
+	request = httptesting.New(ts.URL, false).New(t)
+	request.Get("/return?"+params.Encode(), nil)
+	request.AssertOK()
+	request.AssertHeader("Content-Type", "application/json")
+	request.AssertContains(`{"Name":"gogo","Age":5}`)
+
+	// xml render with request header of accept
 	request = httptesting.New(ts.URL, false).New(t)
 	request.WithHeader("Accept", "appication/json, text/xml, */*; q=0.01")
 	request.Get("/return", nil)
 	request.AssertOK()
 	request.AssertHeader("Content-Type", "text/xml")
-	request.AssertContains("<string>OK!</string>")
+	request.AssertContains("<Result><Name>gogo</Name><Age>5</Age></Result>")
+
+	// default render with request query of content-Type=text/xml
+	params = url.Values{}
+	params.Add("content-type", "text/xml")
+
+	request = httptesting.New(ts.URL, false).New(t)
+	request.Get("/return?"+params.Encode(), nil)
+	request.AssertOK()
+	request.AssertHeader("Content-Type", "text/xml")
+	request.AssertContains(`<Result><Name>gogo</Name><Age>5</Age></Result>`)
 }
 
 func Test_ServerWithNotFound(t *testing.T) {
@@ -108,81 +189,101 @@ func Test_ServerWithNotFound(t *testing.T) {
 	request := httptesting.New(ts.URL, false).New(t)
 	request.Get("/not/found", nil)
 	request.AssertNotFound()
+	request.AssertContains("Route(GET /not/found) not found")
 }
 
-// func Test_ServerWithThrottle(t *testing.T) {
-// 	config, _ := newMockConfig("application.throttle.json")
-// 	logger := NewAppLogger("stdout", "")
+func Test_ServerWithThroughput(t *testing.T) {
+	assertion := assert.New(t)
+	config, _ := newMockConfig("application.throttle.json")
+	logger := NewAppLogger("stdout", "")
 
-// 	server := NewAppServer("test", config, logger)
-// 	server.GET("/server/throttle", func(ctx *Context) {
-// 		ctx.Text("OK")
-// 	})
+	server := NewAppServer(config, logger)
+	server.newThrottle(1)
 
-// 	ts := httptest.NewServer(server)
-// 	defer ts.Close()
+	server.GET("/server/throughput", func(ctx *Context) {
+		ctx.SetStatus(http.StatusNoContent)
+		ctx.Return()
+	})
 
-// 	startedAt := time.Now()
+	ts := httptest.NewServer(server)
+	defer ts.Close()
 
-// 	var wg sync.WaitGroup
-// 	wg.Add(2)
+	var (
+		wg sync.WaitGroup
 
-// 	for i := 0; i < 2; i++ {
-// 		go func() {
-// 			defer wg.Done()
+		routines = 3
+	)
 
-// 			request := httptesting.New(ts.URL, false).New(t)
-// 			request.Get("/server/throttle", nil)
-// 			request.AssertContains("OK")
-// 		}()
-// 	}
+	bufc := make(chan []byte, routines)
 
-// 	wg.Wait()
+	wg.Add(routines)
+	for i := 0; i < routines; i++ {
+		go func() {
+			defer wg.Done()
 
-// 	assert.Empty(t, startedAt.Sub(time.Now()))
-// }
+			request := httptesting.New(ts.URL, false).New(t)
+			request.Get("/server/throughput", nil)
 
-// func Test_ServerWithMethodNotAllowed(t *testing.T) {
-// 	server := newMockServer()
-// 	server.Any("/not/allowed", func(c *Context) {
-// 		c.Return("/not/allowed")
-// 	})
+			bufc <- request.ResponseBody
+		}()
+	}
+	wg.Wait()
 
-// 	ts := httptest.NewServer(server)
-// 	defer ts.Close()
+	close(bufc)
 
-// 	request := httptesting.New(ts.URL, false).New(t)
-// 	request.Invoke("Method", "/not/allowed", "application/json", nil)
-// 	request.AssertStatus(http.StatusMethodNotAllowed)
-// }
+	s := ""
+	for buf := range bufc {
+		s += string(buf)
+	}
 
-// // TODO: implements this later!
-// func Test_ServerWithRequestTimeout(t *testing.T) {
-// 	assertion := assert.New(t)
+	assertion.Contains(s, "I'm a teapot")
+}
 
-// 	config, _ := newMockConfig("request_timeout.json")
-// 	server := NewAppServer(config, Logger)
-// 	server.PUT("/server/request_timeout", func(ctx *Context) {
-// 		b, err := ioutil.ReadAll(ctx.Request.Body)
-// 		ctx.Request.Body.Close()
+func Test_ServerWithConcurrency(t *testing.T) {
+	assertion := assert.New(t)
+	config, _ := newMockConfig("application.throttle.json")
+	logger := NewAppLogger("stdout", "")
 
-// 		assertion.Nil(err)
-// 		assertion.Empty(string(b))
+	server := NewAppServer(config, logger)
+	server.newSlowdown(1, 1)
 
-// 		ctx.Text("REQUEST TIMEOUT")
-// 	})
+	server.GET("/server/concurrency", func(ctx *Context) {
+		time.Sleep(time.Second)
 
-// 	ts := httptest.NewAppServer(server)
+		ctx.SetStatus(http.StatusNoContent)
+		ctx.Return()
+	})
 
-// 	request, _ := http.NewRequest("PUT", ts.URL+"/server/request_timeout", bytes.NewBufferString("Ping!"))
+	ts := httptest.NewServer(server)
+	defer ts.Close()
 
-// 	client := NewAppTesting(ts.URL, false)
-// 	client.NewFilterRequest(t, request, func(r *http.Request) error {
-// 		// wait 1s
-// 		time.Sleep(1 * time.Second)
+	var (
+		wg sync.WaitGroup
 
-// 		return nil
-// 	})
-// 	client.AssertOK()
-// 	client.AssertEmpty()
-// }
+		routines = 2
+	)
+
+	bufc := make(chan string, routines)
+
+	wg.Add(routines)
+	for i := 0; i < routines; i++ {
+		go func(routine int) {
+			defer wg.Done()
+
+			request := httptesting.New(ts.URL, false).New(t)
+			request.Get("/server/concurrency", nil)
+
+			bufc <- fmt.Sprintf("[routine@#%d] %s", routine, string(request.ResponseBody))
+		}(i)
+	}
+	wg.Wait()
+
+	close(bufc)
+
+	s := ""
+	for buf := range bufc {
+		s += string(buf)
+	}
+
+	assertion.Contains(s, "Too Many Requests")
+}
