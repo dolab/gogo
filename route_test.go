@@ -18,15 +18,14 @@ func Test_NewAppRoute(t *testing.T) {
 	assertion := assert.New(t)
 
 	route := NewAppRoute(prefix, server)
-	assertion.Empty(route.handlers)
+	assertion.Empty(route.middlewares)
 	assertion.Equal(prefix, route.prefix)
 	assertion.Equal(server, route.server)
 }
 
 func Test_RouteHandle(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
 	assertion := assert.New(t)
+	server := newMockServer()
 
 	testCases := map[string]struct {
 		path    string
@@ -78,7 +77,7 @@ func Test_RouteHandle(t *testing.T) {
 
 	// register handlers
 	for method, testCase := range testCases {
-		route.Handle(method, testCase.path, testCase.handler)
+		server.Handle(method, testCase.path, testCase.handler)
 	}
 
 	// start server
@@ -89,11 +88,11 @@ func Test_RouteHandle(t *testing.T) {
 	for method, testCase := range testCases {
 		request, _ := http.NewRequest(method, ts.URL+testCase.path, nil)
 
-		res, err := http.DefaultClient.Do(request)
+		response, err := http.DefaultClient.Do(request)
 		assertion.Nil(err)
 
-		body, err := ioutil.ReadAll(res.Body)
-		res.Body.Close()
+		body, err := ioutil.ReadAll(response.Body)
+		response.Body.Close()
 
 		switch method {
 		case "HEAD":
@@ -106,15 +105,13 @@ func Test_RouteHandle(t *testing.T) {
 }
 
 func Test_RouteHandleWithTailSlash(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
 	assertion := assert.New(t)
+	server := newMockServer()
 
-	route.Handle("GET", "/:tailslash", func(ctx *Context) {
+	server.Handle("GET", "/:tailslash", func(ctx *Context) {
 		ctx.Text("GET /:tailslash")
 	})
-
-	route.Handle("GET", "/:tailslash/*extraargs", func(ctx *Context) {
+	server.Handle("GET", "/:tailslash/*extraargs", func(ctx *Context) {
 		ctx.Text("GET /:tailslash/*extraargs")
 	})
 
@@ -168,17 +165,16 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 }
 
 func Test_RouteProxyHandle(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
 	assertion := assert.New(t)
+	server := newMockServer()
 
 	// proxied handler
-	route.Use(func(ctx *Context) {
+	server.Use(func(ctx *Context) {
 		ctx.Logger.Warn("proxy middleware")
 
 		ctx.Next()
 	})
-	route.Handle("GET", "/backend", func(ctx *Context) {
+	server.Handle("GET", "/backend", func(ctx *Context) {
 		ctx.Text("Proxied!")
 	})
 
@@ -190,7 +186,7 @@ func Test_RouteProxyHandle(t *testing.T) {
 			r.URL.RawPath = "/backend"
 		},
 	}
-	route.ProxyHandle("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
+	server.ProxyHandle("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
 		s := strings.ToUpper(string(b))
 
 		w.Header().Set("Content-Length", strconv.Itoa(len(s)*2))
@@ -215,13 +211,12 @@ func Test_RouteProxyHandle(t *testing.T) {
 }
 
 func Test_RouteMockHandle(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
-	response := httptest.NewRecorder()
 	assertion := assert.New(t)
+	server := newMockServer()
+	response := httptest.NewRecorder()
 
 	// mock handler
-	route.MockHandle("GET", "/mock", response, func(ctx *Context) {
+	server.MockHandle("GET", "/mock", response, func(ctx *Context) {
 		ctx.Text("MOCK")
 	})
 
@@ -245,9 +240,9 @@ func Test_RouteMockHandle(t *testing.T) {
 }
 
 func Test_RouteGroup(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server).Group("/group")
 	assertion := assert.New(t)
+	server := newMockServer()
+	route := server.Group("/group")
 
 	// register handler
 	// GET /group/:method
@@ -268,37 +263,36 @@ func Test_RouteGroup(t *testing.T) {
 	assertion.Equal("testing", string(body))
 }
 
-type TestGroupController struct{}
+type testGroupController struct{}
 
-func (t *TestGroupController) Index(ctx *Context) {
+func (t *testGroupController) Index(ctx *Context) {
 	ctx.Text("GET /group")
 }
 
-func (t *TestGroupController) Show(ctx *Context) {
+func (t *testGroupController) Show(ctx *Context) {
 	ctx.Text("GET /group/" + ctx.Params.Get("group"))
 }
 
-type TestUserController struct{}
+type testUserController struct{}
 
-func (t *TestUserController) ID() string {
+func (t *testUserController) ID() string {
 	return "id"
 }
 
-func (t *TestUserController) Show(ctx *Context) {
+func (t *testUserController) Show(ctx *Context) {
 	ctx.Text("GET /group/" + ctx.Params.Get("group") + "/user/" + ctx.Params.Get("id"))
 }
 
-func Test_ResourceController(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
+func Test_RouteResource(t *testing.T) {
 	assertion := assert.New(t)
+	server := newMockServer()
 
 	// start server
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
 	// group resource
-	group := route.Resource("group", &TestGroupController{})
+	group := server.Resource("group", &testGroupController{})
 
 	// should work for GET /group/:group
 	res, err := http.Get(ts.URL + "/group/my-group")
@@ -310,7 +304,7 @@ func Test_ResourceController(t *testing.T) {
 	assertion.Equal("GET /group/my-group", string(body))
 
 	// user resource
-	group.Resource("user", &TestUserController{})
+	group.Resource("user", &testUserController{})
 
 	// should work for GET /group/:group/user/:id
 	res, err = http.Get(ts.URL + "/group/my-group/user/my-user")
@@ -332,27 +326,26 @@ func Test_ResourceController(t *testing.T) {
 	assertion.Contains(string(body), "not found")
 }
 
-type TestGroupMemberController struct{}
+type testGroupMemberController struct{}
 
-func (t *TestGroupMemberController) Index(ctx *Context) {
+func (t *testGroupMemberController) Index(ctx *Context) {
 	ctx.Text("GET /group/member")
 }
 
-func (t *TestGroupMemberController) Show(ctx *Context) {
+func (t *testGroupMemberController) Show(ctx *Context) {
 	ctx.Text("GET /group/member/" + ctx.Params.Get("member"))
 }
 
-func Test_ResourceControllerWithSubPath(t *testing.T) {
-	server := newMockServer()
-	route := NewAppRoute("/", server)
+func Test_RouteResourceWithSubPath(t *testing.T) {
 	assertion := assert.New(t)
+	server := newMockServer()
 
 	// start server
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
 	// member resource
-	route.Resource("group/member", &TestGroupMemberController{})
+	server.Resource("group/member", &testGroupMemberController{})
 
 	// should work for GET /group/member/:group
 	res, err := http.Get(ts.URL + "/group/member/my-group")

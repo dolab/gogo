@@ -4,12 +4,12 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/golib/httprouter"
 	"golang.org/x/time/rate"
 )
 
@@ -17,18 +17,16 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	pool    sync.Pool
-	handler Handler
-
-	throttle        *rate.Limiter // time.Rate for rate limit, its about throughput
-	throttleTimeout time.Duration // time.Duration for throughput timeout
-	slowdown        chan bool     // chain for rate limit, its about concurrency
-	slowdownTimeout time.Duration // time.Duration for concurrency timeout
-
 	config       *AppConfig
 	logger       Logger
 	requestID    string   // request id header name
 	filterParams []string // filter out params when logging
+
+	context         sync.Pool     // cache of *Context for performance
+	throttle        *rate.Limiter // time.Rate for rate limit, its about throughput
+	throttleTimeout time.Duration // time.Duration for throughput timeout
+	slowdown        chan bool     // chain for rate limit, its about concurrency
+	slowdownTimeout time.Duration // time.Duration for concurrency timeout
 }
 
 // NewAppServer returns *AppServer inited with args
@@ -39,22 +37,13 @@ func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 		requestID: DefaultHttpRequestID,
 	}
 
-	// init Context pool
-	server.pool.New = func() interface{} {
-		return NewContext(server)
+	// overwrite pool.New for Context
+	server.context.New = func() interface{} {
+		return NewContext()
 	}
 
-	// init Route
+	// init AppRoute for server
 	server.AppRoute = NewAppRoute("/", server)
-
-	// init default handler with httprouter.Router
-	handler := httprouter.New()
-	handler.RedirectTrailingSlash = false
-	handler.HandleMethodNotAllowed = false // strict for RESTful
-	handler.NotFound = http.HandlerFunc(server.AppRoute.notFoundHandle)
-	handler.MethodNotAllowed = http.HandlerFunc(server.AppRoute.methodNotAllowed)
-
-	server.handler = handler
 
 	return server
 }
@@ -155,28 +144,13 @@ func (s *AppServer) Run() {
 // RunWithHandler runs the http server with given handler
 // It's useful for embbedding third-party golang applications.
 func (s *AppServer) RunWithHandler(handler Handler) {
-	s.handler = handler
+	s.SetHandler(handler)
 
 	s.Run()
 }
 
-// Use applies middlewares to app route
-// NOTE: It dispatch to Route.Use by overwrite
-func (s *AppServer) Use(middlewares ...Middleware) {
-	s.AppRoute.Use(middlewares...)
-}
-
-// Handlers returns registered middlewares of app route
-func (s *AppServer) Handlers() []Middleware {
-	return s.AppRoute.handlers
-}
-
-// Clean removes all registered middlewares, it's useful in testing cases.
-func (s *AppServer) Clean() {
-	s.AppRoute.handlers = []Middleware{}
-}
-
-// ServeHTTP implements the http.Handler interface with throughput.
+// ServeHTTP implements the http.Handler interface with throughput and concurrency support.
+// NOTE: It servers client by dispatching request to AppRoute.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// hijack request id
 	requestID := r.Header.Get(s.requestID)
@@ -230,12 +204,29 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.handler.ServeHTTP(w, r)
+	s.AppRoute.ServeHTTP(w, r)
+}
+
+func (s *AppServer) filterParameters(lru *url.URL) string {
+	ss := lru.Path
+
+	query := lru.Query()
+	if len(query) > 0 {
+		for _, key := range s.filterParams {
+			if _, ok := query[key]; ok {
+				query.Set(key, "[FILTERED]")
+			}
+		}
+
+		ss += "?" + query.Encode()
+	}
+
+	return ss
 }
 
 // new returns a new context for the request
 func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
-	ctx := s.pool.Get().(*Context)
+	ctx := s.context.Get().(*Context)
 	ctx.Request = r
 	ctx.Params = params
 	ctx.Logger = s.logger.New(r.Header.Get(s.requestID))
@@ -247,7 +238,7 @@ func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
 func (s *AppServer) reuseContext(ctx *Context) {
 	s.logger.Reuse(ctx.Logger)
 
-	s.pool.Put(ctx)
+	s.context.Put(ctx)
 }
 
 func (s *AppServer) newThrottle(n int) {

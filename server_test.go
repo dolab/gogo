@@ -29,7 +29,7 @@ func Test_NewAppServer(t *testing.T) {
 
 	server := newMockServer()
 	assertion.Implements((*http.Handler)(nil), server)
-	assertion.IsType(&Context{}, server.pool.Get())
+	assertion.IsType(&Context{}, server.context.Get())
 }
 
 func Test_ServerNewContext(t *testing.T) {
@@ -47,7 +47,7 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion.Equal(params, ctx.Params)
 	assertion.Nil(ctx.settings)
 	assertion.Nil(ctx.frozenSettings)
-	assertion.Empty(ctx.handlers)
+	assertion.Empty(ctx.middlewares)
 	assertion.EqualValues(0, ctx.cursor)
 
 	// creation

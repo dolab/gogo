@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golib/httprouter"
@@ -14,43 +14,78 @@ import (
 
 // AppRoute defines route component of gogo
 type AppRoute struct {
-	server   *AppServer
-	prefix   string
-	handlers []Middleware
+	mux sync.Mutex
+
+	server      *AppServer
+	handler     Handler
+	prefix      string
+	middlewares []Middleware
 }
 
 // NewAppRoute creates a new app route with specified prefix and server
 func NewAppRoute(prefix string, server *AppServer) *AppRoute {
-	return &AppRoute{
+	route := &AppRoute{
 		server: server,
 		prefix: prefix,
 	}
+
+	// init default handler with httprouter.Router
+	router := httprouter.New()
+	router.RedirectTrailingSlash = false
+	router.HandleMethodNotAllowed = false // strict for RESTful
+	router.NotFound = http.HandlerFunc(route.notFoundHandle)
+	router.MethodNotAllowed = http.HandlerFunc(route.methodNotAllowed)
+
+	route.handler = router
+
+	return route
+}
+
+// Group returns a new *AppRoute which has the same prefix path and middlewares
+func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
+	return &AppRoute{
+		server:      r.server,
+		handler:     r.handler,
+		prefix:      r.calculatePrefix(prefix),
+		middlewares: r.combineMiddlewares(middlewares...),
+	}
+}
+
+// SetHandler replaces hanlder of AppRoute
+func (r *AppRoute) SetHandler(handler Handler) {
+	r.mux.Lock()
+	r.handler = handler
+	r.mux.Unlock()
 }
 
 // Use registers new middlewares to the route
 // TODO: ignore duplicated middlewares?
 func (r *AppRoute) Use(middlewares ...Middleware) {
-	r.handlers = append(r.handlers, middlewares...)
+	r.mux.Lock()
+	r.middlewares = append(r.middlewares, middlewares...)
+	r.mux.Unlock()
 }
 
-// Group returns a new app route group which has the same prefix path and middlewares
-func (r *AppRoute) Group(prefix string, middlewares ...Middleware) *AppRoute {
-	return &AppRoute{
-		server:   r.server,
-		prefix:   r.calculatePrefix(prefix),
-		handlers: r.combineHandlers(middlewares...),
-	}
+// Middlewares returns registered middlewares of AppRoute
+func (r *AppRoute) Middlewares() []Middleware {
+	return r.middlewares
+}
+
+// Clean removes all registered middlewares of AppRoute
+// NOTE: it's useful in testing cases.
+func (r *AppRoute) Clean() {
+	r.middlewares = []Middleware{}
 }
 
 // Handle registers a new resource with its handler
 func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	uri := r.calculatePrefix(path)
-	handlers := r.combineHandlers(handler)
+	handlers := r.combineMiddlewares(handler)
 
-	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.newContext(req, NewAppParams(req, params))
 
-		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
+		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))
 		defer func() {
 			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
 
@@ -85,12 +120,12 @@ func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.Rever
 // MockHandle mocks a new resource with specified response and handler, useful for testing
 func (r *AppRoute) MockHandle(method string, path string, response http.ResponseWriter, handler Middleware) {
 	uri := r.calculatePrefix(path)
-	handlers := r.combineHandlers(handler)
+	handlers := r.combineMiddlewares(handler)
 
-	r.server.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
 		ctx := r.server.newContext(req, NewAppParams(req, params))
 
-		ctx.Logger.Print("Started ", req.Method, " ", r.filterParameters(req.URL))
+		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))
 		defer func() {
 			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
 
@@ -100,6 +135,10 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 		resp.Header().Set(r.server.requestID, ctx.RequestID())
 		ctx.run(response, handlers)
 	})
+}
+
+func (r *AppRoute) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(resp, req)
 }
 
 // PUT is a shortcut of route.Handle("PUT", path, handler)
@@ -243,13 +282,13 @@ func (r *AppRoute) Static(path, root string) {
 	}
 	path += "*filepath"
 
-	r.server.handler.ServeFiles(path, http.Dir(root))
+	r.handler.ServeFiles(path, http.Dir(root))
 }
 
-func (r *AppRoute) combineHandlers(handlers ...Middleware) []Middleware {
-	combined := make([]Middleware, 0, len(r.handlers)+len(handlers))
-	combined = append(combined, r.handlers...)
-	combined = append(combined, handlers...)
+func (r *AppRoute) combineMiddlewares(middlewares ...Middleware) []Middleware {
+	combined := make([]Middleware, 0, len(r.middlewares)+len(middlewares))
+	combined = append(combined, r.middlewares...)
+	combined = append(combined, middlewares...)
 
 	return combined
 }
@@ -267,23 +306,6 @@ func (r *AppRoute) calculatePrefix(suffix string) string {
 	}
 
 	return prefix
-}
-
-func (r *AppRoute) filterParameters(lru *url.URL) string {
-	s := lru.Path
-
-	query := lru.Query()
-	if len(query) > 0 {
-		for _, key := range r.server.filterParams {
-			if _, ok := query[key]; ok {
-				query.Set(key, "[FILTERED]")
-			}
-		}
-
-		s += "?" + query.Encode()
-	}
-
-	return s
 }
 
 func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
