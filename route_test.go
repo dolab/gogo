@@ -329,7 +329,7 @@ func Test_ResourceController(t *testing.T) {
 	res.Body.Close()
 
 	assertion.Equal(http.StatusNotFound, res.StatusCode)
-	assertion.Contains(string(body), "404 page not found")
+	assertion.Contains(string(body), "not found")
 }
 
 type TestGroupMemberController struct{}
@@ -371,5 +371,5 @@ func Test_ResourceControllerWithSubPath(t *testing.T) {
 	res.Body.Close()
 
 	assertion.Equal(http.StatusNotFound, res.StatusCode)
-	assertion.Contains(string(body), "404 page not found")
+	assertion.Contains(string(body), "not found")
 }
