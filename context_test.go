@@ -22,9 +22,7 @@ func (statusCoder testContextStatusCoder) StatusCode() int {
 func Test_NewContext(t *testing.T) {
 	assertion := assert.New(t)
 
-	server := newMockServer()
-	ctx := NewContext(server)
-	assertion.Equal(server, ctx.Server)
+	ctx := NewContext()
 	assertion.EqualValues(-1, ctx.cursor)
 
 	// settings
@@ -122,9 +120,9 @@ func Test_Context_Next(t *testing.T) {
 		ctx.Next()
 	}
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Logger = NewAppLogger("stderr", "")
-	ctx.handlers = append(ctx.handlers, middleware1, middleware2)
+	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
 	ctx.Next()
 
 	assertion.EqualValues(2, ctx.cursor)
@@ -146,9 +144,9 @@ func Test_Context_Abort(t *testing.T) {
 		ctx.Next()
 	}
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Logger = NewAppLogger("stderr", "")
-	ctx.handlers = append(ctx.handlers, middleware1, middleware2)
+	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
 	ctx.Abort()
 	ctx.Next()
 
@@ -162,7 +160,7 @@ func Test_Context_Redirect(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -179,13 +177,13 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
 	}
 	ctx.Logger = NewAppLogger("stderr", "")
-	ctx.handlers = []Middleware{
+	ctx.middlewares = []Middleware{
 		func(ctx *Context) {
 			ctx.Redirect(location)
 
@@ -206,7 +204,7 @@ func Test_Context_Return(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -228,7 +226,7 @@ func Test_Context_ReturnWithJson(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	request.Header.Set("Accept", "application/json, text/xml; charset=utf-8")
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -253,7 +251,7 @@ func Test_Context_ReturnWithXml(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	request.Header.Set("Accept", "appication/json, text/xml; charset=utf-8")
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -281,7 +279,7 @@ func Test_Context_Render(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -352,7 +350,7 @@ func Test_Context_RenderWithStatusCoder(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
@@ -372,13 +370,13 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
-	ctx := NewContext(newMockServer())
+	ctx := NewContext()
 	ctx.Request = request
 	ctx.Response = &Response{
 		ResponseWriter: recorder,
 	}
 	ctx.Logger = NewAppLogger("stderr", "")
-	ctx.handlers = []Middleware{
+	ctx.middlewares = []Middleware{
 		func(ctx *Context) {
 			ctx.Render(NewDefaultRender(ctx.Response), "render")
 
