@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -289,12 +290,12 @@ func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
 	r.server.logger.Print("Started ", req.Method, " ", req.URL)
 	defer r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
 
-	http.NotFound(resp, req)
+	http.Error(resp, fmt.Sprintf("Route(%s %s) not found", req.Method, req.URL.RequestURI()), http.StatusNotFound)
 }
 
 func (r *AppRoute) methodNotAllowed(resp http.ResponseWriter, req *http.Request) {
 	r.server.logger.Print("Started ", req.Method, " ", req.URL)
 	defer r.server.logger.Print("Completed ", http.StatusMethodNotAllowed, " ", http.StatusText(http.StatusMethodNotAllowed))
 
-	http.Error(resp, "405 request method not allowed", http.StatusMethodNotAllowed)
+	http.Error(resp, fmt.Sprintf("Route(%s %s) not allowed", req.Method, req.URL.RequestURI()), http.StatusMethodNotAllowed)
 }

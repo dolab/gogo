@@ -205,22 +205,25 @@ func (c *Context) Redirect(location string) {
 func (c *Context) Return(body ...interface{}) error {
 	var render Render
 
-	// auto detect response content-type from request accept header
-	accept := c.Request.Header.Get("Accept")
-	for _, enc := range strings.Split(accept, ",") {
-		switch strings.TrimSpace(enc) {
-		case "application/json":
-			render = NewJsonRender(c.Response)
+	// auto detect response content-type from request header of accept
+	if c.Response.Header().Get("Content-Type") == "" {
+		accept := c.Request.Header.Get("Accept")
+		for _, enc := range strings.Split(accept, ",") {
+			switch {
+			case strings.Contains(enc, RenderJsonContentType), strings.Contains(enc, RenderJsonPContentType):
+				render = NewJsonRender(c.Response)
 
-		case "text/xml":
-			render = NewXmlRender(c.Response)
+			case strings.Contains(enc, RednerXmlContentType):
+				render = NewXmlRender(c.Response)
 
-		}
-		if render != nil {
-			break
+			}
+			if render != nil {
+				break
+			}
 		}
 	}
 
+	// third, use default render
 	if render == nil {
 		render = NewDefaultRender(c.Response)
 	}
@@ -266,6 +269,14 @@ func (c *Context) Render(w Render, data interface{}) error {
 	// always abort
 	c.Abort()
 
+	// currect response status code
+	if coder, ok := data.(StatusCoder); ok {
+		c.SetStatus(coder.StatusCode())
+	}
+
+	// currect response header of content-type
+	c.SetHeader("Content-Type", w.ContentType())
+
 	err := w.Render(data)
 	if err != nil {
 		c.Logger.Errorf("%T.Render(?): %v", w, err)
@@ -295,8 +306,8 @@ func (c *Context) Abort() {
 
 // run starting request chan with new envs.
 func (c *Context) run(w http.ResponseWriter, handlers []Middleware) {
+	// hijack with correct http.ResponseWriter
 	c.writer.reset(w)
-	defer c.writer.FlushHeader()
 
 	// reset ResponseWriter
 	c.Response = &c.writer
@@ -308,5 +319,6 @@ func (c *Context) run(w http.ResponseWriter, handlers []Middleware) {
 	c.startedAt = time.Now()
 	c.cursor = -1
 
+	// start chains
 	c.Next()
 }

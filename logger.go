@@ -22,7 +22,6 @@ func NewAppLogger(output, filename string) *AppLogger {
 	switch output {
 	case "stdout", "stderr", "null", "nil":
 		// skip
-
 	default:
 		if output[0] != '/' {
 			output = path.Join(output, filename+".log")
@@ -34,38 +33,44 @@ func NewAppLogger(output, filename string) *AppLogger {
 		log.Panicf("logger.New(%s): %v\n", output, err)
 	}
 
-	al := &AppLogger{
-		Logger: lg,
+	alog := &AppLogger{
+		Logger: lg.New(),
 	}
-	al.pool.New = func() interface{} {
+
+	// overwrite poo.New
+	alog.pool.New = func() interface{} {
 		return &AppLogger{
 			Logger: lg.New(),
 		}
 	}
 
-	return al
+	return alog
 }
 
 // New returns a new Logger with provided requestID which shared writer with current logger
-func (al *AppLogger) New(requestID string) Logger {
+func (alog *AppLogger) New(requestID string) Logger {
 	// shortcut
-	if al.requestID == requestID {
-		return al
+	if alog.requestID == requestID {
+		return alog
 	}
 
-	nl := al.pool.Get().(*AppLogger)
-	nl.SetTags(requestID)
-	nl.requestID = requestID
+	lg := alog.pool.Get()
+	if nlog, ok := lg.(*AppLogger); ok {
+		nlog.requestID = requestID
+		nlog.SetTags(requestID)
 
-	return nl
+		return nlog
+	}
+
+	return lg.(Logger).New(requestID)
 }
 
 // RequestID returns request id binded to the logger
-func (al *AppLogger) RequestID() string {
-	return al.requestID
+func (alog *AppLogger) RequestID() string {
+	return alog.requestID
 }
 
 // Reuse puts the Logger back to pool for later usage
-func (al *AppLogger) Reuse(lg Logger) {
-	al.pool.Put(lg)
+func (alog *AppLogger) Reuse(lg Logger) {
+	alog.pool.Put(lg)
 }

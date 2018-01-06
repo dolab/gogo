@@ -86,14 +86,13 @@ func (s *AppServer) Run() {
 	// throughput of rate limit
 	// NOTE: burst value is 10% of throttle
 	if config.Server.Throttle > 0 {
-		s.throttleTimeout = time.Second / time.Duration(config.Server.Throttle)
-		s.throttle = rate.NewLimiter(rate.Every(s.throttleTimeout), config.Server.Throttle*10/100)
+		s.newThrottle(config.Server.Throttle)
 	}
 
 	// concurrency of rate limit
+	// NOTE: timeout after request timeout
 	if config.Server.Slowdown > 0 {
-		s.slowdownTimeout = time.Duration(config.Server.RTimeout) * time.Second
-		s.slowdown = make(chan bool, config.Server.Slowdown)
+		s.newSlowdown(config.Server.Slowdown, config.Server.RTimeout)
 	}
 
 	// adjust app server request id
@@ -179,7 +178,19 @@ func (s *AppServer) Clean() {
 
 // ServeHTTP implements the http.Handler interface with throughput.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	s.logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
+	// hijack request id
+	requestID := r.Header.Get(s.requestID)
+	if requestID == "" || len(requestID) > DefaultMaxHttpRequestIDLen {
+		requestID = NewGID().Hex()
+
+		// inject request header with new request id
+		r.Header.Set(s.requestID, requestID)
+	}
+
+	logger := s.logger.New(requestID)
+	defer s.logger.Reuse(logger)
+
+	logger.Debugf(`processing %s "%s"`, r.Method, s.filterParameters(r.URL))
 
 	// throughput by rate limit, timeout after time.Second/throttle
 	if s.throttle != nil {
@@ -188,7 +199,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		done()
 
 		if err != nil {
-			s.logger.Warnf("Exceed server throughput: %v", err)
+			logger.Warnf("Throughput exceed: %v", err)
 
 			w.Header().Set("Retry-After", s.throttleTimeout.String())
 			http.Error(w, http.StatusText(http.StatusTeapot), http.StatusTeapot)
@@ -211,7 +222,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case <-ticker.C:
 			ticker.Stop()
 
-			s.logger.Warnf("Exceed server concurrency: %v timeout", s.slowdownTimeout)
+			logger.Warnf("Concurrency exceed: %v timeout", s.slowdownTimeout)
 
 			w.Header().Set("Retry-After", s.slowdownTimeout.String())
 			http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
@@ -224,19 +235,10 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // new returns a new context for the request
 func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
-	// hijack request id
-	requestID := r.Header.Get(s.requestID)
-	if requestID == "" {
-		requestID = NewGID().Hex()
-
-		// inject request header with new request id
-		r.Header.Set(s.requestID, requestID)
-	}
-
 	ctx := s.pool.Get().(*Context)
 	ctx.Request = r
 	ctx.Params = params
-	ctx.Logger = s.logger.New(requestID)
+	ctx.Logger = s.logger.New(r.Header.Get(s.requestID))
 
 	return ctx
 }
@@ -246,4 +248,22 @@ func (s *AppServer) reuseContext(ctx *Context) {
 	s.logger.Reuse(ctx.Logger)
 
 	s.pool.Put(ctx)
+}
+
+func (s *AppServer) newThrottle(n int) {
+	burst := n * 10 / 100
+	if burst < 1 {
+		burst = 1
+	}
+
+	s.throttleTimeout = time.Second / time.Duration(n)
+	s.throttle = rate.NewLimiter(rate.Every(s.throttleTimeout), burst)
+}
+
+func (s *AppServer) newSlowdown(n, timeout int) {
+	s.slowdownTimeout = time.Duration(timeout) * time.Second
+	s.slowdown = make(chan bool, n)
+	for i := 0; i < n; i++ {
+		s.slowdown <- true
+	}
 }
