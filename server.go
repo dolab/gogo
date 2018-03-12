@@ -58,7 +58,7 @@ func (s *AppServer) Config() *AppConfig {
 	return s.config
 }
 
-// Run runs the http server with httprouter.Router handler
+// Run runs the http server with httpdispatch.Router handler
 func (s *AppServer) Run() {
 	var (
 		config         = s.config.Section()
