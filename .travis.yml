@@ -8,16 +8,15 @@ go:
 before_script:
 
 install:
-  - mkdir -p skeleton/src/github.com
+  - export GOPATH=$TRAVIS_BUILD_DIR/skeleton:$GOPATH
+  - mkdir -p $TRAVIS_BUILD_DIR/skeleton/src/github.com
   - ln -s $TRAVIS_BUILD_DIR/skeleton/gogo/ $TRAVIS_BUILD_DIR/skeleton/src/github.com/skeleton
-  - export GOPATH=$GOPATH:$TRAVIS_BUILD_DIR/skeleton
   - go get -v github.com/dolab/colorize
   - go get -v github.com/dolab/httpdispatch
   - go get -v github.com/dolab/httptesting
   - go get -v github.com/dolab/logger
-  - go get -v golang.org/x/net/context
-  - go get -v golang.org/x/text
   - go get -v golang.org/x/time/rate
+  - go get -v golang.org/x/net/context
 
 script:
   - go test
