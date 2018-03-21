@@ -3,14 +3,14 @@ package gogo
 import (
 	"net/http"
 
-	"github.com/golib/httprouter"
+	"github.com/dolab/httpdispatch"
 )
 
 // Handler represents server handlers
 type Handler interface {
 	http.Handler
 
-	Handle(string, string, httprouter.Handle)
+	Handle(string, string, httpdispatch.Handle)
 	ServeFiles(string, http.FileSystem)
 }
 

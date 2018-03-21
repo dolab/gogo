@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golib/httprouter"
+	"github.com/dolab/httpdispatch"
 )
 
 // AppRoute defines route component of gogo
@@ -29,14 +29,14 @@ func NewAppRoute(prefix string, server *AppServer) *AppRoute {
 		prefix: prefix,
 	}
 
-	// init default handler with httprouter.Router
-	router := httprouter.New()
-	router.RedirectTrailingSlash = false
-	router.HandleMethodNotAllowed = false // strict for RESTful
-	router.NotFound = http.HandlerFunc(route.notFoundHandle)
-	router.MethodNotAllowed = http.HandlerFunc(route.methodNotAllowed)
+	// init default handler with httpdispatch.Router
+	dispatcher := httpdispatch.New()
+	dispatcher.RedirectTrailingSlash = false
+	dispatcher.HandleMethodNotAllowed = false // strict for RESTful
+	dispatcher.NotFound = http.HandlerFunc(route.notFoundHandle)
+	dispatcher.MethodNotAllowed = http.HandlerFunc(route.methodNotAllowed)
 
-	route.handler = router
+	route.handler = dispatcher
 
 	return route
 }
@@ -82,7 +82,7 @@ func (r *AppRoute) Handle(method string, path string, handler Middleware) {
 	uri := r.calculatePrefix(path)
 	handlers := r.combineMiddlewares(handler)
 
-	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httpdispatch.Params) {
 		ctx := r.server.newContext(req, NewAppParams(req, params))
 
 		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))
@@ -122,7 +122,7 @@ func (r *AppRoute) MockHandle(method string, path string, response http.Response
 	uri := r.calculatePrefix(path)
 	handlers := r.combineMiddlewares(handler)
 
-	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httpdispatch.Params) {
 		ctx := r.server.newContext(req, NewAppParams(req, params))
 
 		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))

@@ -11,21 +11,21 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/golib/httprouter"
+	"github.com/dolab/httpdispatch"
 )
 
 // AppParams defines params component of gogo
 type AppParams struct {
 	mux     sync.RWMutex
 	request *http.Request
-	params  httprouter.Params
+	params  httpdispatch.Params
 	rawBody []byte
 	rawErr  error
 	readed  bool
 }
 
-// NewAppParams returns an *AppParams with *http.Request and httprouter.Params
-func NewAppParams(r *http.Request, params httprouter.Params) *AppParams {
+// NewAppParams returns an *AppParams with *http.Request and httpdispatch.Params
+func NewAppParams(r *http.Request, params httpdispatch.Params) *AppParams {
 	return &AppParams{
 		request: r,
 		params:  params,
@@ -74,7 +74,7 @@ func (p *AppParams) RawBody() ([]byte, error) {
 }
 
 // Get returns the first value for the named component of the request.
-// NOTE: httprouter.Params takes precedence over URL query string values.
+// NOTE: httpdispatch.Params takes precedence over URL query string values.
 func (p *AppParams) Get(name string) string {
 	value := p.params.ByName(name)
 

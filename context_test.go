@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/golib/assert"
-	"github.com/golib/httprouter"
+	"github.com/dolab/httpdispatch"
 )
 
 type testContextStatusCoder struct {
@@ -81,7 +81,7 @@ func Test_Context_RequestHeader(t *testing.T) {
 	request.Header.Add("X-Canonical-Key", "Canonical-Value")
 	request.Header["x-normal-key"] = []string{"normal value"}
 
-	params := NewAppParams(request, httprouter.Params{})
+	params := NewAppParams(request, httpdispatch.Params{})
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)

@@ -12,7 +12,7 @@ import (
 
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
-	"github.com/golib/httprouter"
+	"github.com/dolab/httpdispatch"
 )
 
 var (
@@ -36,7 +36,7 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
-	params := NewAppParams(request, httprouter.Params{})
+	params := NewAppParams(request, httpdispatch.Params{})
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)
@@ -60,7 +60,7 @@ func Test_ServerNewContext(t *testing.T) {
 func Test_ServerReuseContext(t *testing.T) {
 	assertion := assert.New(t)
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
-	params := NewAppParams(request, httprouter.Params{})
+	params := NewAppParams(request, httpdispatch.Params{})
 
 	server := newMockServer()
 	ctx := server.newContext(request, params)

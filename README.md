@@ -1,8 +1,8 @@
 # gogo
 
-[![Build Status](https://travis-ci.org/dolab/gogo.svg?branch=master&style=flat)](https://travis-ci.org/dolab/gogo)
+[![Build Status](https://travis-ci.org/dolab/gogo.svg?branch=master&style=flat)](https://travis-ci.org/dolab/gogo) [![Coverage](http://gocover.io/_badge/github.com/dolab/gogo?0)](http://gocover.io/github.com/dolab/gogo) [![GoDoc](https://godoc.org/github.com/dolab/gogo?status.svg)](http://godoc.org/github.com/dolab/gogo)
 
-gogo is an open source, high performance RESTful api framework for the golang programming language.
+`gogo` is an open source, high performance RESTful api framework for the [Golang](https://golang.org) programming language.
 
 It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
 
@@ -241,6 +241,7 @@ func main() {
 ## TODOs
 
 - [x] server config context
+- [x] support http.Request context
 - [ ] scoffold && generator
 - [ ] mountable third-part app
 
