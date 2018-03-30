@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dolab/httpdispatch"
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
-	"github.com/dolab/httpdispatch"
 )
 
 var (
-	newMockServer = func() *AppServer {
-		config, _ := newMockConfig("application.json")
+	fakeServer = func() *AppServer {
+		config, _ := fakeConfig("application.json")
 		logger := NewAppLogger("stdout", "")
 
 		return NewAppServer(config, logger)
@@ -27,7 +27,7 @@ var (
 func Test_NewAppServer(t *testing.T) {
 	assertion := assert.New(t)
 
-	server := newMockServer()
+	server := fakeServer()
 	assertion.Implements((*http.Handler)(nil), server)
 	assertion.IsType(&Context{}, server.context.Get())
 }
@@ -38,9 +38,9 @@ func Test_ServerNewContext(t *testing.T) {
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httpdispatch.Params{})
 
-	server := newMockServer()
-	ctx := server.newContext(request, params)
-	ctx.run(recorder, nil)
+	server := fakeServer()
+	ctx := server.newContext(request, "", "", params)
+	ctx.run(recorder, nil, nil)
 
 	assertion.Equal(request, ctx.Request)
 	assertion.Equal(recorder.Header().Get(server.requestID), ctx.Response.Header().Get(server.requestID))
@@ -51,8 +51,8 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion.EqualValues(0, ctx.cursor)
 
 	// creation
-	newCtx := server.newContext(request, params)
-	newCtx.run(recorder, nil)
+	newCtx := server.newContext(request, "", "", params)
+	newCtx.run(recorder, nil, nil)
 
 	assertion.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
@@ -62,16 +62,16 @@ func Test_ServerReuseContext(t *testing.T) {
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httpdispatch.Params{})
 
-	server := newMockServer()
-	ctx := server.newContext(request, params)
+	server := fakeServer()
+	ctx := server.newContext(request, "", "", params)
 	server.reuseContext(ctx)
 
-	newCtx := server.newContext(request, params)
+	newCtx := server.newContext(request, "", "", params)
 	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
 func Test_Server(t *testing.T) {
-	config, _ := newMockConfig("application.json")
+	config, _ := fakeConfig("application.json")
 	logger := NewAppLogger("stdout", "")
 
 	server := NewAppServer(config, logger)
@@ -91,7 +91,7 @@ func Test_Server(t *testing.T) {
 }
 
 func Benchmark_Server(b *testing.B) {
-	config, _ := newMockConfig("application.json")
+	config, _ := fakeConfig("application.json")
 	logger := NewAppLogger("stdout", "")
 
 	server := NewAppServer(config, logger)
@@ -112,7 +112,7 @@ func Benchmark_Server(b *testing.B) {
 }
 
 func Test_ServerWithReturn(t *testing.T) {
-	server := newMockServer()
+	server := fakeServer()
 	server.GET("/return", func(ctx *Context) {
 		if contentType := ctx.Params.Get("content-type"); contentType != "" {
 			ctx.SetHeader("Content-Type", contentType)
@@ -181,7 +181,7 @@ func Test_ServerWithReturn(t *testing.T) {
 }
 
 func Test_ServerWithNotFound(t *testing.T) {
-	server := newMockServer()
+	server := fakeServer()
 
 	ts := httptest.NewServer(server)
 	defer ts.Close()
@@ -194,7 +194,7 @@ func Test_ServerWithNotFound(t *testing.T) {
 
 func Test_ServerWithThroughput(t *testing.T) {
 	assertion := assert.New(t)
-	config, _ := newMockConfig("application.throttle.json")
+	config, _ := fakeConfig("application.throttle.json")
 	logger := NewAppLogger("stdout", "")
 
 	server := NewAppServer(config, logger)
@@ -241,7 +241,7 @@ func Test_ServerWithThroughput(t *testing.T) {
 
 func Test_ServerWithConcurrency(t *testing.T) {
 	assertion := assert.New(t)
-	config, _ := newMockConfig("application.throttle.json")
+	config, _ := fakeConfig("application.throttle.json")
 	logger := NewAppLogger("stdout", "")
 
 	server := NewAppServer(config, logger)

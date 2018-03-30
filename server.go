@@ -166,9 +166,11 @@ func (s *AppServer) filterParameters(lru *url.URL) string {
 }
 
 // new returns a new context for the request
-func (s *AppServer) newContext(r *http.Request, params *AppParams) *Context {
+func (s *AppServer) newContext(r *http.Request, controller, action string, params *AppParams) *Context {
 	ctx := s.context.Get().(*Context)
 	ctx.Request = r
+	ctx.controller = controller
+	ctx.action = action
 	ctx.Params = params
 	ctx.Logger = s.logger.New(r.Header.Get(s.requestID))
 
