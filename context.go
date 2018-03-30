@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -16,21 +17,33 @@ type Context struct {
 	Params   *AppParams
 	Logger   Logger
 
-	mux    sync.RWMutex
-	writer Response
-	cursor int8
-
-	middlewares    []Middleware
+	controller     string
+	action         string
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
+	middlewares    []Middleware
 	startedAt      time.Time
+
+	mux    sync.RWMutex
+	cursor int8
 }
 
 // NewContext returns a *Context with *AppServer
 func NewContext() *Context {
 	return &Context{
-		cursor: -1,
+		Response: NewResponse(nil),
+		cursor:   -1,
 	}
+}
+
+// Controller returns controller name of routed handler
+func (c *Context) Controller() string {
+	return c.controller
+}
+
+// Action returns action name of routed handler
+func (c *Context) Action() string {
+	return c.action
 }
 
 // Set binds a new value with key for the context
@@ -47,26 +60,26 @@ func (c *Context) Set(key string, value interface{}) {
 }
 
 // Get returns a value of the key
-func (c *Context) Get(key string) (interface{}, bool) {
+func (c *Context) Get(key string) (v interface{}, ok bool) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
 	if c.settings == nil {
-		return nil, false
+		return
 	}
 
-	value, ok := c.settings[key]
-	return value, ok
+	v, ok = c.settings[key]
+	return
 }
 
 // MustGet returns a value of key or panic when key doesn't exist
 func (c *Context) MustGet(key string) interface{} {
-	value, ok := c.Get(key)
+	v, ok := c.Get(key)
 	if !ok {
 		c.Logger.Panicf("Key %s doesn't exist", key)
 	}
 
-	return value
+	return v
 }
 
 // SetFinal binds a value with key for the context and freezes it
@@ -88,16 +101,16 @@ func (c *Context) SetFinal(key string, value interface{}) error {
 }
 
 // GetFinal returns a frozen value of the key
-func (c *Context) GetFinal(key string) (interface{}, bool) {
+func (c *Context) GetFinal(key string) (v interface{}, ok bool) {
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
 	if c.frozenSettings == nil {
-		return nil, false
+		return
 	}
 
-	value, ok := c.frozenSettings[key]
-	return value, ok
+	v, ok = c.frozenSettings[key]
+	return
 }
 
 // MustSetFinal likes SetFinal, but it panics if key is duplicated.
@@ -110,22 +123,31 @@ func (c *Context) MustSetFinal(key string, value interface{}) {
 
 // MustGetFinal returns a frozen value of key or panic when it doesn't exist
 func (c *Context) MustGetFinal(key string) interface{} {
-	value, ok := c.GetFinal(key)
+	v, ok := c.GetFinal(key)
 	if !ok {
 		c.Logger.Panicf("Freeze key %s doesn't exist", key)
 	}
 
-	return value
+	return v
 }
 
 // RequestID returns request id of the Context
 func (c *Context) RequestID() string {
+	if c.Logger == nil {
+		return ""
+	}
+
 	return c.Logger.RequestID()
 }
 
 // RequestURI returns request raw uri of http.Request
 func (c *Context) RequestURI() string {
-	return c.Request.RequestURI
+	if c.Request.RequestURI != "" {
+		return c.Request.RequestURI
+	}
+
+	uri, _ := url.PathUnescape(c.Request.URL.EscapedPath())
+	return uri
 }
 
 // HasRawHeader returns true if request sets its header with specified key
@@ -288,7 +310,7 @@ func (c *Context) Render(w Render, data interface{}) error {
 func (c *Context) Next() {
 	c.cursor++
 
-	if c.cursor < int8(len(c.middlewares)) {
+	if c.cursor >= 0 && c.cursor < int8(len(c.middlewares)) {
 		c.middlewares[c.cursor](c)
 	} else {
 		c.Logger.Warn("No more executer in the chain.")
@@ -297,16 +319,13 @@ func (c *Context) Next() {
 
 // Abort forces to stop call chain.
 func (c *Context) Abort() {
-	c.cursor = math.MaxInt8 / 2
+	c.cursor = math.MaxInt8
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(w http.ResponseWriter, middlewares []Middleware) {
-	// hijack with correct http.ResponseWriter
-	c.writer.reset(w)
-
-	// reset ResponseWriter
-	c.Response = &c.writer
+func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares []Middleware) {
+	// reset Responser with correct http.ResponseWriter
+	c.Response.(*Response).reset(w)
 
 	// reset internal
 	c.settings = nil
@@ -317,4 +336,9 @@ func (c *Context) run(w http.ResponseWriter, middlewares []Middleware) {
 
 	// start chains
 	c.Next()
+
+	// invoke http.Handler if existed
+	if c.cursor >= 0 && c.cursor < math.MaxInt8 && handler != nil {
+		handler.ServeHTTP(c.Response, c.Request)
+	}
 }
