@@ -14,7 +14,7 @@ import (
 
 func Test_NewAppRoute(t *testing.T) {
 	prefix := "/prefix"
-	server := newMockServer()
+	server := fakeServer()
 	assertion := assert.New(t)
 
 	route := NewAppRoute(prefix, server)
@@ -25,7 +25,7 @@ func Test_NewAppRoute(t *testing.T) {
 
 func Test_RouteHandle(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 
 	testCases := map[string]struct {
 		path    string
@@ -106,7 +106,7 @@ func Test_RouteHandle(t *testing.T) {
 
 func Test_RouteHandleWithTailSlash(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 
 	server.Handle("GET", "/:tailslash", func(ctx *Context) {
 		ctx.Text("GET /:tailslash")
@@ -166,7 +166,7 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 
 func Test_RouteProxyHandle(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 
 	// proxied handler
 	server.Use(func(ctx *Context) {
@@ -212,7 +212,7 @@ func Test_RouteProxyHandle(t *testing.T) {
 
 func Test_RouteMockHandle(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 	response := httptest.NewRecorder()
 
 	// mock handler
@@ -241,7 +241,7 @@ func Test_RouteMockHandle(t *testing.T) {
 
 func Test_RouteGroup(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 	route := server.Group("/group")
 
 	// register handler
@@ -285,7 +285,7 @@ func (t *testUserController) Show(ctx *Context) {
 
 func Test_RouteResource(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 
 	// start server
 	ts := httptest.NewServer(server)
@@ -338,7 +338,7 @@ func (t *testGroupMemberController) Show(ctx *Context) {
 
 func Test_RouteResourceWithSubPath(t *testing.T) {
 	assertion := assert.New(t)
-	server := newMockServer()
+	server := fakeServer()
 
 	// start server
 	ts := httptest.NewServer(server)
