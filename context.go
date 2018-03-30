@@ -146,7 +146,7 @@ func (c *Context) RequestURI() string {
 		return c.Request.RequestURI
 	}
 
-	uri, _ := url.PathUnescape(c.Request.URL.EscapedPath())
+	uri, _ := url.QueryUnescape(c.Request.URL.EscapedPath())
 	return uri
 }
 
