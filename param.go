@@ -24,6 +24,11 @@ type AppParams struct {
 	readed  bool
 }
 
+// NewParams returns an *AppParams with *http.Request and context httpdispatch.Params
+func NewParams(r *http.Request) *AppParams {
+	return NewAppParams(r, httpdispatch.ContextParams(r))
+}
+
 // NewAppParams returns an *AppParams with *http.Request and httpdispatch.Params
 func NewAppParams(r *http.Request, params httpdispatch.Params) *AppParams {
 	return &AppParams{

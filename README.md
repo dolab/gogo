@@ -43,18 +43,33 @@ $ make
 package main
 
 import (
-    "github.com/dolab/gogo"
+	"net/http"
+
+	"github.com/dolab/gogo"
 )
 
 func main() {
-    app := gogo.New("development", "/path/to/your/config")
+	app := gogo.New("development", "/path/to/your/config")
 
-    // GET /
-    app.GET("/", func(ctx *gogo.Context) {
-        ctx.Text("Hello, gogo!")
-    })
+	// GET /
+	app.GET("/", func(ctx *gogo.Context) {
+		ctx.Text("Hello, gogo!")
+	})
 
-    app.Run()
+	// GET /hello/:name
+	app.HandlerFunc(http.MethodGet, "/hello/:name", func(w http.ResponseWriter, r *http.Request) {
+		params := gogo.NewAppParams(r)
+
+		name := params.Get("name")
+		if name == "" {
+			name = "gogo"
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello, " + name + "!"))
+	})
+
+	app.Run()
 }
 ```
 
@@ -70,6 +85,7 @@ import (
 func main() {
     app := gogo.New("development", "/path/to/your/config")
 
+    // avoid server quit by registering a recovery middleware
     app.Use(func(ctx *gogo.Context) {
         if panicErr := recover(); panicErr != nil {
             ctx.Abort()
@@ -106,6 +122,7 @@ import (
 func main() {
     app := gogo.New("development", "/path/to/your/config")
 
+    // avoid server quit by registering recovery func global
     app.Use(func(ctx *gogo.Context) {
         if panicErr := recover(); panicErr != nil {
             ctx.Abort()
@@ -122,6 +139,7 @@ func main() {
     })
 
     // prefix resources with /v1 and apply basic auth middleware for all sub-resources
+    // NOTE: it combines recovery middleware from previous.
     v1 := app.Group("/v1", func(ctx *gogo.Context) {
         auth := ctx.Header("Authorization")
         if !strings.HasPrefix(auth, "Basic ") {
@@ -171,15 +189,17 @@ func main() {
 - Use Resource Controller
 
 You can implement a *controller* with optional `Index`, `Create`, `Explore`, `Show`, `Update` and `Destroy` methods, 
-and use `app.Resource("resourceName", &YourController)` to register all RESTful routes auto.
+and use `app.Resource("resourceName", &MyController)` to register all RESTful routes auto.
 
-NOTE: When your resource has a inheritance relationship, there MUST NOT be two same id key.
+NOTE: When your resource has a inheritance relationship, there **MUST NOT** be two same id key.
 you can overwrite default id key by implementing `ControllerID` interface.
 
 ```go
 package main
 
-import "github.com/dolab/gogo"
+import (
+    "github.com/dolab/gogo"
+)
 
 type GroupController struct{}
 
@@ -227,10 +247,10 @@ func main() {
 {
     "addr": "localhost",
     "port": 9090,
-    "request_timeout": 30,
-    "response_timeout": 30,
     "throttle": 3000, // RPS, throughput of per-seconds
     "slowdown": 30000, // TPS, concurrency of server
+    "request_timeout": 30,
+    "response_timeout": 30,
     "ssl": false,
     "ssl_cert": "/path/to/ssl/cert",
     "ssl_key": "/path/to/ssl/key",
