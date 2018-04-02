@@ -31,7 +31,7 @@ func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Mid
 	switch len(tmpvars) {
 	case 3:
 		// variable func in !go1.6 formatted in /path/to/gogo.glob.func?
-		if tmpvars[1] == "glob" && tmp[2][:4] == "func" {
+		if tmpvars[1] == "glob" && tmpvars[2][:4] == "func" {
 			tmpvars = []string{tmpvars[0], tmpvars[0], "<http.HandlerFunc>"}
 		} else {
 			// adjust controller name
