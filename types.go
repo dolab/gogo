@@ -10,24 +10,13 @@ import (
 type Handler interface {
 	http.Handler
 
-	Handle(string, string, httpdispatch.Handle)
+	Handle(string, string, httpdispatch.Handler)
 	ServeFiles(string, http.FileSystem)
 }
 
 // Middleware represents request filters and resource handler
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
 type Middleware func(ctx *Context)
-
-// Render represents HTTP response render
-type Render interface {
-	ContentType() string
-	Render(v interface{}) error
-}
-
-// StatusCoder represents HTTP response status code
-type StatusCoder interface {
-	StatusCode() int
-}
 
 // Responser represents HTTP response interface
 type Responser interface {
@@ -43,6 +32,18 @@ type Responser interface {
 
 // ResponseFilter defines filter interface applied to response
 type ResponseFilter func(w Responser, b []byte) []byte
+
+// StatusCoder represents HTTP response status code
+// it is useful for custom response data with response status code
+type StatusCoder interface {
+	StatusCode() int
+}
+
+// Render represents HTTP response render
+type Render interface {
+	ContentType() string
+	Render(v interface{}) error
+}
 
 // Logger defines interface of application log apis.
 type Logger interface {

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	newMockApp = func(mode string) *AppServer {
+	fakeApp = func(mode string) *AppServer {
 		root, _ := os.Getwd()
 
 		return New(mode, path.Join(root, "skeleton", "gogo"))
@@ -22,7 +22,7 @@ var (
 func Test_New(t *testing.T) {
 	assertion := assert.New(t)
 
-	app := newMockApp("test")
+	app := fakeApp("test")
 	app.GET("/gogo", func(ctx *Context) {
 		ctx.Text("Hello, gogo!")
 	})
@@ -56,6 +56,6 @@ func Test_New(t *testing.T) {
 func Test_NewWithModeConfig(t *testing.T) {
 	assertion := assert.New(t)
 
-	app := newMockApp("development")
+	app := fakeApp("development")
 	assertion.Equal("for development", app.config.Name)
 }

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golib/assert"
 	"github.com/dolab/httpdispatch"
+	"github.com/golib/assert"
 )
 
 func Test_AppParamsHasQuery(t *testing.T) {

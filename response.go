@@ -9,6 +9,7 @@ const (
 	noneHeaderFlushed = -1
 )
 
+// Response extends http.ResponseWriter with extra metadata
 type Response struct {
 	http.ResponseWriter
 
@@ -17,6 +18,8 @@ type Response struct {
 	filters []ResponseFilter
 }
 
+// NewResponse returns a Responser with w passed.
+// NOTE: It sets default response status code to http.StatusOK
 func NewResponse(w http.ResponseWriter) Responser {
 	response := &Response{
 		ResponseWriter: w,
@@ -33,15 +36,17 @@ func (r *Response) Before(filter ResponseFilter) {
 	r.filters = append(r.filters, filter)
 }
 
+// Status returns current response status code
 func (r *Response) Status() int {
 	return r.status
 }
 
+// Size returns size of response body written
 func (r *Response) Size() int {
 	return r.size
 }
 
-// HeaderFlushed returns whether response headers has written
+// HeaderFlushed returns true if response headers has written
 func (r *Response) HeaderFlushed() bool {
 	return r.size != noneHeaderFlushed
 }
@@ -67,6 +72,7 @@ func (r *Response) FlushHeader() {
 	r.ResponseWriter.WriteHeader(r.status)
 }
 
+// Write writes data to client, and returns size of data written or error if exits.
 func (r *Response) Write(data []byte) (size int, err error) {
 	// apply filters
 	for i := len(r.filters) - 1; i >= 0; i-- {
@@ -81,6 +87,7 @@ func (r *Response) Write(data []byte) (size int, err error) {
 	return
 }
 
+// Flush tryes flush to client if possible
 func (r *Response) Flush() {
 	flush, ok := r.ResponseWriter.(http.Flusher)
 	if ok {

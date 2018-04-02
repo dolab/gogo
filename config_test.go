@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	newMockConfig = func(name string) (*AppConfig, error) {
+	fakeConfig = func(name string) (*AppConfig, error) {
 		root, _ := os.Getwd()
 
 		return NewAppConfig(path.Join(root, "skeleton", "gogo", "config", name))
@@ -19,7 +19,7 @@ var (
 func Test_NewConfig(t *testing.T) {
 	assertion := assert.New(t)
 
-	config, err := newMockConfig("application.json")
+	config, err := fakeConfig("application.json")
 	assertion.Nil(err)
 	assertion.Equal(Test, config.Mode)
 	assertion.Equal("gogo", config.Name)
@@ -47,7 +47,7 @@ func Test_NewConfigWithoutName(t *testing.T) {
 func Test_ConfigSetMode(t *testing.T) {
 	assertion := assert.New(t)
 
-	config, _ := newMockConfig("application.json")
+	config, _ := fakeConfig("application.json")
 	assertion.Equal(Test, config.Mode)
 
 	config.SetMode(Production)
@@ -56,7 +56,7 @@ func Test_ConfigSetMode(t *testing.T) {
 
 func Test_ConfigSection(t *testing.T) {
 	assertion := assert.New(t)
-	config, _ := newMockConfig("application.json")
+	config, _ := fakeConfig("application.json")
 
 	section := config.Section()
 	assertion.NotNil(section.Server)
@@ -71,7 +71,7 @@ func Test_ConfigUnmarshalJSON(t *testing.T) {
 	}
 
 	assertion := assert.New(t)
-	config, _ := newMockConfig("application.json")
+	config, _ := fakeConfig("application.json")
 	config.SetMode(Development)
 
 	err := config.UnmarshalJSON(&testConfig)

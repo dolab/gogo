@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/dolab/httpdispatch"
 )
@@ -33,7 +32,7 @@ func NewAppRoute(prefix string, server *AppServer) *AppRoute {
 	dispatcher := httpdispatch.New()
 	dispatcher.RedirectTrailingSlash = false
 	dispatcher.HandleMethodNotAllowed = false // strict for RESTful
-	dispatcher.NotFound = http.HandlerFunc(route.notFoundHandle)
+	dispatcher.NotFound = http.HandlerFunc(route.notFound)
 	dispatcher.MethodNotAllowed = http.HandlerFunc(route.methodNotAllowed)
 
 	route.handler = dispatcher
@@ -77,70 +76,6 @@ func (r *AppRoute) Clean() {
 	r.middlewares = []Middleware{}
 }
 
-// Handle registers a new resource with its handler
-func (r *AppRoute) Handle(method string, path string, handler Middleware) {
-	uri := r.calculatePrefix(path)
-	handlers := r.combineMiddlewares(handler)
-
-	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httpdispatch.Params) {
-		ctx := r.server.newContext(req, NewAppParams(req, params))
-
-		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))
-		defer func() {
-			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-			r.server.reuseContext(ctx)
-		}()
-
-		resp.Header().Set(r.server.requestID, ctx.RequestID())
-		ctx.run(resp, handlers)
-	})
-}
-
-// ProxyHandle registers a new resource with a proxy
-func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
-	handler := func(ctx *Context) {
-		for _, filter := range filters {
-			ctx.Response.Before(filter)
-		}
-
-		proxy.ServeHTTP(ctx.Response, ctx.Request)
-	}
-
-	switch method {
-	case "*":
-		r.Any(path, handler)
-
-	default:
-		r.Handle(method, path, handler)
-
-	}
-}
-
-// MockHandle mocks a new resource with specified response and handler, useful for testing
-func (r *AppRoute) MockHandle(method string, path string, response http.ResponseWriter, handler Middleware) {
-	uri := r.calculatePrefix(path)
-	handlers := r.combineMiddlewares(handler)
-
-	r.handler.Handle(method, uri, func(resp http.ResponseWriter, req *http.Request, params httpdispatch.Params) {
-		ctx := r.server.newContext(req, NewAppParams(req, params))
-
-		ctx.Logger.Print("Started ", req.Method, " ", r.server.filterParameters(req.URL))
-		defer func() {
-			ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-			r.server.reuseContext(ctx)
-		}()
-
-		resp.Header().Set(r.server.requestID, ctx.RequestID())
-		ctx.run(response, handlers)
-	})
-}
-
-func (r *AppRoute) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	r.handler.ServeHTTP(resp, req)
-}
-
 // PUT is a shortcut of route.Handle("PUT", path, handler)
 func (r *AppRoute) PUT(path string, handler Middleware) {
 	r.Handle("PUT", path, handler)
@@ -174,6 +109,47 @@ func (r *AppRoute) HEAD(path string, handler Middleware) {
 // OPTIONS is a shortcut of route.Handle("OPTIONS", path, handler)
 func (r *AppRoute) OPTIONS(path string, handler Middleware) {
 	r.Handle("OPTIONS", path, handler)
+}
+
+// Any is a shortcut for all request methods
+func (r *AppRoute) Any(path string, handler Middleware) {
+	r.Handle("GET", path, handler)
+	r.Handle("POST", path, handler)
+	r.Handle("PUT", path, handler)
+	r.Handle("PATCH", path, handler)
+	r.Handle("DELETE", path, handler)
+	r.Handle("HEAD", path, handler)
+	r.Handle("OPTIONS", path, handler)
+}
+
+// Static serves files from the given dir
+func (r *AppRoute) Static(path, root string) {
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
+	path += "*filepath"
+
+	r.handler.ServeFiles(path, http.Dir(root))
+}
+
+// ProxyHandle registers a new resource with a proxy
+func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
+	handler := func(ctx *Context) {
+		for _, filter := range filters {
+			ctx.Response.Before(filter)
+		}
+
+		proxy.ServeHTTP(ctx.Response, ctx.Request)
+	}
+
+	switch method {
+	case "*":
+		r.Any(path, handler)
+
+	default:
+		r.Handle(method, path, handler)
+
+	}
 }
 
 // Resource generates routes with controller interfaces, and returns a group routes
@@ -264,25 +240,38 @@ func (r *AppRoute) Resource(resource string, controller interface{}) *AppRoute {
 	return r.Group(resourceSpec)
 }
 
-// Any is a shortcut for all request methods
-func (r *AppRoute) Any(path string, handler Middleware) {
-	r.Handle("GET", path, handler)
-	r.Handle("POST", path, handler)
-	r.Handle("PUT", path, handler)
-	r.Handle("PATCH", path, handler)
-	r.Handle("DELETE", path, handler)
-	r.Handle("HEAD", path, handler)
-	r.Handle("OPTIONS", path, handler)
+// HandlerFunc registers a new resource by http.HandlerFunc
+func (r *AppRoute) HandlerFunc(method, uri string, handler http.HandlerFunc) {
+	r.Handler(method, uri, handler)
 }
 
-// Static serves files from the given dir
-func (r *AppRoute) Static(path, root string) {
-	if path[len(path)-1] != '/' {
-		path += "/"
-	}
-	path += "*filepath"
+// Handler registers a new resource by http.Handler
+func (r *AppRoute) Handler(method, uri string, handler http.Handler) {
+	uri = r.calculatePrefix(uri)
+	middlewares := r.combineMiddlewares()
 
-	r.handler.ServeFiles(path, http.Dir(root))
+	r.handler.Handle(method, uri, NewContextHandle(r.server, handler.ServeHTTP, middlewares))
+}
+
+// ServeHTTP implements http.Handler by proxy to wrapped Handler
+func (r *AppRoute) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	r.handler.ServeHTTP(resp, req)
+}
+
+// Handle registers a new resource by Middleware
+func (r *AppRoute) Handle(method string, uri string, handler Middleware) {
+	uri = r.calculatePrefix(uri)
+	middlewares := r.combineMiddlewares(handler)
+
+	r.handler.Handle(method, uri, NewContextHandle(r.server, nil, middlewares))
+}
+
+// MockHandle mocks a new resource with specified response and handler, useful for testing
+func (r *AppRoute) MockHandle(method string, path string, response http.ResponseWriter, handler Middleware) {
+	uri := r.calculatePrefix(path)
+	middlewares := r.combineMiddlewares(handler)
+
+	r.handler.Handle(method, uri, NewFakeHandle(r.server, nil, middlewares, response))
 }
 
 func (r *AppRoute) combineMiddlewares(middlewares ...Middleware) []Middleware {
@@ -308,7 +297,7 @@ func (r *AppRoute) calculatePrefix(suffix string) string {
 	return prefix
 }
 
-func (r *AppRoute) notFoundHandle(resp http.ResponseWriter, req *http.Request) {
+func (r *AppRoute) notFound(resp http.ResponseWriter, req *http.Request) {
 	r.server.logger.Print("Started ", req.Method, " ", req.URL)
 	defer r.server.logger.Print("Completed ", http.StatusNotFound, " ", http.StatusText(http.StatusNotFound))
 
