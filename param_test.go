@@ -40,11 +40,13 @@ func Test_AppParamsHasForm(t *testing.T) {
 }
 
 func Test_AppParamsRawBody(t *testing.T) {
+	assertion := assert.New(t)
+
 	params := url.Values{}
 	params.Add("key", "name")
 
-	request, _ := http.NewRequest("PUT", "/path/to/resource?test&key=url_value", bytes.NewBufferString(params.Encode()))
-	assertion := assert.New(t)
+	request, _ := http.NewRequest("POST", "/path/to/resource?test&key=url_value", bytes.NewBufferString(params.Encode()))
+	request.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
 	p := NewAppParams(request, httpdispatch.Params{})
 
@@ -52,10 +54,16 @@ func Test_AppParamsRawBody(t *testing.T) {
 	assertion.Nil(err)
 	assertion.Equal(params.Encode(), string(body))
 
+	// original FormValue should works also
+	assertion.Equal(params.Get("key"), request.FormValue("key"))
+
 	// safe to invoke more than one time
 	body, err = p.RawBody()
 	assertion.Nil(err)
 	assertion.Equal(params.Encode(), string(body))
+
+	// original FormValue should works also
+	assertion.Equal(params.Get("key"), request.FormValue("key"))
 }
 
 func Test_AppParamsGet(t *testing.T) {

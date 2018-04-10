@@ -68,11 +68,14 @@ func (p *AppParams) RawBody() ([]byte, error) {
 
 	p.rawBody, p.rawErr = ioutil.ReadAll(p.request.Body)
 
-	// close the request.Body
+	// close and hijack the request.Body
 	if p.rawErr == nil {
 		p.request.Body.Close()
+
+		p.request.Body = ioutil.NopCloser(bytes.NewReader(p.rawBody))
 	}
 
+	// mark as readed
 	p.readed = true
 
 	return p.rawBody, p.rawErr
