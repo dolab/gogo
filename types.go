@@ -28,6 +28,7 @@ type Responser interface {
 	Status() int                  // response status code
 	HeaderFlushed() bool          // whether response header has been sent?
 	FlushHeader()                 // send response header
+	Reset(w http.ResponseWriter)  // reset response with new http.ResponseWriter
 }
 
 // ResponseFilter defines filter interface applied to response

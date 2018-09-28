@@ -192,7 +192,7 @@ func Test_Context_AddHeader(t *testing.T) {
 	assertion.Empty(recorder.Header())
 
 	ctx := NewContext()
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	ctx.AddHeader("key", "value")
 	assertion.NotEmpty(recorder.Header())
@@ -211,7 +211,7 @@ func Test_Context_SetHeader(t *testing.T) {
 	assertion.Empty(recorder.Header())
 
 	ctx := NewContext()
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	ctx.SetHeader("key", "value")
 	assertion.NotEmpty(recorder.Header())
@@ -230,7 +230,7 @@ func Test_Context_SetStatus(t *testing.T) {
 	assertion.Equal(http.StatusOK, recorder.Code)
 
 	ctx := NewContext()
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 	assertion.Equal(http.StatusOK, ctx.Response.Status())
 
 	ctx.SetStatus(http.StatusAccepted)
@@ -251,7 +251,7 @@ func Test_Context_Redirect(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	ctx.Redirect(location)
 
@@ -268,7 +268,7 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.middlewares = []Middleware{
 		func(ctx *Context) {
@@ -293,7 +293,7 @@ func Test_Context_Return(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	// return with sample string
 	s := "Hello, world!"
@@ -313,7 +313,7 @@ func Test_Context_ReturnWithJson(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	// return with complex data type
 	data := struct {
@@ -336,7 +336,7 @@ func Test_Context_ReturnWithXml(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 
 	// render with complex data type
 	data := struct {
@@ -433,7 +433,7 @@ func Test_Context_RenderWithStatusCoder(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 	ctx.Logger = NewAppLogger("stderr", "")
 
 	data := fakeContextStatusCoder{
@@ -451,7 +451,7 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.(*Response).reset(recorder)
+	ctx.Response.Reset(recorder)
 	ctx.Logger = NewAppLogger("stderr", "")
 	ctx.middlewares = []Middleware{
 		func(ctx *Context) {

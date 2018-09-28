@@ -95,7 +95,8 @@ func (r *Response) Flush() {
 	}
 }
 
-func (r *Response) reset(w http.ResponseWriter) {
+// Reset resets the current *Response with new http.ResponseWriter
+func (r *Response) Reset(w http.ResponseWriter) {
 	r.ResponseWriter = w
 	r.status = http.StatusOK
 	r.size = noneHeaderFlushed
