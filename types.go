@@ -6,6 +6,15 @@ import (
 	"github.com/dolab/httpdispatch"
 )
 
+// Configer represents application configurations
+type Configer interface {
+	RunMode() RunMode
+	RunName() string
+	SetMode(mode RunMode)
+	Section() *SectionConfig
+	UnmarshalJSON(v interface{}) error
+}
+
 // Handler represents server handlers
 type Handler interface {
 	http.Handler

@@ -16,7 +16,7 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	config       *AppConfig
+	config       Configer
 	logger       Logger
 	requestID    string   // request id header name
 	filterParams []string // filter out params when logging
@@ -29,7 +29,7 @@ type AppServer struct {
 }
 
 // NewAppServer returns *AppServer inited with args
-func NewAppServer(config *AppConfig, logger Logger) *AppServer {
+func NewAppServer(config Configer, logger Logger) *AppServer {
 	server := &AppServer{
 		config:    config,
 		logger:    logger,
@@ -49,11 +49,11 @@ func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return s.config.Mode.String()
+	return s.config.RunMode().String()
 }
 
 // Config returns app config of the app server
-func (s *AppServer) Config() *AppConfig {
+func (s *AppServer) Config() Configer {
 	return s.config
 }
 
