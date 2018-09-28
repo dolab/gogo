@@ -19,6 +19,7 @@ var (
 	fakeServer = func() *AppServer {
 		config, _ := fakeConfig("application.json")
 		logger := NewAppLogger("stdout", "")
+		logger.SetSkip(3)
 
 		return NewAppServer(config, logger)
 	}
