@@ -138,7 +138,7 @@ type LoggerConfig struct {
 	Output    string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
 	LevelName string `json:"level"`  // valid values [debug|info|warn|error]
 
-	FilterParams []string `json:"filter_params"`
+	FilterFields []string `json:"filter_fields"` // sensitive fields which should filter out when logging
 }
 
 // Level returns logger.Level by its name

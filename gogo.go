@@ -38,7 +38,8 @@ var (
 )
 
 // New creates application server with config resolved
-// from <srcPath>/config/application[.<runMode>].json.
+// from file <srcPath>/config/application[.<runMode>].json.
+// NOTE: You can custom resolver by overwriting FindModeConfigFile.
 func New(runMode, srcPath string) *AppServer {
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
@@ -49,7 +50,8 @@ func New(runMode, srcPath string) *AppServer {
 	return NewWithConfiger(config)
 }
 
-// NewWithConfiger creates application server with custom Configer and default Logger
+// NewWithConfiger creates application server with custom Configer and
+// default Logger, see Configer for implements a new config provider.
 func NewWithConfiger(config Configer) *AppServer {
 	// init default logger
 	logger := NewAppLogger(config.Section().Logger.Output, config.RunMode().String())
@@ -57,7 +59,7 @@ func NewWithConfiger(config Configer) *AppServer {
 	return NewWithLogger(config, logger)
 }
 
-// NewWithLogger creates application server with custom Logger
+// NewWithLogger creates application server with custom Configer and Logger
 func NewWithLogger(config Configer, logger Logger) *AppServer {
 	// overwrite logger level and colorful
 	logger.SetLevelByName(config.Section().Logger.LevelName)

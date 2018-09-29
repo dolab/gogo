@@ -70,9 +70,9 @@ func (r *AppRoute) Middlewares() []Middleware {
 	return r.middlewares
 }
 
-// Clean removes all registered middlewares of AppRoute
+// CleanModdilewares removes all registered middlewares of AppRoute
 // NOTE: it's useful in testing cases.
-func (r *AppRoute) Clean() {
+func (r *AppRoute) CleanModdilewares() {
 	r.middlewares = []Middleware{}
 }
 
