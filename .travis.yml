@@ -27,5 +27,6 @@ jobs:
       go: 1.7
       script: go test
 
-script:
-  - go test
+    - stage: go1.11
+      go: 1.11
+      script: go test
