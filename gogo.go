@@ -37,7 +37,9 @@ var (
 	}
 )
 
-// New creates application server with config resolved of run mode.
+// New creates application server with config resolved
+// from file <srcPath>/config/application[.<runMode>].json.
+// NOTE: You can custom resolver by overwriting FindModeConfigFile.
 func New(runMode, srcPath string) *AppServer {
 	// resolve config from application.json
 	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
@@ -45,30 +47,25 @@ func New(runMode, srcPath string) *AppServer {
 		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
 	}
 
-	// init default logger
-	section := config.Section()
-	logger := NewAppLogger(section.Logger.Output, runMode)
-	logger.SetLevelByName(section.Logger.LevelName)
-	logger.SetColor(!config.Mode.IsProduction())
-
-	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
-
-	return NewAppServer(config, logger)
+	return NewWithConfiger(config)
 }
 
-// NewWithLogger creates application server with provided Logger
-func NewWithLogger(runMode, srcPath string, logger Logger) *AppServer {
-	// resolve config from application.json
-	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
-	if err != nil {
-		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
-	}
+// NewWithConfiger creates application server with custom Configer and
+// default Logger, see Configer for implements a new config provider.
+func NewWithConfiger(config Configer) *AppServer {
+	// init default logger
+	logger := NewAppLogger(config.Section().Logger.Output, config.RunMode().String())
 
+	return NewWithLogger(config, logger)
+}
+
+// NewWithLogger creates application server with custom Configer and Logger
+func NewWithLogger(config Configer, logger Logger) *AppServer {
 	// overwrite logger level and colorful
 	logger.SetLevelByName(config.Section().Logger.LevelName)
-	logger.SetColor(!config.Mode.IsProduction())
+	logger.SetColor(!config.RunMode().IsProduction())
 
-	logger.Printf("Initialized %s in %s mode", config.Name, config.Mode)
+	logger.Printf("Initialized %s in %s mode", config.RunName(), config.RunMode())
 
 	return NewAppServer(config, logger)
 }

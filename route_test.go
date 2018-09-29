@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
-	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/golib/assert"
@@ -168,18 +168,26 @@ func Test_RouteProxyHandle(t *testing.T) {
 	assertion := assert.New(t)
 	server := fakeServer()
 
+	var n int32
+
 	// proxied handler
-	server.Use(func(ctx *Context) {
+	proxiedServer := server.Group("", func(ctx *Context) {
+		atomic.AddInt32(&n, 1)
+
 		ctx.Logger.Warn("proxy middleware")
 
 		ctx.Next()
 	})
-	server.Handle("GET", "/backend", func(ctx *Context) {
+	proxiedServer.Handle("GET", "/backend", func(ctx *Context) {
+		atomic.AddInt32(&n, 1)
+
 		ctx.Text("Proxied!")
 	})
 
 	proxy := &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
+			atomic.AddInt32(&n, 1)
+
 			r.URL.Scheme = "http"
 			r.URL.Host = r.Host
 			r.URL.Path = "/backend"
@@ -187,11 +195,7 @@ func Test_RouteProxyHandle(t *testing.T) {
 		},
 	}
 	server.ProxyHandle("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
-		s := strings.ToUpper(string(b))
-
-		w.Header().Set("Content-Length", strconv.Itoa(len(s)*2))
-
-		return []byte(s + s)
+		return []byte(strings.ToUpper(string(b)))
 	})
 
 	// start server
@@ -201,13 +205,14 @@ func Test_RouteProxyHandle(t *testing.T) {
 	// testing by http request
 	request, _ := http.NewRequest("GET", ts.URL+"/proxy", nil)
 
-	res, err := http.DefaultClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
 	assertion.Nil(err)
+	assertion.EqualValues(3, n)
 
-	body, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
+	body, err := ioutil.ReadAll(response.Body)
+	response.Body.Close()
 	assertion.Nil(err)
-	assertion.Equal("PROXIED!PROXIED!", string(body))
+	assertion.Equal("PROXIED!", string(body))
 }
 
 func Test_RouteMockHandle(t *testing.T) {

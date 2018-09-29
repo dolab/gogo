@@ -24,6 +24,7 @@ func Test_NewConfig(t *testing.T) {
 	assertion.Equal(Test, config.Mode)
 	assertion.Equal("gogo", config.Name)
 	assertion.NotEmpty(config.Sections)
+	assertion.Implements((*Configer)(nil), config)
 }
 
 func Test_NewConfigWithoutMode(t *testing.T) {

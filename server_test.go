@@ -19,6 +19,7 @@ var (
 	fakeServer = func() *AppServer {
 		config, _ := fakeConfig("application.json")
 		logger := NewAppLogger("stdout", "")
+		logger.SetSkip(3)
 
 		return NewAppServer(config, logger)
 	}
@@ -260,7 +261,7 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	var (
 		wg sync.WaitGroup
 
-		routines = 2
+		routines = 3
 	)
 
 	bufc := make(chan string, routines)

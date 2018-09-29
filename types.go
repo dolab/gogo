@@ -6,6 +6,15 @@ import (
 	"github.com/dolab/httpdispatch"
 )
 
+// Configer represents application configurations
+type Configer interface {
+	RunMode() RunMode
+	RunName() string
+	SetMode(mode RunMode)
+	Section() *SectionConfig
+	UnmarshalJSON(v interface{}) error
+}
+
 // Handler represents server handlers
 type Handler interface {
 	http.Handler
@@ -28,6 +37,7 @@ type Responser interface {
 	Status() int                  // response status code
 	HeaderFlushed() bool          // whether response header has been sent?
 	FlushHeader()                 // send response header
+	Reset(w http.ResponseWriter)  // reset response with new http.ResponseWriter
 }
 
 // ResponseFilter defines filter interface applied to response

@@ -57,5 +57,5 @@ func Test_NewWithModeConfig(t *testing.T) {
 	assertion := assert.New(t)
 
 	app := fakeApp("development")
-	assertion.Equal("for development", app.config.Name)
+	assertion.Equal("for development", app.config.RunName())
 }

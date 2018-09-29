@@ -16,12 +16,12 @@ import (
 type AppServer struct {
 	*AppRoute
 
-	config       *AppConfig
+	config       Configer
 	logger       Logger
 	requestID    string   // request id header name
-	filterParams []string // filter out params when logging
+	filterFields []string // filter out params when logging
 
-	context         sync.Pool     // cache of *Context for performance
+	context         sync.Pool     // cache pool of *Context for performance
 	throttle        *rate.Limiter // time.Rate for rate limit, its about throughput
 	throttleTimeout time.Duration // time.Duration for throughput timeout
 	slowdown        chan bool     // chain for rate limit, its about concurrency
@@ -29,14 +29,14 @@ type AppServer struct {
 }
 
 // NewAppServer returns *AppServer inited with args
-func NewAppServer(config *AppConfig, logger Logger) *AppServer {
+func NewAppServer(config Configer, logger Logger) *AppServer {
 	server := &AppServer{
 		config:    config,
 		logger:    logger,
 		requestID: DefaultHttpRequestID,
 	}
 
-	// overwrite pool.New for Context
+	// overwrite pool.New for pool of *Context
 	server.context.New = func() interface{} {
 		return NewContext()
 	}
@@ -49,15 +49,15 @@ func NewAppServer(config *AppConfig, logger Logger) *AppServer {
 
 // Mode returns run mode of the app server
 func (s *AppServer) Mode() string {
-	return s.config.Mode.String()
+	return s.config.RunMode().String()
 }
 
 // Config returns app config of the app server
-func (s *AppServer) Config() *AppConfig {
+func (s *AppServer) Config() Configer {
 	return s.config
 }
 
-// Run runs the http server with httpdispatch.Router handler
+// Run starts the http server with httpdispatch.Router handler
 func (s *AppServer) Run() {
 	var (
 		config         = s.config.Section()
@@ -83,13 +83,13 @@ func (s *AppServer) Run() {
 		s.newSlowdown(config.Server.Slowdown, config.Server.RTimeout)
 	}
 
-	// adjust app server request id
+	// adjust app server request id if specified
 	if config.Server.RequestID != "" {
 		s.requestID = config.Server.RequestID
 	}
 
-	// adjust app logger filter parameters
-	s.filterParams = config.Logger.FilterParams
+	// adjust app logger filter sensitive fields
+	s.filterFields = config.Logger.FilterFields
 
 	// If the port is zero, treat the address as a fully qualified local address.
 	// This address must be prefixed with the network type followed by a colon,
@@ -129,7 +129,7 @@ func (s *AppServer) Run() {
 			s.logger.Fatal("[GOGO]=> SSL is only supported for TCP sockets.")
 		}
 
-		s.logger.Fatal("[GOGO]=> Failed to listen:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
+		s.logger.Fatal("[GOGO]=> Failed to serve:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
 	} else {
 		listener, err := net.Listen(network, localAddr)
 		if err != nil {
@@ -153,7 +153,7 @@ func (s *AppServer) filterParameters(lru *url.URL) string {
 
 	query := lru.Query()
 	if len(query) > 0 {
-		for _, key := range s.filterParams {
+		for _, key := range s.filterFields {
 			if _, ok := query[key]; ok {
 				query.Set(key, "[FILTERED]")
 			}
@@ -169,10 +169,10 @@ func (s *AppServer) filterParameters(lru *url.URL) string {
 func (s *AppServer) newContext(r *http.Request, controller, action string, params *AppParams) *Context {
 	ctx := s.context.Get().(*Context)
 	ctx.Request = r
-	ctx.controller = controller
-	ctx.action = action
 	ctx.Params = params
 	ctx.Logger = s.logger.New(r.Header.Get(s.requestID))
+	ctx.controller = controller
+	ctx.action = action
 
 	return ctx
 }

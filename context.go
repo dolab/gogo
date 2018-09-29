@@ -325,7 +325,7 @@ func (c *Context) Abort() {
 // run starting request chan with new envs.
 func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares []Middleware) {
 	// reset Responser with correct http.ResponseWriter
-	c.Response.(*Response).reset(w)
+	c.Response.Reset(w)
 
 	// reset internal
 	c.settings = nil

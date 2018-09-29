@@ -1,9 +1,7 @@
 language: go
 
 go:
-  - 1.6
-  - 1.7
-  - 1.10.1
+  - 1.11
 
 before_script:
 
@@ -18,5 +16,17 @@ install:
   - go get -v golang.org/x/time/rate
   - go get -v golang.org/x/net/context
 
-script:
-  - go test
+jobs:
+  fast_finish: true
+  include:
+    - stage: go1.6
+      go: 1.6
+      script: go test
+
+    - stage: go1.7
+      go: 1.7
+      script: go test
+
+    - stage: go1.11
+      go: 1.11
+      script: go test

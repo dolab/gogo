@@ -27,6 +27,7 @@ var (
 )
 
 // AppConfig defines config component of gogo
+// It implements Configer interface
 type AppConfig struct {
 	Mode RunMode `json:"mode"`
 	Name string  `json:"name"`
@@ -64,6 +65,16 @@ func NewAppConfigFromString(s string) (*AppConfig, error) {
 	}
 
 	return config, nil
+}
+
+// RunMode returns the current mode of *AppConfig
+func (config *AppConfig) RunMode() RunMode {
+	return config.Mode
+}
+
+// RunName returns the application name
+func (config *AppConfig) RunName() string {
+	return config.Name
 }
 
 // SetMode changes config mode
@@ -127,7 +138,7 @@ type LoggerConfig struct {
 	Output    string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
 	LevelName string `json:"level"`  // valid values [debug|info|warn|error]
 
-	FilterParams []string `json:"filter_params"`
+	FilterFields []string `json:"filter_fields"` // sensitive fields which should filter out when logging
 }
 
 // Level returns logger.Level by its name
