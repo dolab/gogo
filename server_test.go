@@ -261,7 +261,7 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	var (
 		wg sync.WaitGroup
 
-		routines = 2
+		routines = 3
 	)
 
 	bufc := make(chan string, routines)
