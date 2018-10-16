@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"net/http/httptest"
 	"os"
 	"path"
 	"testing"
@@ -12,7 +11,6 @@ import (
 
 var (
 	testApp    *gogo.AppServer
-	testServer *httptest.Server
 	testClient *httptesting.Client
 )
 
@@ -23,12 +21,11 @@ func TestMain(m *testing.M) {
 	)
 
 	testApp = gogo.New(runMode, srcPath)
-	testServer = httptest.NewServer(testApp)
-	testClient = httptesting.New(testServer.URL, false)
+	testClient = httptesting.NewServer(testApp, false)
 
 	code := m.Run()
 
-	testServer.Close()
+	testClient.Close()
 
 	os.Exit(code)
 }

@@ -8,7 +8,7 @@ import (
 
 func Test_Recovery(t *testing.T) {
 	testApp.Use(Recovery())
-	defer testApp.Clean()
+	defer testApp.CleanModdilewares()
 
 	// register temp resource for testing
 	testApp.GET("/middlewares/recovery", func(ctx *gogo.Context) {

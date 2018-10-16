@@ -12,15 +12,19 @@ goclean:
 	rm -rf pkg
 
 goinstall:
-	cd gogo && go get -t -v ./...
+	go get github.com/dolab/httptesting
+	go get github.com/dolab/logger
+	go get github.com/golib/assert
 
 goreinstall:
-	cd gogo && go get -t -a -v ./...
+	go get -u github.com/dolab/httptesting
+	go get -u github.com/dolab/logger
+	go get -u github.com/golib/assert
 
 gotest:
 	go test github.com/skeleton/app/controllers
 	go test github.com/skeleton/app/middlewares
-	# go test github.com/skeleton/app/models
+	go test github.com/skeleton/app/models
 
 gopackage:
 	mkdir -p bin && go build -a -o bin/skeleton src/github.com/skeleton/gogo/main.go
