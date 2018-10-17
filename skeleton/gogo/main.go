@@ -17,7 +17,7 @@ var (
 
 func main() {
 	flag.StringVar(&runMode, "runMode", "development", "example -runMode=[development|test|production]")
-	flag.StringVar(&srcPath, "srcPath", "", "example -srcPath=/path/to/source")
+	flag.StringVar(&srcPath, "srcPath", "", "example -srcPath=/path/to/[config/application.json]")
 	flag.Parse()
 
 	// verify run mode

@@ -8,8 +8,7 @@ gobuild: goclean goinstall
 gorebuild: goclean goreinstall
 
 goclean:
-	rm -rf bin
-	rm -rf pkg
+	go clean -r ./...
 
 goinstall:
 	go get github.com/dolab/httptesting

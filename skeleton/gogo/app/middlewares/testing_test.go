@@ -1,15 +1,17 @@
-package controllers
+package middlewares
 
 import (
 	"os"
 	"path"
 	"testing"
 
+	"github.com/dolab/gogo"
 	"github.com/dolab/httptesting"
 )
 
 var (
-	testClient *httptesting.Client
+	gogoapp  *gogo.AppServer
+	gogotest *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -18,14 +20,12 @@ func TestMain(m *testing.M) {
 		srcPath = path.Clean("../../")
 	)
 
-	app := New(runMode, srcPath)
-	app.Resources()
-
-	testClient = httptesting.NewServer(app, false)
+	gogoapp = gogo.New(runMode, srcPath)
+	gogotest = httptesting.NewServer(gogoapp, false)
 
 	code := m.Run()
 
-	testClient.Close()
+	gogotest.Close()
 
 	os.Exit(code)
 }

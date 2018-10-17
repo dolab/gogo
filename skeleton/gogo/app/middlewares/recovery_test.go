@@ -7,14 +7,15 @@ import (
 )
 
 func Test_Recovery(t *testing.T) {
-	testApp.Use(Recovery())
-	defer testApp.CleanModdilewares()
+	gogoapp.Use(Recovery())
+	defer gogoapp.CleanModdilewares()
 
 	// register temp resource for testing
-	testApp.GET("/middlewares/recovery", func(ctx *gogo.Context) {
+	gogoapp.GET("/middlewares/recovery", func(ctx *gogo.Context) {
 		panic("Recover testing")
 	})
 
-	testClient.Get(t, "/middlewares/recovery", nil)
-	testClient.AssertOK()
+	request := gogotest.New(t)
+	request.Get("/middlewares/recovery", nil)
+	request.AssertOK()
 }

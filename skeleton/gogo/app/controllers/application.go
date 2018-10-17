@@ -4,6 +4,7 @@ import (
 	"github.com/dolab/gogo"
 
 	"github.com/skeleton/app/middlewares"
+	"github.com/skeleton/app/models"
 )
 
 type Application struct {
@@ -14,6 +15,12 @@ func New(runMode, srcPath string) *Application {
 	appServer := gogo.New(runMode, srcPath)
 
 	err := NewAppConfig(appServer.Config())
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// inject models
+	err = models.Setup(Config.Model)
 	if err != nil {
 		panic(err.Error())
 	}

@@ -16,6 +16,10 @@ type Config struct {
 }
 
 // Setup inject model with driver conn
-func Setup(conn *sql.Conn) {
-	model = conn
+func Setup(config *Config) error {
+	// TODO: create *sql.Conn with config
+
+	model = &sql.Conn{}
+
+	return nil
 }
