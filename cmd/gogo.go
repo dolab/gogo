@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dolab/gogo/gogo/commands"
+	"github.com/dolab/gogo/cmd/commands"
 	"github.com/golib/cli"
 )
 
@@ -21,8 +21,8 @@ func main() {
 	}
 
 	app.Commands = []cli.Command{
-		commands.New.Command(),
-		commands.NewComponent.Command(),
+		commands.Application.Command(),
+		commands.Component.Command(),
 	}
 
 	app.Run(os.Args)

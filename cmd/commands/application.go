@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	New *_New
+	Application *_Application
 
 	appDirs = [][]string{
 		{"app", "controllers"},
@@ -27,33 +27,22 @@ var (
 
 	appEnv       = template.Must(template.New("gogo").Parse(envTemplate))
 	appMakefile  = template.Must(template.New("gogo").Parse(strings.Replace(makefileTemplate, "    ", "\t", -1)))
-	appGitIgnore = template.Must(template.New("gogo").Parse(gitIgnoreTemplate))
-
-	appController       = template.Must(template.New("gogo").Parse(applicationTemplate[0]))
-	appControllerTest   = template.Must(template.New("gogo").Parse(applicationTemplate[1]))
-	appConfig           = template.Must(template.New("gogo").Parse(configTemplate[0]))
-	appConfigTest       = template.Must(template.New("gogo").Parse(configTemplate[1]))
-	appGettingStart     = template.Must(template.New("gogo").Parse(gettingStartTemplate[0]))
-	appGettingStartTest = template.Must(template.New("gogo").Parse(gettingStartTemplate[1]))
-	appMiddleware       = template.Must(template.New("gogo").Parse(middlewareTemplate[0]))
-	appMiddlewareTest   = template.Must(template.New("gogo").Parse(middlewareTemplate[1]))
-	appMiddlewareInit   = template.Must(template.New("gogo").Parse(middlewareTemplate[2]))
-	appJSON             = template.Must(template.New("gogo").Parse(jsonTemplate))
-	appMain             = template.Must(template.New("gogo").Parse(mainTemplate))
+	appGitIgnore = template.Must(template.New("gogo").Parse(strings.Replace(gitIgnoreTemplate, "    ", "\t", -1)))
 )
 
-type _New struct{}
+type _Application struct{}
 
-func (_ *_New) Command() cli.Command {
+func (_ *_Application) Command() cli.Command {
 	return cli.Command{
-		Name:   "new",
-		Usage:  "Create a new gogo application. gogo new myapp creates a new application called myapp in ./myapp",
-		Flags:  New.Flags(),
-		Action: New.Action(),
+		Name:    "new",
+		Aliases: []string{"n"},
+		Usage:   "Create a new gogo application. gogo new myapp creates a new application called myapp in ./myapp",
+		Flags:   Application.Flags(),
+		Action:  Application.Action(),
 	}
 }
 
-func (_ *_New) Flags() []cli.Flag {
+func (_ *_Application) Flags() []cli.Flag {
 	return []cli.Flag{
 		cli.StringFlag{
 			Name:   "namespace",
@@ -75,7 +64,7 @@ func (_ *_New) Flags() []cli.Flag {
 	}
 }
 
-func (_ *_New) Action() cli.ActionFunc {
+func (_ *_Application) Action() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		root, err := os.Getwd()
 		if err != nil {
@@ -103,9 +92,9 @@ func (_ *_New) Action() cli.ActionFunc {
 			return ErrNoneEmptyDirectory
 		}
 
+		// create app root dir
 		appRoot := path.Join(root, "gogo")
 
-		// create app root dir
 		err = os.MkdirAll(appRoot, os.ModePerm)
 		if err != nil {
 			stderr.Error(err.Error())
@@ -135,42 +124,45 @@ func (_ *_New) Action() cli.ActionFunc {
 		appNamespace := ctx.String("namespace")
 
 		// generate env.sh
-		New.genEnvFile(path.Join(root, "env.sh"), appName, appNamespace)
+		Application.genEnvFile(path.Join(root, "env.sh"), appName, appNamespace)
 
 		// generate Makefile
-		New.genMakefile(path.Join(root, "Makefile"), appName, appNamespace)
+		Application.genMakefile(path.Join(root, "Makefile"), appName, appNamespace)
 
 		// generate .gitignore
-		New.genGitIgnore(path.Join(root, ".gitignore"), appName, appNamespace)
+		Application.genGitIgnore(path.Join(root, ".gitignore"), appName, appNamespace)
 
 		// generate default controller dependences
-		New.genControllers(path.Join(appRoot, "app", "controllers"), appName, appNamespace)
+		Application.genControllers(path.Join(appRoot, "app", "controllers"), appName, appNamespace)
 
 		// generate default middlewares
-		New.genMiddlewares(path.Join(appRoot, "app", "middlewares"), appName, appNamespace)
+		Application.genMiddlewares(path.Join(appRoot, "app", "middlewares"), appName, appNamespace)
+
+		// generate default models
+		Application.genModels(path.Join(appRoot, "app", "models"), appName, appNamespace)
 
 		// generate default application.json
-		New.genConfigFile(path.Join(appRoot, "config", "application.json"), appName, appNamespace)
+		Application.genConfigFile(path.Join(appRoot, "config", "application.json"), appName, appNamespace)
 
 		// generate main.go
-		New.genMainFile(path.Join(appRoot, "main.go"), appName, appNamespace)
+		Application.genMainFile(path.Join(appRoot, "main.go"), appName, appNamespace)
 
 		// // auto install dependences
 		// if !ctx.Bool("skip-install") {
-		// 	New.getDependences()
+		// 	Application.getDependences()
 		// }
 		return nil
 	}
 }
 
-func (_ *_New) genEnvFile(file, app, namespace string) {
+func (_ *_Application) genEnvFile(file, app, namespace string) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appEnv.Execute(fd, templateData{
+	err = apptpl.Lookup("env").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -179,14 +171,14 @@ func (_ *_New) genEnvFile(file, app, namespace string) {
 	}
 }
 
-func (_ *_New) genMakefile(file, app, namespace string) {
+func (_ *_Application) genMakefile(file, app, namespace string) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appMakefile.Execute(fd, templateData{
+	err = apptpl.Lookup("makefile").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -195,14 +187,14 @@ func (_ *_New) genMakefile(file, app, namespace string) {
 	}
 }
 
-func (_ *_New) genGitIgnore(file, app, namespace string) {
+func (_ *_Application) genGitIgnore(file, app, namespace string) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appGitIgnore.Execute(fd, templateData{
+	err = apptpl.Lookup("gitignore").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -211,7 +203,7 @@ func (_ *_New) genGitIgnore(file, app, namespace string) {
 	}
 }
 
-func (_ *_New) genControllers(root, app, namespace string) {
+func (_ *_Application) genControllers(root, app, namespace string) {
 	data := templateData{
 		Namespace:   namespace,
 		Application: app,
@@ -224,19 +216,19 @@ func (_ *_New) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = appController.Execute(fd, data)
+	err = apptpl.Lookup("application").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
 
-	// application_test.go
-	fd, err = os.OpenFile(path.Join(root, "application_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
+	// testing_test.go
+	fd, err = os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appControllerTest.Execute(fd, data)
+	err = apptpl.Lookup("application_testing").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -248,7 +240,7 @@ func (_ *_New) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = appConfig.Execute(fd, data)
+	err = apptpl.Lookup("application_config").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -260,7 +252,7 @@ func (_ *_New) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = appConfigTest.Execute(fd, data)
+	err = apptpl.Lookup("application_config_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -272,7 +264,7 @@ func (_ *_New) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = appGettingStart.Execute(fd, data)
+	err = apptpl.Lookup("getting_start").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -284,26 +276,26 @@ func (_ *_New) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = appGettingStartTest.Execute(fd, data)
+	err = apptpl.Lookup("getting_start_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
 }
 
-func (_ *_New) genMiddlewares(root, app, namespace string) {
+func (_ *_Application) genMiddlewares(root, app, namespace string) {
 	data := templateData{
 		Namespace:   namespace,
 		Application: app,
 	}
 
-	// init_test.go
-	fd, err := os.OpenFile(path.Join(root, "init_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
+	// testing_test.go
+	fd, err := os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appMiddlewareInit.Execute(fd, data)
+	err = apptpl.Lookup("middleware_testing").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -315,7 +307,7 @@ func (_ *_New) genMiddlewares(root, app, namespace string) {
 		return
 	}
 
-	err = appMiddleware.Execute(fd, data)
+	err = apptpl.Lookup("middleware_recovery").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -327,20 +319,51 @@ func (_ *_New) genMiddlewares(root, app, namespace string) {
 		return
 	}
 
-	err = appMiddlewareTest.Execute(fd, data)
+	err = apptpl.Lookup("middleware_recovery_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
 }
 
-func (_ *_New) genConfigFile(file, app, namespace string) {
+func (_ *_Application) genModels(root, app, namespace string) {
+	data := templateData{
+		Namespace:   namespace,
+		Application: app,
+	}
+
+	// model.go
+	fd, err := os.OpenFile(path.Join(root, "model.go"), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		stderr.Error(err.Error())
+		return
+	}
+
+	err = apptpl.Lookup("model").Execute(fd, data)
+	if err != nil {
+		stderr.Error(err.Error())
+	}
+
+	// model_test.go
+	fd, err = os.OpenFile(path.Join(root, "model_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		stderr.Error(err.Error())
+		return
+	}
+
+	err = apptpl.Lookup("model_test").Execute(fd, data)
+	if err != nil {
+		stderr.Error(err.Error())
+	}
+}
+
+func (_ *_Application) genConfigFile(file, app, namespace string) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appJSON.Execute(fd, templateData{
+	err = apptpl.Lookup("application_config_json").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -349,14 +372,14 @@ func (_ *_New) genConfigFile(file, app, namespace string) {
 	}
 }
 
-func (_ *_New) genMainFile(file, app, namespace string) {
+func (_ *_Application) genMainFile(file, app, namespace string) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		stderr.Error(err.Error())
 		return
 	}
 
-	err = appMain.Execute(fd, templateData{
+	err = apptpl.Lookup("main").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
