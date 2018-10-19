@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"net/http/httptest"
 	"os"
 	"path"
 	"testing"
@@ -10,8 +9,7 @@ import (
 )
 
 var (
-	testServer *httptest.Server
-	testClient *httptesting.Client
+	gogotest *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -23,12 +21,11 @@ func TestMain(m *testing.M) {
 	app := New(runMode, srcPath)
 	app.Resources()
 
-	testServer = httptest.NewServer(app)
-	testClient = httptesting.New(testServer.URL, false)
+	gogotest = httptesting.NewServer(app, false)
 
 	code := m.Run()
 
-	testServer.Close()
+	gogotest.Close()
 
 	os.Exit(code)
 }

@@ -4,9 +4,10 @@ import (
 	"testing"
 )
 
-func Test_ExampleHello(t *testing.T) {
-	testClient.Get(t, "/@getting_start/hello")
+func Test_GettingStart_Hello(t *testing.T) {
+	request := gogotest.New(t)
+	request.Get("/@getting_start/hello")
 
-	testClient.AssertOK()
-	testClient.AssertContains(Config.GettingStart.Greeting)
+	request.AssertOK()
+	request.AssertContains(Config.GettingStart.Greeting)
 }
