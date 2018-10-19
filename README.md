@@ -1,6 +1,6 @@
 # gogo
 
-[![Build Status](https://travis-ci.org/dolab/gogo.svg?branch=master&style=flat)](https://travis-ci.org/dolab/gogo) [![Coverage](http://gocover.io/_badge/github.com/dolab/gogo?0)](http://gocover.io/github.com/dolab/gogo) [![GoDoc](https://godoc.org/github.com/dolab/gogo?status.svg)](http://godoc.org/github.com/dolab/gogo)
+[![CircleCI](https://circleci.com/gh/dolab/gogo/tree/master.svg?style=svg)](https://circleci.com/gh/dolab/gogo/tree/master) [![Coverage](http://gocover.io/_badge/github.com/dolab/gogo?0)](http://gocover.io/github.com/dolab/gogo) [![GoDoc](https://godoc.org/github.com/dolab/gogo?status.svg)](http://godoc.org/github.com/dolab/gogo)
 
 `gogo` is an open source, high performance RESTful api framework for the [Golang](https://golang.org) programming language.
 
@@ -10,13 +10,12 @@ It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://g
 
 ```bash
 $ go get github.com/dolab/gogo
+$ go get github.com/dolab/gogo/cmd
 ```
 
 - Create application using scaffold tools
 
 ```bash
-$ go get github.com/dolab/gogo/gogo
-
 # show gogo helps
 $ gogo -h
 
@@ -27,11 +26,21 @@ $ gogo new myapp
 $ cd myapp
 $ source env.sh
 
-# run development server
-$ make godev
+# generate controller
+# NOTE: you should update application.go and add app.Resource("/user", User) route by hand
+$ gogo g c user
+
+# generate middleware
+$ gogo g w session
+
+# generate model
+$ gogo g m user
 
 # run test
 $ make
+
+# run development server
+$ make godev
 ```
 
 
@@ -49,7 +58,7 @@ import (
 )
 
 func main() {
-	app := gogo.New("development", "/path/to/your/config")
+	app := gogo.New("development", "/path/to/[config/application.json]")
 
 	// GET /
 	app.GET("/", func(ctx *gogo.Context) {
@@ -83,7 +92,7 @@ import (
 )
 
 func main() {
-    app := gogo.New("development", "/path/to/your/config")
+    app := gogo.New("development", "/path/to/[config/application.json]")
 
     // avoid server quit by registering a recovery middleware
     app.Use(func(ctx *gogo.Context) {
@@ -120,7 +129,7 @@ import (
 )
 
 func main() {
-    app := gogo.New("development", "/path/to/your/config")
+    app := gogo.New("development", "/path/to/[config/application.json]")
 
     // avoid server quit by registering recovery func global
     app.Use(func(ctx *gogo.Context) {
@@ -189,7 +198,7 @@ func main() {
 - Use Resource Controller
 
 You can implement a *controller* with optional `Index`, `Create`, `Explore`, `Show`, `Update` and `Destroy` methods, 
-and use `app.Resource("resourceName", &MyController)` to register all RESTful routes auto.
+and use `app.Resource("/myresource", &MyController)` to register all RESTful routes auto.
 
 NOTE: When your resource has a inheritance relationship, there **MUST NOT** be two same id key.
 you can overwrite default id key by implementing `ControllerID` interface.
@@ -226,14 +235,14 @@ func (t *UserController) Show(ctx *gogo.Context) {
 }
 
 func main() {
-	app := gogo.New("development", "/path/to/your/config")
+	app := gogo.New("development", "/path/to/[config/application.json]")
 
 	// register group controller with default :group key
-	group := app.Resource("group", &GroupController{})
+	group := app.Resource("/group", &GroupController{})
 
 	// nested user controller within group resource
 	// NOTE: it overwrites default :user key by implmenting ControllerID interface.
-	group.Resource("user", &UserController{})
+	group.Resource("/user", &UserController{})
 
 	app.Run()
 }
@@ -262,7 +271,7 @@ func main() {
 
 - [x] server config context
 - [x] support http.Request context
-- [ ] scoffold && generator
+- [x] scoffold && generator
 - [ ] mountable third-part app
 
 ## Thanks
