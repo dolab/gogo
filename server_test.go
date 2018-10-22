@@ -58,17 +58,16 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
 }
 
-func Test_ServerReuseContext(t *testing.T) {
-	assertion := assert.New(t)
+func Benchmark_ServerNewContext(b *testing.B) {
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	params := NewAppParams(request, httpdispatch.Params{})
 
 	server := fakeServer()
-	ctx := server.newContext(request, "", "", params)
-	server.reuseContext(ctx)
 
-	newCtx := server.newContext(request, "", "", params)
-	assertion.Equal(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
+	for i := 0; i < b.N; i++ {
+		ctx := server.newContext(request, "", "", params)
+		server.reuseContext(ctx)
+	}
 }
 
 func Test_Server(t *testing.T) {
@@ -93,7 +92,7 @@ func Test_Server(t *testing.T) {
 
 func Benchmark_Server(b *testing.B) {
 	config, _ := fakeConfig("application.json")
-	logger := NewAppLogger("stdout", "")
+	logger := NewAppLogger("null", "")
 
 	server := NewAppServer(config, logger)
 	server.GET("/server/benchmark", func(ctx *Context) {
@@ -106,6 +105,7 @@ func Benchmark_Server(b *testing.B) {
 
 	// NOTE: there is 37 allocs/op for client
 	request, _ := http.NewRequest("GET", ts.URL+"/server/benchmark", nil)
+
 	for i := 0; i < b.N; i++ {
 		resp, _ := http.DefaultClient.Do(request)
 		resp.Body.Close()
