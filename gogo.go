@@ -13,6 +13,17 @@ var (
 		// adjust srcPath
 		srcPath = path.Clean(srcPath)
 
+		// is srcPath exist?
+		finfo, ferr := os.Stat(srcPath)
+		if ferr != nil {
+			return SchemaConfig
+		}
+
+		// is srcPath a regular file?
+		if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
+			return srcPath
+		}
+
 		filename := "application.json"
 		switch RunMode(runMode) {
 		case Development:

@@ -16,8 +16,9 @@ var (
 	}
 
 	DefaultLoggerConfig = &LoggerConfig{
-		Output:    "stderr",
-		LevelName: "info",
+		Output:       "stderr",
+		LevelName:    "info",
+		FilterFields: []string{"password", "token"},
 	}
 
 	DefaultSectionConfig = &SectionConfig{
@@ -37,6 +38,10 @@ type AppConfig struct {
 
 // NewAppConfig returns *AppConfig by parsing application.json
 func NewAppConfig(filename string) (*AppConfig, error) {
+	if filename == SchemaConfig {
+		return NewAppConfigFromDefault()
+	}
+
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -65,6 +70,20 @@ func NewAppConfigFromString(s string) (*AppConfig, error) {
 	}
 
 	return config, nil
+}
+
+// NewAppConfigFromDefault returns *AppConfig of defaults
+func NewAppConfigFromDefault() (*AppConfig, error) {
+	data, _ := json.Marshal(map[string]interface{}{
+		"mode": Development,
+		"sections": map[RunMode]interface{}{
+			Development: DefaultSectionConfig,
+			Test:        DefaultSectionConfig,
+			Production:  DefaultSectionConfig,
+		},
+	})
+
+	return NewAppConfigFromString(string(data))
 }
 
 // RunMode returns the current mode of *AppConfig

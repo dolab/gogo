@@ -1,16 +1,24 @@
 package gogo
 
+// internal schema
+const (
+	SchemaConfig = "gogo://config"
+)
+
+// run mode
 const (
 	Development RunMode = "development"
 	Test        RunMode = "test"
 	Production  RunMode = "production"
 )
 
+// http config
 const (
 	DefaultMaxMultiformBytes = 32 << 20 // 32M
 	DefaultMaxHeaderBytes    = 64 << 10 // 64k
 )
 
+// server config
 const (
 	DefaultHttpRequestID       = "X-Request-Id"
 	DefaultMaxHttpRequestIDLen = 32
