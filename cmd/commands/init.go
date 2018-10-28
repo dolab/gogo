@@ -38,6 +38,7 @@ func init() {
 	template.Must(apptpl.New("env").Parse(envTemplate))
 	template.Must(apptpl.New("makefile").Parse(Space2Tab(makefileTemplate)))
 	template.Must(apptpl.New("gitignore").Parse(gitIgnoreTemplate))
+	template.Must(apptpl.New("readme").Parse(readmeTemplate))
 	template.Must(apptpl.New("main").Parse(Space2Tab(mainTemplate)))
 	// controllers
 	template.Must(apptpl.New("application").Parse(Space2Tab(applicationTemplates["application"])))
