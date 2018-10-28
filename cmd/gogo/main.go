@@ -3,8 +3,13 @@ package main
 import (
 	"os"
 
+	"github.com/dolab/gogo"
 	"github.com/dolab/gogo/cmd/commands"
 	"github.com/golib/cli"
+)
+
+var (
+	_ gogo.RunMode
 )
 
 func main() {

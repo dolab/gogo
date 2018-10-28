@@ -159,6 +159,7 @@ import (
 	"{{.Namespace}}/{{.Application}}/app/models"
 )
 
+// Application extends gogo.AppServer by customization
 type Application struct {
 	*gogo.AppServer
 }
@@ -166,12 +167,13 @@ type Application struct {
 func New(runMode, srcPath string) *Application {
 	appServer := gogo.New(runMode, srcPath)
 
+	// init Config
 	err := NewAppConfig(appServer.Config())
 	if err != nil {
 		panic(err.Error())
 	}
 
-	// setup models
+	// init models
 	err = models.Setup(Config.Model)
 	if err != nil {
 		panic(err.Error())
