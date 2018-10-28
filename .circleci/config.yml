@@ -20,7 +20,6 @@ default_steps: &default_steps
     - run: go get -v github.com/dolab/httpdispatch
     - run: go get -v github.com/dolab/httptesting
     - run: go get -v github.com/dolab/logger
-    - run: go get -v github.com/gobuffalo/packr
     - run: go test -v -race
 jobs:
   go1.6:

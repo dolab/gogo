@@ -15,7 +15,6 @@ install:
   - go get -v github.com/dolab/httpdispatch
   - go get -v github.com/dolab/httptesting
   - go get -v github.com/dolab/logger
-  - go get -v github.com/gobuffalo/packr
 
 jobs:
   fast_finish: true
