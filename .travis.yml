@@ -9,12 +9,13 @@ install:
   - export GOPATH=$TRAVIS_BUILD_DIR/skeleton:$GOPATH
   - mkdir -p $TRAVIS_BUILD_DIR/skeleton/src/github.com
   - ln -s $TRAVIS_BUILD_DIR/skeleton/gogo/ $TRAVIS_BUILD_DIR/skeleton/src/github.com/skeleton
+  - go get -v golang.org/x/time/rate
+  - go get -v golang.org/x/net/context
   - go get -v github.com/dolab/colorize
   - go get -v github.com/dolab/httpdispatch
   - go get -v github.com/dolab/httptesting
   - go get -v github.com/dolab/logger
-  - go get -v golang.org/x/time/rate
-  - go get -v golang.org/x/net/context
+  - go get -v github.com/gobuffalo/packr
 
 jobs:
   fast_finish: true
