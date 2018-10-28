@@ -118,14 +118,17 @@ func (_ *_Application) Action() cli.ActionFunc {
 
 		appNamespace := ctx.String("namespace")
 
+		// generate .gitignore
+		Application.genGitIgnore(path.Join(root, ".gitignore"), appName, appNamespace)
+
 		// generate env.sh
 		Application.genEnvFile(path.Join(root, "env.sh"), appName, appNamespace)
 
 		// generate Makefile
 		Application.genMakefile(path.Join(root, "Makefile"), appName, appNamespace)
 
-		// generate .gitignore
-		Application.genGitIgnore(path.Join(root, ".gitignore"), appName, appNamespace)
+		// generate readme.md
+		Application.genReadme(path.Join(root, "README.md"), appName, appNamespace)
 
 		// generate default controller dependences
 		Application.genControllers(path.Join(appRoot, "app", "controllers"), appName, appNamespace)
@@ -141,9 +144,6 @@ func (_ *_Application) Action() cli.ActionFunc {
 
 		// generate main.go
 		Application.genMainFile(path.Join(appRoot, "main.go"), appName, appNamespace)
-
-		// generate readme.md
-		Application.genReadme(path.Join(appRoot, "README.md"), appName, appNamespace)
 
 		// // auto install dependences
 		// if !ctx.Bool("skip-install") {

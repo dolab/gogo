@@ -8,7 +8,7 @@ export GOGOROOT=$(pwd)
 # adjust GOPATH
 case ":$GOPATH:" in
     *":$GOGOROOT:"*) :;;
-    *) GOPATH=$GOPATH:$GOGOROOT;;
+    *) GOPATH=$GOGOROOT:$GOPATH;;
 esac
 export GOPATH
 
