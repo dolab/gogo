@@ -1,9 +1,10 @@
 package commands
 
 import (
+	"bytes"
 	"log"
+	"text/template"
 
-	"github.com/gobuffalo/packr"
 	"github.com/golib/cli"
 )
 
@@ -13,7 +14,7 @@ var (
 
 type _Packr struct{}
 
-func (_ *_Packr) Command(box packr.Box) cli.Command {
+func (_ *_Packr) Command(box *template.Template) cli.Command {
 	return cli.Command{
 		Name:    "packr",
 		Usage:   "print `file` content of named template.",
@@ -22,7 +23,7 @@ func (_ *_Packr) Command(box packr.Box) cli.Command {
 	}
 }
 
-func (_ *_Packr) Action(box packr.Box) cli.ActionFunc {
+func (_ *_Packr) Action(box *template.Template) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := ctx.Args().First()
 		if name == "" {
@@ -30,13 +31,21 @@ func (_ *_Packr) Action(box packr.Box) cli.ActionFunc {
 			return nil
 		}
 
-		s, err := box.MustString(name)
-		if err != nil {
-			log.Printf("packr.MustString(%s): %v", ctx.String("name"), err)
+		tpl := box.Lookup(name)
+		if tpl != nil {
+			if name == "doc.go" {
+				buf := bytes.NewBuffer(nil)
+
+				tpl.Execute(buf, nil)
+
+				log.Printf("box.Lookup(%s): \n%s", name, buf.String())
+			} else {
+				log.Printf("box.Lookup(%s): OK", name)
+			}
 		} else {
-			println(s)
+			log.Printf("box.Lookup(%s): Not Found", name)
 		}
 
-		return err
+		return nil
 	}
 }

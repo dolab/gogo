@@ -160,7 +160,7 @@ func (_ *_Application) genEnvFile(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("env").Execute(fd, templateData{
+	err = box.Lookup("env").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -176,7 +176,7 @@ func (_ *_Application) genMakefile(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("makefile").Execute(fd, templateData{
+	err = box.Lookup("makefile").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -192,7 +192,7 @@ func (_ *_Application) genGitIgnore(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("gitignore").Execute(fd, templateData{
+	err = box.Lookup("gitignore").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -208,7 +208,7 @@ func (_ *_Application) genReadme(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("readme").Execute(fd, templateData{
+	err = box.Lookup("readme").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -230,7 +230,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("application").Execute(fd, data)
+	err = box.Lookup("application").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -242,7 +242,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("application_testing").Execute(fd, data)
+	err = box.Lookup("application_testing").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -254,7 +254,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("application_config").Execute(fd, data)
+	err = box.Lookup("application_config").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -266,7 +266,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("application_config_test").Execute(fd, data)
+	err = box.Lookup("application_config_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -278,7 +278,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("getting_start").Execute(fd, data)
+	err = box.Lookup("getting_start").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -290,7 +290,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("getting_start_test").Execute(fd, data)
+	err = box.Lookup("getting_start_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -309,7 +309,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("middleware_testing").Execute(fd, data)
+	err = box.Lookup("middleware_testing").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -321,7 +321,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("middleware_recovery").Execute(fd, data)
+	err = box.Lookup("middleware_recovery").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -333,7 +333,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("middleware_recovery_test").Execute(fd, data)
+	err = box.Lookup("middleware_recovery_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -352,7 +352,7 @@ func (_ *_Application) genModels(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("model").Execute(fd, data)
+	err = box.Lookup("model").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -364,7 +364,7 @@ func (_ *_Application) genModels(root, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("model_test").Execute(fd, data)
+	err = box.Lookup("model_test").Execute(fd, data)
 	if err != nil {
 		stderr.Error(err.Error())
 	}
@@ -377,7 +377,7 @@ func (_ *_Application) genConfigFile(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("application_config_json").Execute(fd, templateData{
+	err = box.Lookup("application_config_json").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
@@ -393,7 +393,7 @@ func (_ *_Application) genMainFile(file, app, namespace string) {
 		return
 	}
 
-	err = apptpl.Lookup("main").Execute(fd, templateData{
+	err = box.Lookup("main").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})

@@ -2,20 +2,32 @@ package main
 
 import (
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"text/template"
 
 	_ "github.com/dolab/gogo"
 	"github.com/dolab/gogo/cmd/commands"
-	_ "github.com/dolab/gogo/cmd/gogo/templates"
-	"github.com/gobuffalo/packr"
 	"github.com/golib/cli"
 )
 
 var (
-	box packr.Box
+	box *template.Template
 )
 
 func init() {
-	box = packr.NewBox("templates")
+	_, filename, _, _ := runtime.Caller(0)
+
+	var err error
+
+	box, err = template.New("gogo").Funcs(template.FuncMap{
+		"lowercase": strings.ToLower,
+	}).ParseGlob(path.Join(filepath.Dir(filename), "templates", "*"))
+	if err != nil {
+		box = commands.Box()
+	}
 }
 
 func main() {
