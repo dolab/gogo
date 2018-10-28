@@ -30,3 +30,7 @@ jobs:
     - stage: go1.11
       go: 1.11
       script: go test
+
+    - stage: latest
+      go: latest
+      script: go get -v github.com/dolab/gogo/cmd/gogo && gogo -h

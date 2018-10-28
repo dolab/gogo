@@ -9,8 +9,7 @@ It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://g
 ## Installation
 
 ```bash
-$ go get github.com/dolab/gogo
-$ go get github.com/dolab/gogo/cmd
+$ go get github.com/dolab/gogo/cmd/gogo
 ```
 
 - Create application using scaffold tools
@@ -58,7 +57,14 @@ import (
 )
 
 func main() {
-	app := gogo.New("development", "/path/to/[config/application.json]")
+    // load config from config/application.json
+    // app := gogo.New("development", "/path/to/[config/application.json]")
+
+    // load config frome filename
+    // app := gogo.New("development", "/path/to/config.json")
+
+    // use default config
+    app := gogo.New("development", "")
 
 	// GET /
 	app.GET("/", func(ctx *gogo.Context) {
@@ -92,7 +98,7 @@ import (
 )
 
 func main() {
-    app := gogo.New("development", "/path/to/[config/application.json]")
+    app := gogo.New("development", "")
 
     // avoid server quit by registering a recovery middleware
     app.Use(func(ctx *gogo.Context) {
@@ -129,7 +135,7 @@ import (
 )
 
 func main() {
-    app := gogo.New("development", "/path/to/[config/application.json]")
+    app := gogo.New("development", "")
 
     // avoid server quit by registering recovery func global
     app.Use(func(ctx *gogo.Context) {
@@ -235,7 +241,7 @@ func (t *UserController) Show(ctx *gogo.Context) {
 }
 
 func main() {
-	app := gogo.New("development", "/path/to/[config/application.json]")
+	app := gogo.New("development", "")
 
 	// register group controller with default :group key
 	group := app.Resource("/group", &GroupController{})

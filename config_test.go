@@ -79,3 +79,24 @@ func Test_ConfigUnmarshalJSON(t *testing.T) {
 	assertion.Nil(err)
 	assertion.Equal("Hello, gogo!", testConfig.GettingStart.Greeting)
 }
+
+func Test_ConfigWithDefaults(t *testing.T) {
+	assertion := assert.New(t)
+	config, _ := NewAppConfigFromDefault()
+
+	// it should work for development mode
+	testModes := []RunMode{
+		Development, Test, Production,
+	}
+	for _, mode := range testModes {
+		config.SetMode(mode)
+
+		section := config.Section()
+		assertion.Equal(DefaultServerConfig.Addr, section.Server.Addr)
+		assertion.Equal(DefaultServerConfig.Port, section.Server.Port)
+		assertion.Equal(DefaultServerConfig.Ssl, section.Server.Ssl)
+		assertion.Equal(DefaultLoggerConfig.Output, section.Logger.Output)
+		assertion.Equal(DefaultLoggerConfig.LevelName, section.Logger.LevelName)
+		assertion.Equal(DefaultLoggerConfig.FilterFields, section.Logger.FilterFields)
+	}
+}

@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"text/template"
 
 	"github.com/golib/cli"
 )
@@ -24,10 +23,6 @@ var (
 		{"tmp", "pids"},
 		{"tmp", "sockes"},
 	}
-
-	appEnv       = template.Must(template.New("gogo").Parse(envTemplate))
-	appMakefile  = template.Must(template.New("gogo").Parse(strings.Replace(makefileTemplate, "    ", "\t", -1)))
-	appGitIgnore = template.Must(template.New("gogo").Parse(strings.Replace(gitIgnoreTemplate, "    ", "\t", -1)))
 )
 
 type _Application struct{}
@@ -147,6 +142,9 @@ func (_ *_Application) Action() cli.ActionFunc {
 		// generate main.go
 		Application.genMainFile(path.Join(appRoot, "main.go"), appName, appNamespace)
 
+		// generate readme.md
+		Application.genReadme(path.Join(appRoot, "README.md"), appName, appNamespace)
+
 		// // auto install dependences
 		// if !ctx.Bool("skip-install") {
 		// 	Application.getDependences()
@@ -195,6 +193,22 @@ func (_ *_Application) genGitIgnore(file, app, namespace string) {
 	}
 
 	err = apptpl.Lookup("gitignore").Execute(fd, templateData{
+		Namespace:   namespace,
+		Application: app,
+	})
+	if err != nil {
+		stderr.Error(err.Error())
+	}
+}
+
+func (_ *_Application) genReadme(file, app, namespace string) {
+	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		stderr.Error(err.Error())
+		return
+	}
+
+	err = apptpl.Lookup("readme").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
