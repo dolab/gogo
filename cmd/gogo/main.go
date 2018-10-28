@@ -2,20 +2,38 @@ package main
 
 import (
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"text/template"
 
-	"github.com/dolab/gogo"
+	_ "github.com/dolab/gogo"
 	"github.com/dolab/gogo/cmd/commands"
 	"github.com/golib/cli"
 )
 
 var (
-	_ gogo.RunMode
+	box *template.Template
 )
+
+func init() {
+	_, filename, _, _ := runtime.Caller(0)
+
+	var err error
+
+	box, err = template.New("gogo").Funcs(template.FuncMap{
+		"lowercase": strings.ToLower,
+	}).ParseGlob(path.Join(filepath.Dir(filename), "templates", "*"))
+	if err != nil {
+		box = commands.Box()
+	}
+}
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "gogo"
-	app.Version = "1.2.0"
+	app.Version = "1.3.0"
 	app.Usage = "gogo COMMAND [ARGS]"
 
 	app.Authors = []cli.Author{
@@ -26,6 +44,7 @@ func main() {
 	}
 
 	app.Commands = []cli.Command{
+		commands.Packr.Command(box),
 		commands.Application.Command(),
 		commands.Component.Command(),
 	}

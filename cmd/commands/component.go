@@ -173,7 +173,7 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 		return err
 	}
 
-	err = apptpl.Lookup("template_"+ctype.String()).Execute(fd, &ComTemplateModel{
+	err = box.Lookup("template_"+ctype.String()).Execute(fd, &ComTemplateModel{
 		Name: Component.toCamelCase(comName),
 	})
 	if err != nil {
@@ -190,7 +190,7 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 		return err
 	}
 
-	err = apptpl.Lookup("template_"+ctype.String()+"_test").Execute(fd, &ComTemplateModel{
+	err = box.Lookup("template_"+ctype.String()+"_test").Execute(fd, &ComTemplateModel{
 		Name: Component.toCamelCase(comName),
 	})
 	if err != nil {
