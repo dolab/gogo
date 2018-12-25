@@ -6,7 +6,9 @@
 
 It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
 
-## Installation
+> NOTE: The master branch is new *VERSION 2*, which removes `!go1.7` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
+
+## Install
 
 ```bash
 $ go get github.com/dolab/gogo/cmd/gogo
@@ -279,6 +281,7 @@ func main() {
 - [x] support http.Request context
 - [x] scoffold && generator
 - [ ] mountable third-part app
+- [ ] gRPC support
 
 ## Thanks
 
