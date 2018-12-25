@@ -7,9 +7,9 @@ import (
 )
 
 func Test_Setup(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
-	assertion.Nil(model)
+	it.Nil(model)
 	Setup(&Config{})
-	assertion.NotNil(model)
+	it.NotNil(model)
 }

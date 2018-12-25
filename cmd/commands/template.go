@@ -256,7 +256,7 @@ import (
 )
 
 var (
-	gogotest *httptesting.Client
+	gogotesting *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -268,11 +268,11 @@ func TestMain(m *testing.M) {
 	app := New(runMode, srcPath)
 	app.Resources()
 
-	gogotest = httptesting.NewServer(app, false)
+	gogotesting = httptesting.NewServer(app, false)
 
 	code := m.Run()
 
-	gogotest.Close()
+	gogotesting.Close()
 
 	os.Exit(code)
 }
@@ -315,10 +315,10 @@ import (
 )
 
 func Test_AppConfig(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
-	assertion.NotEmpty(Config.Domain)
-	assertion.NotNil(Config.GettingStart)
+	it.NotEmpty(Config.Domain)
+	it.NotNil(Config.GettingStart)
 }
 `,
 		"getting_start": `package controllers
@@ -352,7 +352,7 @@ import (
 
 func Test_GettingStart_Hello(t *testing.T) {
 	// it should work without greeting
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/@getting_start/hello")
 
 	request.AssertOK()
@@ -364,7 +364,7 @@ func Test_GettingStart_Hello(t *testing.T) {
 	params := url.Values{}
 	params.Add("name", greeting)
 
-	request = gogotest.New(t)
+	request = gogotesting.New(t)
 	request.Get("/@getting_start/hello", params)
 
 	request.AssertOK()
@@ -384,7 +384,7 @@ import (
 
 var (
 	gogoapp  *gogo.AppServer
-	gogotest *httptesting.Client
+	gogotesting *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -394,11 +394,11 @@ func TestMain(m *testing.M) {
 	)
 
 	gogoapp = gogo.New(runMode, srcPath)
-	gogotest = httptesting.NewServer(gogoapp, false)
+	gogotesting = httptesting.NewServer(gogoapp, false)
 
 	code := m.Run()
 
-	gogotest.Close()
+	gogotesting.Close()
 
 	os.Exit(code)
 }
@@ -406,6 +406,7 @@ func TestMain(m *testing.M) {
 		"middleware_recovery": `package middlewares
 
 import (
+	"net/http"
 	"runtime"
 	"strings"
 
@@ -449,7 +450,8 @@ func Recovery() gogo.Middleware {
 					}
 				}
 
-				ctx.Abort()
+				ctx.SetStatus(http.StatusInternalServerError)
+				ctx.Return(panicErr)
 			}
 		}()
 
@@ -474,10 +476,11 @@ func Test_Recovery(t *testing.T) {
 	})
 
 	// it should work
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/middlewares/recovery")
 
-	request.AssertOK()
+	request.AssertStatus(http.StatusInternalServerError)
+	request.AssertNotEmpty()
 }
 `,
 		"model": `package models
@@ -515,11 +518,11 @@ import (
 )
 
 func Test_Setup(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
-	assertion.Nil(model)
+	it.Nil(model)
 	Setup(&Config{})
-	assertion.NotNil(model)
+	it.NotNil(model)
 }
 `,
 		"application_config_json": `{
@@ -659,7 +662,7 @@ import (
 )
 
 func Test_{{.Name}}_Index(t *testing.T) {
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/{{.Name|lowercase}}")
 
 	request.AssertStatus(http.StatusNotImplemented)
@@ -667,7 +670,7 @@ func Test_{{.Name}}_Index(t *testing.T) {
 }
 
 func Test_{{.Name}}_Create(t *testing.T) {
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.PostJSON("/{{.Name|lowercase}}", nil)
 
 	request.AssertStatus(http.StatusNotImplemented)
@@ -677,7 +680,7 @@ func Test_{{.Name}}_Create(t *testing.T) {
 func Test_{{.Name}}_Show(t *testing.T) {
 	id := "{{.Name|lowercase}}"
 
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/{{.Name|lowercase}}/" + id)
 
 	request.AssertStatus(http.StatusNotImplemented)
@@ -688,7 +691,7 @@ func Test_{{.Name}}_Show(t *testing.T) {
 func Test_{{.Name}}_Update(t *testing.T) {
 	id := "{{.Name|lowercase}}"
 
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.PutJSON("/{{.Name|lowercase}}/"+id, nil)
 
 	request.AssertStatus(http.StatusNotImplemented)
@@ -698,7 +701,7 @@ func Test_{{.Name}}_Update(t *testing.T) {
 func Test_{{.Name}}_Destroy(t *testing.T) {
 	id := "{{.Name|lowercase}}"
 
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.DeleteJSON("/{{.Name|lowercase}}/"+id, nil)
 
 	request.AssertStatus(http.StatusNotImplemented)
@@ -736,7 +739,7 @@ func Test_{{.Name}}(t *testing.T) {
 		ctx.Return()
 	})
 
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/middlewares/{{.Name|lowercase}}", nil)
 	request.AssertOK()
 	request.AssertHeader("x-gogo-middleware", "Hello, middleware!")
@@ -773,20 +776,20 @@ import (
 )
 
 func Test_{{.Name}}Model(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	m := &{{.Name}}Model{}
-	assertion.NotNil(m)
+	it.NotNil(m)
 }
 
 func Test_{{.Name}}_Find(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	id := "???"
 
 	m, err := {{.Name}}.Find(id)
-	assertion.EqualError(err, "Not Found")
-	assertion.Nil(m)
+	it.EqualError(err, "Not Found")
+	it.Nil(m)
 }
 `}
 )

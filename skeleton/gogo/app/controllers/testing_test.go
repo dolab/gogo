@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	gogotest *httptesting.Client
+	gogotesting *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -21,11 +21,11 @@ func TestMain(m *testing.M) {
 	app := New(runMode, srcPath)
 	app.Resources()
 
-	gogotest = httptesting.NewServer(app, false)
+	gogotesting = httptesting.NewServer(app, false)
 
 	code := m.Run()
 
-	gogotest.Close()
+	gogotesting.Close()
 
 	os.Exit(code)
 }
