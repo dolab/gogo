@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	gogoapp  *gogo.AppServer
-	gogotest *httptesting.Client
+	gogoapp     *gogo.AppServer
+	gogotesting *httptesting.Client
 )
 
 func TestMain(m *testing.M) {
@@ -21,11 +21,11 @@ func TestMain(m *testing.M) {
 	)
 
 	gogoapp = gogo.New(runMode, srcPath)
-	gogotest = httptesting.NewServer(gogoapp, false)
+	gogotesting = httptesting.NewServer(gogoapp, false)
 
 	code := m.Run()
 
-	gogotest.Close()
+	gogotesting.Close()
 
 	os.Exit(code)
 }

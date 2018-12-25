@@ -14,7 +14,6 @@ default_steps: &default_steps
 
     # specify any bash command here prefixed with `run: `
     - run: go get -v golang.org/x/time/rate
-    - run: go get -v golang.org/x/net/context
     - run: go get -v golang.org/x/net/websocket
     - run: go get -v github.com/dolab/colorize
     - run: go get -v github.com/dolab/httpdispatch
@@ -29,6 +28,7 @@ jobs:
       - image: golang:1.6
 
     <<: *default_steps
+
   go1.7:
     <<: *defaults
     docker:
@@ -36,6 +36,7 @@ jobs:
       - image: golang:1.7
 
     <<: *default_steps
+
   go1.8:
     <<: *defaults
     docker:
@@ -43,6 +44,7 @@ jobs:
       - image: circleci/golang:1.8
 
     <<: *default_steps
+
   go1.11:
     <<: *defaults
     docker:
@@ -50,6 +52,7 @@ jobs:
       - image: circleci/golang:1.11
 
     <<: *default_steps
+
   latest:
     <<: *defaults
     docker:
@@ -62,7 +65,7 @@ workflows:
   version: 2
   testing:
     jobs:
-      - go1.6
+      # - go1.6
       - go1.7
       - go1.8
       - go1.11

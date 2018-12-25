@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"net/http"
 	"runtime"
 	"strings"
 
@@ -44,7 +45,8 @@ func Recovery() gogo.Middleware {
 					}
 				}
 
-				ctx.Abort()
+				ctx.SetStatus(http.StatusInternalServerError)
+				ctx.Return(panicErr)
 			}
 		}()
 

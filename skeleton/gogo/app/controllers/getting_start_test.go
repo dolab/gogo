@@ -5,7 +5,7 @@ import (
 )
 
 func Test_GettingStart_Hello(t *testing.T) {
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/@getting_start/hello")
 
 	request.AssertOK()

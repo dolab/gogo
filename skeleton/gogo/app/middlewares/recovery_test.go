@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/dolab/gogo"
@@ -15,7 +16,8 @@ func Test_Recovery(t *testing.T) {
 		panic("Recover testing")
 	})
 
-	request := gogotest.New(t)
+	request := gogotesting.New(t)
 	request.Get("/middlewares/recovery", nil)
-	request.AssertOK()
+	request.AssertStatus(http.StatusInternalServerError)
+	request.AssertNotEmpty()
 }

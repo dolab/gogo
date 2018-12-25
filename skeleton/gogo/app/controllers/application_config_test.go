@@ -7,8 +7,8 @@ import (
 )
 
 func Test_AppConfig(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
-	assertion.NotEmpty(Config.Domain)
-	assertion.NotNil(Config.GettingStart)
+	it.NotEmpty(Config.Domain)
+	it.NotNil(Config.GettingStart)
 }
