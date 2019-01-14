@@ -245,7 +245,7 @@ func Test_Context_SetStatus(t *testing.T) {
 
 	ctx := NewContext()
 	ctx.Response.Hijack(recorder)
-	it.Equal(http.StatusNotImplemented, ctx.Response.Status())
+	it.Equal(http.StatusOK, ctx.Response.Status())
 
 	ctx.SetStatus(http.StatusAccepted)
 	it.Equal(http.StatusOK, recorder.Code)
@@ -314,7 +314,7 @@ func Test_Context_Return(t *testing.T) {
 
 	err := ctx.Return(s)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal(RenderDefaultContentType, recorder.Header().Get("Content-Type"))
 		it.Equal(s, recorder.Body.String())
 	}
@@ -338,7 +338,7 @@ func Test_Context_ReturnWithJson(t *testing.T) {
 
 	err := ctx.Return(data)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("application/json", recorder.Header().Get("Content-Type"))
 		it.Equal(`{"Name":"gogo","Age":5}`, strings.TrimSpace(recorder.Body.String()))
 	}
@@ -366,7 +366,7 @@ func Test_Context_ReturnWithXml(t *testing.T) {
 
 	err := ctx.Return(data)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("text/xml", recorder.Header().Get("Content-Type"))
 		it.Equal("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", strings.TrimSpace(recorder.Body.String()))
 	}
@@ -545,6 +545,7 @@ func Benchmark_Context(b *testing.B) {
 	recorder := httptest.NewRecorder()
 
 	ctx := NewContext()
+	ctx.Request = httptest.NewRequest(http.MethodGet, "https://example.com", nil)
 	ctx.Logger = NewAppLogger("nil", "")
 
 	for i := 0; i < b.N; i++ {

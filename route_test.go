@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 )
 
@@ -109,7 +110,6 @@ func Test_RouteHandle(t *testing.T) {
 }
 
 func Test_RouteHandleWithTailSlash(t *testing.T) {
-	it := assert.New(t)
 	server := fakeServer()
 
 	server.Handle("GET", "/:tailslash", func(ctx *Context) {
@@ -120,60 +120,32 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	})
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// without tail slash
-	request, _ := http.NewRequest("GET", ts.URL+"/tailslash", nil)
-
-	response, err := http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /:tailslash", string(body))
-		}
-	}
+	request := ts.New(t)
+	request.Get("/tailslash")
+	request.AssertOK()
+	request.AssertContains("GET /:tailslash")
 
 	// with tail slash
-	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/?query", nil)
-
-	response, err = http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /:tailslash", string(body))
-		}
-	}
+	request = ts.New(t)
+	request.Get("/tailslash/?query")
+	request.AssertOK()
+	request.AssertContains("GET /:tailslash")
 
 	// with extra args without tail slash
-	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs", nil)
-
-	response, err = http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /:tailslash/*extraargs", string(body))
-		}
-	}
+	request = ts.New(t)
+	request.Get("/tailslash/extraargs")
+	request.AssertOK()
+	request.AssertContains("GET /:tailslash/*extraargs")
 
 	// with extra args with tail slash
-	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs/", nil)
-
-	response, err = http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /:tailslash/*extraargs", string(body))
-		}
-	}
+	request = ts.New(t)
+	request.Get("/tailslash/extraargs/")
+	request.AssertOK()
+	request.AssertContains("GET /:tailslash/*extraargs")
 }
 
 func Test_RouteProxyHandle(t *testing.T) {
@@ -212,23 +184,16 @@ func Test_RouteProxyHandle(t *testing.T) {
 	})
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// testing by http request
-	request, _ := http.NewRequest("GET", ts.URL+"/proxy", nil)
+	request := ts.New(t)
+	request.Get("/proxy")
+	request.AssertOK()
+	request.AssertContains("I AM BACKEND!")
 
-	response, err := http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		it.EqualValues(2, n)
-
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("I AM BACKEND!", string(body))
-		}
-	}
+	it.EqualValues(2, n)
 }
 
 func Test_RouteMockHandle(t *testing.T) {
@@ -242,28 +207,20 @@ func Test_RouteMockHandle(t *testing.T) {
 	})
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// testing by http request
-	request, _ := http.NewRequest("GET", ts.URL+"/mock", nil)
+	request := ts.New(t)
+	request.Get("/mock")
+	request.AssertOK()
+	request.AssertEmpty()
 
-	response, err := http.DefaultClient.Do(request)
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Empty(body)
-
-			it.Equal(http.StatusNotImplemented, recorder.Code)
-			it.Equal("MOCK", recorder.Body.String())
-		}
-	}
+	it.Equal(http.StatusOK, recorder.Code)
+	it.Equal("MOCK", recorder.Body.String())
 }
 
 func Test_RouteGroup(t *testing.T) {
-	it := assert.New(t)
 	server := fakeServer()
 	group := server.Group("/group")
 
@@ -274,18 +231,13 @@ func Test_RouteGroup(t *testing.T) {
 	})
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
-	response, err := http.Get(ts.URL + "/group/testing")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("testing", string(body))
-		}
-	}
+	request := ts.New(t)
+	request.Get("/group/testing")
+	request.AssertOK()
+	request.AssertContains("testing")
 }
 
 type testGroupController struct{}
@@ -309,51 +261,35 @@ func (t *testUserController) Show(ctx *Context) {
 }
 
 func Test_RouteResource(t *testing.T) {
-	it := assert.New(t)
 	server := fakeServer()
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// group resource
 	group := server.Resource("group", &testGroupController{})
 
 	// should work for GET /group/:group
-	response, err := http.Get(ts.URL + "/group/my-group")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-			it.Equal("GET /group/my-group", string(body))
-		}
-	}
+	request := ts.New(t)
+	request.Get("/group/my-group")
+	request.AssertOK()
+	request.AssertContains("GET /group/my-group")
 
 	// user resource
 	group.Resource("user", &testUserController{})
 
 	// should work for GET /group/:group/user/:id
-	response, err = http.Get(ts.URL + "/group/my-group/user/my-user")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /group/my-group/user/my-user", string(body))
-		}
-	}
+	request = ts.New(t)
+	request.Get("/group/my-group/user/my-user")
+	request.AssertOK()
+	request.AssertContains("GET /group/my-group/user/my-user")
 
 	// error for not found
-	response, err = http.Get(ts.URL + "/group/my-group/user/")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal(http.StatusNotFound, response.StatusCode)
-			it.Contains(string(body), "not found")
-		}
-	}
+	request = ts.New(t)
+	request.Get("/group/my-group/user/")
+	request.AssertStatus(http.StatusNotFound)
+	request.AssertContains("not found")
 }
 
 type testGroupMemberController struct{}
@@ -367,36 +303,24 @@ func (t *testGroupMemberController) Show(ctx *Context) {
 }
 
 func Test_RouteResourceWithSubPath(t *testing.T) {
-	it := assert.New(t)
 	server := fakeServer()
 
 	// start server
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// member resource
 	server.Resource("group/member", &testGroupMemberController{})
 
 	// should work for GET /group/member/:group
-	response, err := http.Get(ts.URL + "/group/member/my-group")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal("GET /group/member/my-group", string(body))
-		}
-	}
+	request := ts.New(t)
+	request.Get("/group/member/my-group")
+	request.AssertOK()
+	request.AssertContains("GET /group/member/my-group")
 
 	// error for not found
-	response, err = http.Get(ts.URL + "/group/member/my-group/user")
-	if it.Nil(err) {
-		body, err := ioutil.ReadAll(response.Body)
-		if it.Nil(err) {
-			response.Body.Close()
-
-			it.Equal(http.StatusNotFound, response.StatusCode)
-			it.Contains(string(body), "not found")
-		}
-	}
+	request = ts.New(t)
+	request.Get("/group/member/my-group/user")
+	request.AssertStatus(http.StatusNotFound)
+	request.AssertContains("not found")
 }

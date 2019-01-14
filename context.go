@@ -224,7 +224,7 @@ func (c *Context) Return(body ...interface{}) error {
 	var render Render
 
 	// auto detect response content-type from request header of accept
-	if c.Response.Header().Get("Content-Type") == "" {
+	if len(c.Response.Header().Get("Content-Type")) == 0 {
 		accept := c.Request.Header.Get("Accept")
 		for _, enc := range strings.Split(accept, ",") {
 			switch {
@@ -287,11 +287,6 @@ func (c *Context) Render(w Render, data interface{}) error {
 	// always abort
 	c.Abort()
 
-	// shortcut for nil
-	if data == nil {
-		return nil
-	}
-
 	// currect response status code
 	if coder, ok := data.(StatusCoder); ok {
 		c.SetStatus(coder.StatusCode())
@@ -299,6 +294,14 @@ func (c *Context) Render(w Render, data interface{}) error {
 
 	// currect response header of content-type
 	c.SetHeader("Content-Type", w.ContentType())
+
+	// flush header
+	c.Response.FlushHeader()
+
+	// shortcut for nil
+	if data == nil {
+		return nil
+	}
 
 	err := w.Render(data)
 	if err != nil {
@@ -340,8 +343,17 @@ func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares [
 	// start chains
 	c.Next()
 
-	// invoke http.Handler if existed
-	if c.cursor >= 0 && c.cursor < math.MaxInt8 && handler != nil {
-		handler.ServeHTTP(c.Response, c.Request)
+	// invoke http.Handler if chained
+	if c.cursor >= 0 && c.cursor < math.MaxInt8 {
+		c.Abort()
+
+		if handler != nil {
+			handler.ServeHTTP(c.Response, c.Request)
+		} else {
+			// ghost, response status code only
+			if !c.Response.HeaderFlushed() {
+				w.WriteHeader(c.Response.Status())
+			}
+		}
 	}
 }

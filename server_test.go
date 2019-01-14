@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -56,23 +57,20 @@ func Test_Server(t *testing.T) {
 		ctx.Return()
 	})
 
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
-	request := httptesting.New(ts.URL, false).New(t)
+	request := ts.New(t)
 	request.Get("/server", nil)
-	request.AssertOK()
+	request.AssertStatus(http.StatusNoContent)
 	request.AssertEmpty()
 }
 
 func Benchmark_Server(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-
+	it := assert.New(b)
 	server := fakeServer()
 	server.GET("/server/benchmark", func(ctx *Context) {
 		ctx.SetStatus(http.StatusNoContent)
-		ctx.Return()
 	})
 
 	ts := httptest.NewServer(server)
@@ -81,24 +79,35 @@ func Benchmark_Server(b *testing.B) {
 	r, _ := http.NewRequest("GET", ts.URL+"/server/benchmark", nil)
 	w := httptest.NewRecorder()
 
+	server.ServeHTTP(w, r)
+	it.Equal(http.StatusNoContent, w.Code)
+
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		server.ServeHTTP(w, r)
 	}
 }
 
 func Benchmark_ServerWithReader(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
+	it := assert.New(b)
+
+	reader := []byte("Hello,world!")
 
 	server := fakeServer()
-	reader := bytes.NewBufferString("Hello,world!")
 	server.GET("/server/benchmark", func(ctx *Context) {
-		ctx.Return(reader)
+		ctx.Return(bytes.NewReader(reader))
 	})
 
 	r, _ := http.NewRequest("GET", "/server/benchmark", nil)
 	w := httptest.NewRecorder()
 
+	server.ServeHTTP(w, r)
+	it.Equal(http.StatusOK, w.Code)
+	it.Equal(reader, w.Body.Bytes())
+
+	b.ReportAllocs()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		server.ServeHTTP(w, r)
 	}
@@ -126,21 +135,21 @@ func Test_ServerWithReturn(t *testing.T) {
 		ctx.Return(data)
 	})
 
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	// default render
-	request := httptesting.New(ts.URL, false).New(t)
+	request := ts.New(t)
 	request.Get("/return", nil)
-	request.AssertStatus(http.StatusNotImplemented)
+	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/plain; charset=utf-8")
 	request.AssertContains(`{{ Result} gogo 5}`)
 
 	// json render with request header of accept
-	request = httptesting.New(ts.URL, false).New(t)
+	request = ts.New(t)
 	request.WithHeader("Accept", "application/json, text/xml, */*; q=0.01")
 	request.Get("/return", nil)
-	request.AssertStatus(http.StatusNotImplemented)
+	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "application/json")
 	request.AssertContains(`{"Name":"gogo","Age":5}`)
 
@@ -148,17 +157,17 @@ func Test_ServerWithReturn(t *testing.T) {
 	params := url.Values{}
 	params.Add("content-type", "application/json")
 
-	request = httptesting.New(ts.URL, false).New(t)
+	request = ts.New(t)
 	request.Get("/return?"+params.Encode(), nil)
-	request.AssertStatus(http.StatusNotImplemented)
+	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "application/json")
 	request.AssertContains(`{"Name":"gogo","Age":5}`)
 
 	// xml render with request header of accept
-	request = httptesting.New(ts.URL, false).New(t)
+	request = ts.New(t)
 	request.WithHeader("Accept", "appication/json, text/xml, */*; q=0.01")
 	request.Get("/return", nil)
-	request.AssertStatus(http.StatusNotImplemented)
+	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/xml")
 	request.AssertContains("<Result><Name>gogo</Name><Age>5</Age></Result>")
 
@@ -166,9 +175,9 @@ func Test_ServerWithReturn(t *testing.T) {
 	params = url.Values{}
 	params.Add("content-type", "text/xml")
 
-	request = httptesting.New(ts.URL, false).New(t)
+	request = ts.New(t)
 	request.Get("/return?"+params.Encode(), nil)
-	request.AssertStatus(http.StatusNotImplemented)
+	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/xml")
 	request.AssertContains(`<Result><Name>gogo</Name><Age>5</Age></Result>`)
 }
@@ -286,15 +295,14 @@ func Test_HTTPS_Server(t *testing.T) {
 
 	server.GET("/https/server", func(ctx *Context) {
 		ctx.SetStatus(http.StatusNoContent)
-		ctx.Return()
 	})
 
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, true)
 	defer ts.Close()
 
-	request := httptesting.New(ts.URL, false).New(t)
+	request := ts.New(t)
 	request.Get("/https/server", nil)
-	request.AssertOK()
+	request.AssertStatus(http.StatusNoContent)
 	request.AssertEmpty()
 }
 
@@ -314,7 +322,7 @@ func Test_Server_newContext(t *testing.T) {
 	it.Nil(ctx.settings)
 	it.Nil(ctx.frozenSettings)
 	it.Empty(ctx.middlewares)
-	it.EqualValues(0, ctx.cursor)
+	it.EqualValues(math.MaxInt8, ctx.cursor)
 
 	// creation
 	newCtx := server.newContext(request, "", "", params)
