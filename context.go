@@ -22,7 +22,7 @@ type Context struct {
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
 	middlewares    []Middleware
-	startedAt      time.Time
+	issuedAt       time.Time
 
 	mux    sync.RWMutex
 	cursor int8
@@ -334,7 +334,7 @@ func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares [
 	c.settings = nil
 	c.frozenSettings = nil
 	c.middlewares = middlewares
-	c.startedAt = time.Now()
+	c.issuedAt = time.Now()
 	c.cursor = -1
 
 	// start chains

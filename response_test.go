@@ -14,7 +14,7 @@ func Test_NewResponse(t *testing.T) {
 
 	response := NewResponse(recorder)
 	it.Implements((*Responser)(nil), response)
-	it.Equal(http.StatusNotImplemented, response.Status())
+	it.Equal(http.StatusOK, response.Status())
 	it.Equal(nonHeaderFlushed, response.Size())
 }
 

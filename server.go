@@ -64,7 +64,7 @@ func (s *AppServer) Config() Configer {
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// hijack request id if defined
 	var requestID string
-	if s.requestID != "" {
+	if s.hasRequestID() {
 		requestID = r.Header.Get(s.requestID)
 		if requestID == "" || len(requestID) > DefaultMaxHttpRequestIDLen {
 			requestID = NewGID().Hex()
@@ -253,6 +253,10 @@ func (s *AppServer) reuseContext(ctx *Context) {
 	s.logger.Reuse(ctx.Logger)
 
 	s.context.Put(ctx)
+}
+
+func (s *AppServer) hasRequestID() bool {
+	return len(s.requestID) > 0
 }
 
 func (s *AppServer) newThrottle(n int) {
