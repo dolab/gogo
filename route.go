@@ -77,63 +77,63 @@ func (r *AppRoute) CleanModdilewares() {
 }
 
 // PUT is a shortcut of route.Handle("PUT", path, handler)
-func (r *AppRoute) PUT(path string, handler Middleware) {
-	r.Handle("PUT", path, handler)
+func (r *AppRoute) PUT(rpath string, handler Middleware) {
+	r.Handle("PUT", rpath, handler)
 }
 
 // POST is a shortcut of route.Handle("POST", path, handler)
-func (r *AppRoute) POST(path string, handler Middleware) {
-	r.Handle("POST", path, handler)
+func (r *AppRoute) POST(rpath string, handler Middleware) {
+	r.Handle("POST", rpath, handler)
 }
 
 // GET is a shortcut of route.Handle("GET", path, handler)
-func (r *AppRoute) GET(path string, handler Middleware) {
-	r.Handle("GET", path, handler)
+func (r *AppRoute) GET(rpath string, handler Middleware) {
+	r.Handle("GET", rpath, handler)
 }
 
 // PATCH is a shortcut of route.Handle("PATCH", path, handler)
-func (r *AppRoute) PATCH(path string, handler Middleware) {
-	r.Handle("PATCH", path, handler)
+func (r *AppRoute) PATCH(rpath string, handler Middleware) {
+	r.Handle("PATCH", rpath, handler)
 }
 
 // DELETE is a shortcut of route.Handle("DELETE", path, handler)
-func (r *AppRoute) DELETE(path string, handler Middleware) {
-	r.Handle("DELETE", path, handler)
+func (r *AppRoute) DELETE(rpath string, handler Middleware) {
+	r.Handle("DELETE", rpath, handler)
 }
 
 // HEAD is a shortcut of route.Handle("HEAD", path, handler)
-func (r *AppRoute) HEAD(path string, handler Middleware) {
-	r.Handle("HEAD", path, handler)
+func (r *AppRoute) HEAD(rpath string, handler Middleware) {
+	r.Handle("HEAD", rpath, handler)
 }
 
 // OPTIONS is a shortcut of route.Handle("OPTIONS", path, handler)
-func (r *AppRoute) OPTIONS(path string, handler Middleware) {
-	r.Handle("OPTIONS", path, handler)
+func (r *AppRoute) OPTIONS(rpath string, handler Middleware) {
+	r.Handle("OPTIONS", rpath, handler)
 }
 
 // Any is a shortcut for all request methods
-func (r *AppRoute) Any(path string, handler Middleware) {
-	r.Handle("GET", path, handler)
-	r.Handle("POST", path, handler)
-	r.Handle("PUT", path, handler)
-	r.Handle("PATCH", path, handler)
-	r.Handle("DELETE", path, handler)
-	r.Handle("HEAD", path, handler)
-	r.Handle("OPTIONS", path, handler)
+func (r *AppRoute) Any(rpath string, handler Middleware) {
+	r.Handle("GET", rpath, handler)
+	r.Handle("POST", rpath, handler)
+	r.Handle("PUT", rpath, handler)
+	r.Handle("PATCH", rpath, handler)
+	r.Handle("DELETE", rpath, handler)
+	r.Handle("HEAD", rpath, handler)
+	r.Handle("OPTIONS", rpath, handler)
 }
 
 // Static serves files from the given dir
-func (r *AppRoute) Static(path, root string) {
-	if path[len(path)-1] != '/' {
-		path += "/"
+func (r *AppRoute) Static(rpath, root string) {
+	if rpath[len(rpath)-1] != '/' {
+		rpath += "/"
 	}
-	path += "*filepath"
+	rpath += "*filepath"
 
-	r.handler.ServeFiles(path, http.Dir(root))
+	r.handler.ServeFiles(rpath, http.Dir(root))
 }
 
 // ProxyHandle registers a new resource with a proxy
-func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
+func (r *AppRoute) ProxyHandle(method string, rpath string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
 	handler := func(ctx *Context) {
 		for _, filter := range filters {
 			ctx.Response.Before(filter)
@@ -144,10 +144,10 @@ func (r *AppRoute) ProxyHandle(method string, path string, proxy *httputil.Rever
 
 	switch method {
 	case "*":
-		r.Any(path, handler)
+		r.Any(rpath, handler)
 
 	default:
-		r.Handle(method, path, handler)
+		r.Handle(method, rpath, handler)
 
 	}
 }
@@ -267,8 +267,8 @@ func (r *AppRoute) Handle(method string, uri string, handler Middleware) {
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
-func (r *AppRoute) MockHandle(method string, path string, response http.ResponseWriter, handler Middleware) {
-	uri := r.calculatePrefix(path)
+func (r *AppRoute) MockHandle(method string, rpath string, response http.ResponseWriter, handler Middleware) {
+	uri := r.calculatePrefix(rpath)
 	middlewares := r.combineMiddlewares(handler)
 
 	r.handler.Handle(method, uri, NewFakeHandle(r.server, nil, middlewares, response))

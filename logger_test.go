@@ -7,34 +7,50 @@ import (
 )
 
 func Test_NewAppLogger(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	logger := NewAppLogger("null", "")
-	assertion.NotNil(logger)
-	assertion.Empty(logger.RequestID())
-	assertion.Implements((*Logger)(nil), logger)
+	if it.NotNil(logger) {
+		it.Implements((*Logger)(nil), logger)
+		it.Empty(logger.RequestID())
+	}
 }
 
 func Test_Logger_New(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	logger := NewAppLogger("null", "")
 
 	// new with request id
-	nlog := logger.New("di-tseuqer-x")
-	assertion.NotNil(nlog)
-	assertion.NotEqual(logger, nlog)
-	assertion.Equal("di-tseuqer-x", nlog.RequestID())
-	assertion.Implements((*Logger)(nil), nlog)
+	tmplog := logger.New("di-tseuqer-x")
+	if it.NotNil(tmplog) {
+		it.Implements((*Logger)(nil), tmplog)
+		it.NotEqual(logger, tmplog)
+		it.Equal("di-tseuqer-x", tmplog.RequestID())
+	}
 
-	assertion.Empty(logger.RequestID())
+	it.Empty(logger.RequestID())
 }
 
 func Benchmark_Logger_New(b *testing.B) {
-	logger := NewAppLogger("null", "")
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	logger := NewAppLogger("nil", "")
 
 	for i := 0; i < b.N; i++ {
-		nlog := logger.New("logger")
-		logger.Reuse(nlog)
+		logger.New("logger")
+	}
+}
+
+func Benchmark_Logger_Reuse(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	logger := NewAppLogger("nil", "")
+
+	for i := 0; i < b.N; i++ {
+		tmplog := logger.New("logger")
+		logger.Reuse(tmplog)
 	}
 }

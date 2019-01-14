@@ -137,8 +137,9 @@ type SectionConfig struct {
 
 // ServerConfig defines config spec of AppServer
 type ServerConfig struct {
-	Addr           string `json:"addr"`
-	Port           int    `json:"port"`
+	HTTP2          bool   `json:"http2"`            // use http2 server
+	Addr           string `json:"addr"`             // listen address
+	Port           int    `json:"port"`             // listen port
 	RTimeout       int    `json:"request_timeout"`  // unit in second
 	WTimeout       int    `json:"response_timeout"` // unit in second
 	MaxHeaderBytes int    `json:"max_header_bytes"` // unit in byte

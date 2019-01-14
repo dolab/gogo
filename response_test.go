@@ -9,73 +9,119 @@ import (
 )
 
 func Test_NewResponse(t *testing.T) {
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	assertion := assert.New(t)
 
 	response := NewResponse(recorder)
-	assertion.Implements((*Responser)(nil), response)
-	assertion.Equal(http.StatusOK, response.Status())
-	assertion.Equal(noneHeaderFlushed, response.Size())
+	it.Implements((*Responser)(nil), response)
+	it.Equal(http.StatusNotImplemented, response.Status())
+	it.Equal(nonHeaderFlushed, response.Size())
 }
 
 func Test_ResponseWriteHeader(t *testing.T) {
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	assertion := assert.New(t)
 
 	response := NewResponse(recorder)
 	response.WriteHeader(http.StatusRequestTimeout)
-	assertion.Equal(http.StatusRequestTimeout, response.Status())
-	assertion.Equal(noneHeaderFlushed, response.Size())
+	it.Equal(http.StatusRequestTimeout, response.Status())
+	it.Equal(nonHeaderFlushed, response.Size())
 }
 
 func Test_ResponseFlushHeader(t *testing.T) {
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	assertion := assert.New(t)
 
 	response := NewResponse(recorder)
 	response.WriteHeader(http.StatusRequestTimeout)
 	response.FlushHeader()
-	assertion.Equal(http.StatusRequestTimeout, recorder.Code)
-	assertion.NotEqual(noneHeaderFlushed, response.Size())
+	it.Equal(http.StatusRequestTimeout, recorder.Code)
+	it.NotEqual(nonHeaderFlushed, response.Size())
 
 	// no effect after flushed headers
 	response.WriteHeader(http.StatusOK)
-	assertion.Equal(http.StatusOK, response.Status())
+	it.Equal(http.StatusOK, response.Status())
 	response.FlushHeader()
-	assertion.NotEqual(http.StatusOK, recorder.Code)
+	it.NotEqual(http.StatusOK, recorder.Code)
 }
 
-func Test_ResponseFulshHeaderWithFilters(t *testing.T) {
+func Test_ResponseFlushHeaderWithFilters(t *testing.T) {
+	it := assert.New(t)
 	counter := 0
 	recorder := httptest.NewRecorder()
 	filter1 := func(r Responser, b []byte) []byte {
-		counter += 1
+		counter++
 
 		return b
 	}
 	filter2 := func(r Responser, b []byte) []byte {
-		counter += 2
+		counter++
 
 		return b
 	}
-	assertion := assert.New(t)
 
 	response := NewResponse(recorder)
 	response.Before(filter1)
 	response.Before(filter2)
 
 	response.Write([]byte(""))
-	assertion.Equal(3, counter)
+	it.Equal(2, counter)
 }
 
 func Test_ResponseWrite(t *testing.T) {
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	data := "Hello,world!"
-	assertion := assert.New(t)
+	hello := []byte("Hello,")
+	world := []byte("world!")
+	expected := []byte("Hello,world!")
 
 	response := NewResponse(recorder)
-	response.Write([]byte("Hello,"))
-	response.Write([]byte("world!"))
-	assertion.Equal(len(data), response.Size())
-	assertion.Equal(data, recorder.Body.String())
+	response.Write(hello)
+	response.Write(world)
+	it.True(response.HeaderFlushed())
+	it.Equal(len(expected), response.Size())
+	it.Equal(expected, recorder.Body.Bytes())
+}
+
+func Benchmark_ResponseWrite(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	hello := []byte("Hello,")
+	world := []byte("world!")
+
+	recorder := httptest.NewRecorder()
+	response := NewResponse(recorder)
+	for i := 0; i < b.N; i++ {
+		response.Write(hello)
+		response.Write(world)
+	}
+}
+
+func Test_ResponseHijack(t *testing.T) {
+	it := assert.New(t)
+	recorder := httptest.NewRecorder()
+	expected := []byte("Hello,world!")
+
+	response := NewResponse(recorder)
+	response.Write(expected)
+	it.True(response.HeaderFlushed())
+	it.Equal(recorder, response.(*Response).ResponseWriter)
+	it.Equal(len(expected), response.Size())
+
+	response.Hijack(httptest.NewRecorder())
+	it.False(response.HeaderFlushed())
+	it.NotEqual(recorder, response.(*Response).ResponseWriter)
+	it.Equal(nonHeaderFlushed, response.Size())
+}
+
+func Benchmark_ResponseHijack(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	recorder := httptest.NewRecorder()
+	response := NewResponse(recorder)
+	for i := 0; i < b.N; i++ {
+		response.Hijack(recorder)
+	}
 }

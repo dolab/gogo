@@ -6,26 +6,25 @@ import (
 )
 
 const (
-	noneHeaderFlushed = -1
+	nonHeaderFlushed = -1
 )
 
-// Response extends http.ResponseWriter with extra metadata
+// Response extends http.ResponseWriter with extra metadata.
 type Response struct {
 	http.ResponseWriter
 
+	filters []ResponseFilter
 	status  int
 	size    int
-	filters []ResponseFilter
 }
 
-// NewResponse returns a Responser with w passed.
-// NOTE: It sets default response status code to http.StatusOK
+// NewResponse returns a Responser with w given.
+// NOTE: It sets response status code to http.StatusNotImplemented by default.
 func NewResponse(w http.ResponseWriter) Responser {
 	response := &Response{
 		ResponseWriter: w,
-
-		status: http.StatusOK,
-		size:   noneHeaderFlushed,
+		status:         http.StatusNotImplemented,
+		size:           nonHeaderFlushed,
 	}
 
 	return response
@@ -48,10 +47,10 @@ func (r *Response) Size() int {
 
 // HeaderFlushed returns true if response headers has written
 func (r *Response) HeaderFlushed() bool {
-	return r.size != noneHeaderFlushed
+	return r.size != nonHeaderFlushed
 }
 
-// WriteHeader sets response status code only by overwrites underline
+// WriteHeader sets response status code by overwriting underline
 func (r *Response) WriteHeader(code int) {
 	if code > 0 {
 		r.status = code
@@ -62,7 +61,7 @@ func (r *Response) WriteHeader(code int) {
 	}
 }
 
-// FlushHeader writes response headers with status and reset size, it also invoke before filters
+// FlushHeader writes response headers of status code, and resets size of response.
 func (r *Response) FlushHeader() {
 	if r.HeaderFlushed() {
 		return
@@ -72,7 +71,9 @@ func (r *Response) FlushHeader() {
 	r.ResponseWriter.WriteHeader(r.status)
 }
 
-// Write writes data to client, and returns size of data written or error if exits.
+// Write writes data to client, and returns size of data written.
+// It returns error when failed.
+// It also invokes before filters if exist.
 func (r *Response) Write(data []byte) (size int, err error) {
 	// apply filters
 	for i := len(r.filters) - 1; i >= 0; i-- {
@@ -87,7 +88,7 @@ func (r *Response) Write(data []byte) (size int, err error) {
 	return
 }
 
-// Flush tryes flush to client if possible
+// Flush tryes flushing to client if possible
 func (r *Response) Flush() {
 	flush, ok := r.ResponseWriter.(http.Flusher)
 	if ok {
@@ -95,10 +96,10 @@ func (r *Response) Flush() {
 	}
 }
 
-// Reset resets the current *Response with new http.ResponseWriter
-func (r *Response) Reset(w http.ResponseWriter) {
+// Hijack resets the current *Response with new http.ResponseWriter
+func (r *Response) Hijack(w http.ResponseWriter) {
 	r.ResponseWriter = w
-	r.status = http.StatusOK
-	r.size = noneHeaderFlushed
+	r.status = http.StatusNotImplemented
+	r.size = nonHeaderFlushed
 	r.filters = nil
 }

@@ -106,32 +106,32 @@ import(
 )
 
 func Test_{{.Name}}(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	m := New{{.Name}}Model()
-	assertion.True(m.IsNewRecord())
+	it.True(m.IsNewRecord())
 
 	err := m.Save()
-	assertion.Nil(err)
-	assertion.False(m.IsNewRecord())
+	it.Nil(err)
+	it.False(m.IsNewRecord())
 }
 
 func Test_{{.Name}}_Find(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	m := New{{.Name}}Model()
 
 	// it should be error
 	tmp, err := {{.Name}}.Find(m.ID.Hex())
-	assertion.NotNil(err)
-	assertion.Nil(tmp)
+	it.NotNil(err)
+	it.Nil(tmp)
 
 	// it should work
 	m.Save()
 
 	tmp, err = {{.Name}}.Find(m.ID.Hex())
-	assertion.Nil(err)
-	assertion.Equal(m.ID.Hex(), tmp.ID.Hex())
+	it.Nil(err)
+	it.Equal(m.ID.Hex(), tmp.ID.Hex())
 }
 `}
 )

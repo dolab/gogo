@@ -250,7 +250,7 @@ func (c *Context) Return(body ...interface{}) error {
 		return c.Render(render, body[0])
 	}
 
-	return c.Render(render, "")
+	return c.Render(render, nil)
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
@@ -287,6 +287,11 @@ func (c *Context) Render(w Render, data interface{}) error {
 	// always abort
 	c.Abort()
 
+	// shortcut for nil
+	if data == nil {
+		return nil
+	}
+
 	// currect response status code
 	if coder, ok := data.(StatusCoder); ok {
 		c.SetStatus(coder.StatusCode())
@@ -298,8 +303,6 @@ func (c *Context) Render(w Render, data interface{}) error {
 	err := w.Render(data)
 	if err != nil {
 		c.Logger.Errorf("%T.Render(?): %v", w, err)
-
-		c.Response.WriteHeader(http.StatusInternalServerError)
 	}
 
 	return err
@@ -324,8 +327,8 @@ func (c *Context) Abort() {
 
 // run starting request chan with new envs.
 func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares []Middleware) {
-	// reset Responser with correct http.ResponseWriter
-	c.Response.Reset(w)
+	// hijack Responser with correct http.ResponseWriter
+	c.Response.Hijack(w)
 
 	// reset internal
 	c.settings = nil

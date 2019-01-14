@@ -14,7 +14,7 @@
                 "request_id": "X-Request-Id"
             },
             "logger": {
-                "output": "stdout",
+                "output": "nil",
                 "level": "debug",
                 "filter_params": [
                     "password",
