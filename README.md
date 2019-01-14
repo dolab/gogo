@@ -6,7 +6,7 @@
 
 It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
 
-> NOTE: The master branch is new *VERSION 2*, which removes `!go1.7` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
+> NOTE: The master branch is new *VERSION 2*, which requires `go1.10+` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
 
 ## Install
 
@@ -274,6 +274,10 @@ func main() {
     "request_id": "X-Request-Id"
 }
 ```
+
+## Benchmarks
+
+![benchmarks](./skeleton/gogo-benchmarks.png)
 
 ## TODOs
 
