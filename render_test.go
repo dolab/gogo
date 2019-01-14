@@ -25,7 +25,7 @@ func Test_DefaultRender(t *testing.T) {
 
 	err := render.Render(s)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Empty(recorder.Header())
 		it.Equal(s, recorder.Body.String())
 	}
@@ -66,7 +66,7 @@ func Test_DefaultRenderWithReader(t *testing.T) {
 
 	err := render.Render(reader)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal(s, recorder.Body.String())
 	}
 }
@@ -230,7 +230,7 @@ func Test_HashRender(t *testing.T) {
 
 	err := render.Render(s)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("6cd3556deb0da54bca060b4c39479839", recorder.Header().Get("Etag"))
 		it.Equal(s, recorder.Body.String())
 	}
@@ -249,7 +249,7 @@ func Test_HashRenderWithReader(t *testing.T) {
 
 	err := render.Render(reader)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("6cd3556deb0da54bca060b4c39479839", recorder.Header().Get("Etag"))
 		it.Equal("Hello, world!", recorder.Body.String())
 	}
@@ -418,7 +418,7 @@ func Test_TextRender(t *testing.T) {
 
 	err := render.Render(s)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal(s, recorder.Body.String())
 	}
 }
@@ -513,7 +513,7 @@ func Test_JsonRender(t *testing.T) {
 
 	err := render.Render(data)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("application/json", render.ContentType())
 		it.Contains(recorder.Body.String(), `{"success":true,"content":"Hello, world!"}`)
 	}
@@ -557,7 +557,7 @@ func Test_XmlRender(t *testing.T) {
 
 	err := render.Render(data)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("text/xml", render.ContentType())
 		it.Equal("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", recorder.Body.String())
 	}
@@ -601,7 +601,7 @@ func Test_JsonpRender(t *testing.T) {
 
 	err := render.Render(data)
 	if it.Nil(err) {
-		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("application/javascript", render.ContentType())
 		it.Equal("jsCallback({\"success\":true,\"content\":\"Hello, world!\"}\n);", recorder.Body.String())
 	}

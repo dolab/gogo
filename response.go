@@ -19,11 +19,11 @@ type Response struct {
 }
 
 // NewResponse returns a Responser with w given.
-// NOTE: It sets response status code to http.StatusNotImplemented by default.
+// NOTE: It sets response status code to http.StatusOK by default.
 func NewResponse(w http.ResponseWriter) Responser {
 	response := &Response{
 		ResponseWriter: w,
-		status:         http.StatusNotImplemented,
+		status:         http.StatusOK,
 		size:           nonHeaderFlushed,
 	}
 

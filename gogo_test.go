@@ -81,7 +81,7 @@ func Benchmark_Gogo(b *testing.B) {
 	recorder := httptest.NewRecorder()
 	reader := []byte("Hello,world!")
 
-	app := fakeApp("development")
+	app := fakeApp("product")
 	app.GET("/bench", func(ctx *Context) {
 		recorder.WriteHeader(http.StatusOK)
 		recorder.Write(reader)

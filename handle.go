@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/dolab/httpdispatch"
 )
@@ -71,7 +70,7 @@ func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, params h
 	ctx := ch.server.newContext(r, ch.ctrl, ch.action, NewAppParams(r, params))
 	defer ch.server.reuseContext(ctx)
 
-	if ch.server.requestID != "" {
+	if ch.server.hasRequestID() {
 		w.Header().Set(ch.server.requestID, ctx.RequestID())
 	}
 
@@ -102,15 +101,11 @@ func NewFakeHandle(server *AppServer, handler http.HandlerFunc, filters []Middle
 // Handle implements httpdispatch.Handler interface
 func (ch *FakeHandle) Handle(w http.ResponseWriter, r *http.Request, params httpdispatch.Params) {
 	ctx := ch.server.newContext(r, ch.ctrl, ch.action, NewAppParams(r, params))
+	defer ch.server.reuseContext(ctx)
 
-	ctx.Logger.Print("Started ", r.Method, " ", ch.server.filterParameters(r.URL))
-	defer func() {
-		ctx.Logger.Print("Completed ", ctx.Response.Status(), " ", http.StatusText(ctx.Response.Status()), " in ", time.Since(ctx.startedAt))
-
-		ch.server.reuseContext(ctx)
-	}()
-
-	ch.w.Header().Set(ch.server.requestID, ctx.RequestID())
+	if ch.server.hasRequestID() {
+		ch.w.Header().Set(ch.server.requestID, ctx.RequestID())
+	}
 
 	if ch.handler == nil {
 		ctx.run(ch.w, nil, ch.filters)
