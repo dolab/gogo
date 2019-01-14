@@ -7,7 +7,7 @@ defaults: &defaults
   #### expecting it in the form of
   ####   /go/src/github.com/circleci/go-tool
   ####   /go/src/bitbucket.org/circleci/go-tool
-  working_directory: /go/src/github.com/dolab/gogo
+  working_directory: /go/dolab/gogo
 default_steps: &default_steps
   steps:
     - checkout
