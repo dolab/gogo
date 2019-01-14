@@ -99,7 +99,7 @@ func (r *Response) Flush() {
 // Hijack resets the current *Response with new http.ResponseWriter
 func (r *Response) Hijack(w http.ResponseWriter) {
 	r.ResponseWriter = w
-	r.status = http.StatusNotImplemented
+	r.status = http.StatusOK
 	r.size = nonHeaderFlushed
 	r.filters = nil
 }
