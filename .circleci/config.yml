@@ -13,12 +13,7 @@ default_steps: &default_steps
     - checkout
 
     # specify any bash command here prefixed with `run: `
-    - run: go get -v golang.org/x/time/rate
-    - run: go get -v golang.org/x/net/websocket
-    - run: go get -v github.com/dolab/colorize
-    - run: go get -v github.com/dolab/httpdispatch
-    - run: go get -v github.com/dolab/httptesting
-    - run: go get -v github.com/dolab/logger
+    - run: go mod tidy
     - run: go test -v -race
 jobs:
   go1.6:
@@ -66,7 +61,7 @@ workflows:
   testing:
     jobs:
       # - go1.6
-      - go1.7
-      - go1.8
+      # - go1.7
+      # - go1.8
       - go1.11
       - latest
