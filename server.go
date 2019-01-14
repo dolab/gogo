@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"golang.org/x/net/context"
+	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
 )
 
@@ -61,13 +62,16 @@ func (s *AppServer) Config() Configer {
 // ServeHTTP implements the http.Handler interface with throughput and concurrency support.
 // NOTE: It servers client by dispatching request to AppRoute.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// hijack request id
-	requestID := r.Header.Get(s.requestID)
-	if requestID == "" || len(requestID) > DefaultMaxHttpRequestIDLen {
-		requestID = NewGID().Hex()
+	// hijack request id if defined
+	var requestID string
+	if s.requestID != "" {
+		requestID = r.Header.Get(s.requestID)
+		if requestID == "" || len(requestID) > DefaultMaxHttpRequestIDLen {
+			requestID = NewGID().Hex()
 
-		// inject request header with new request id
-		r.Header.Set(s.requestID, requestID)
+			// inject request header with new request id
+			r.Header.Set(s.requestID, requestID)
+		}
 	}
 
 	logger := s.logger.New(requestID)
@@ -181,22 +185,12 @@ func (s *AppServer) Run() {
 	}
 
 	s.logger.Infof("Listening on %s", localAddr)
-	if config.Server.Ssl {
-		if network != "tcp" {
-			// This limitation is just to reduce complexity, since it is standard
-			// to terminate SSL upstream when using unix domain sockets.
-			s.logger.Fatal("[GOGO]=> SSL is only supported for TCP sockets.")
-		}
-
-		s.logger.Fatal("[GOGO]=> Failed to serve:", server.ListenAndServeTLS(config.Server.SslCert, config.Server.SslKey))
-	} else {
-		listener, err := net.Listen(network, localAddr)
-		if err != nil {
-			s.logger.Fatal("[GOGO]=> Failed to listen:", err)
-		}
-
-		s.logger.Fatal("[GOGO]=> Failed to serve:", server.Serve(listener))
+	listener, err := net.Listen(network, localAddr)
+	if err != nil {
+		s.logger.Fatal("[GOGO]=> Failed to listen:", err)
 	}
+
+	s.startServer(server, listener, config.Server)
 }
 
 // RunWithHandler runs the http server with given handler
@@ -222,6 +216,24 @@ func (s *AppServer) filterParameters(lru *url.URL) string {
 	}
 
 	return ss
+}
+
+func (s *AppServer) startServer(server *http.Server, listener net.Listener, config *ServerConfig) {
+	if config.Ssl {
+		msg := "[GOGO]=> Failed to serve(TLS):"
+		if config.HTTP2 {
+			err := http2.ConfigureServer(server, nil)
+			if err != nil {
+				s.logger.Fatalf("[GOGO]=> http2.ConfigureServer(%T, nil): %v", server, err)
+			}
+
+			msg = "[GOGO]=> Failed to serve(HTTP2):"
+		}
+
+		s.logger.Fatal(msg, server.ServeTLS(listener, config.SslCert, config.SslKey))
+	} else {
+		s.logger.Fatal("[GOGO]=> Failed to serve:", server.Serve(listener))
+	}
 }
 
 // new returns a new context for the request

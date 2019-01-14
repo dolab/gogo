@@ -27,21 +27,21 @@ type Handler interface {
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
 type Middleware func(ctx *Context)
 
+// ResponseFilter defines filter interface applied to response
+type ResponseFilter func(w Responser, b []byte) []byte
+
 // Responser represents HTTP response interface
 type Responser interface {
 	http.ResponseWriter
 	http.Flusher
 
 	Before(filter ResponseFilter) // register before filter
-	Size() int                    // return the size of response body
-	Status() int                  // response status code
 	HeaderFlushed() bool          // whether response header has been sent?
 	FlushHeader()                 // send response header
-	Reset(w http.ResponseWriter)  // reset response with new http.ResponseWriter
+	Size() int                    // return the size of response body
+	Status() int                  // response status code
+	Hijack(w http.ResponseWriter) // hijack response with new http.ResponseWriter
 }
-
-// ResponseFilter defines filter interface applied to response
-type ResponseFilter func(w Responser, b []byte) []byte
 
 // StatusCoder represents HTTP response status code
 // it is useful for custom response data with response status code

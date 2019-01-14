@@ -60,7 +60,7 @@ func (render *DefaultRender) Render(v interface{}) error {
 			err = xml.NewEncoder(render.w).Encode(v)
 
 		default:
-			_, err = render.w.Write([]byte(fmt.Sprintf("%v", v)))
+			_, err = render.w.Write([]byte(fmt.Sprint(v)))
 		}
 	}
 
@@ -185,7 +185,7 @@ func (render *TextRender) Render(v interface{}) error {
 		_, err = io.Copy(render.w, v.(io.Reader))
 
 	default:
-		_, err = render.w.Write([]byte(fmt.Sprintf("%v", v)))
+		_, err = render.w.Write([]byte(fmt.Sprint(v)))
 	}
 
 	return err
@@ -215,13 +215,13 @@ func (render *JsonRender) Render(v interface{}) error {
 // It transform response data by xml.Marshal.
 type XmlRender struct {
 	w      Responser
-	header []byte
+	header io.Reader
 }
 
 func NewXmlRender(w Responser) Render {
 	render := &XmlRender{
 		w:      w,
-		header: []byte(xml.Header),
+		header: bytes.NewBufferString(xml.Header),
 	}
 
 	return render
@@ -233,7 +233,7 @@ func (render *XmlRender) ContentType() string {
 
 func (render *XmlRender) Render(v interface{}) error {
 	// hijack xml header
-	_, err := render.w.Write(render.header)
+	_, err := io.Copy(render.w, render.header)
 	if err != nil {
 		return err
 	}
@@ -245,13 +245,15 @@ func (render *XmlRender) Render(v interface{}) error {
 // It transform response data by json.Marshal.
 type JsonpRender struct {
 	w        Responser
-	callback string
+	callback io.Reader
+	tailer   io.Reader
 }
 
 func NewJsonpRender(w Responser, callback string) Render {
 	render := &JsonpRender{
 		w:        w,
-		callback: callback,
+		callback: bytes.NewBufferString(callback + "("),
+		tailer:   bytes.NewBufferString(");"),
 	}
 
 	return render
@@ -262,28 +264,16 @@ func (render *JsonpRender) ContentType() string {
 }
 
 func (render *JsonpRender) Render(v interface{}) error {
-	data, err := json.Marshal(v)
+	_, err := io.Copy(render.w, render.callback)
 	if err != nil {
 		return err
 	}
 
-	buf := bytes.NewBufferString(render.callback)
-
-	err = buf.WriteByte('(')
+	err = json.NewEncoder(render.w).Encode(v)
 	if err != nil {
 		return err
 	}
 
-	_, err = buf.Write(data)
-	if err != nil {
-		return err
-	}
-
-	_, err = buf.WriteString(");")
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(render.w, buf)
+	_, err = io.Copy(render.w, render.tailer)
 	return err
 }

@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/golib/assert"
@@ -20,138 +21,151 @@ func (statusCoder fakeContextStatusCoder) StatusCode() int {
 }
 
 func Test_NewContext(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.NotNil(ctx.Response)
-	assertion.Nil(ctx.Request)
-	assertion.Nil(ctx.Params)
-	assertion.Nil(ctx.Logger)
-	assertion.EqualValues(-1, ctx.cursor)
+	it.NotNil(ctx.Response)
+	it.Nil(ctx.Request)
+	it.Nil(ctx.Params)
+	it.Nil(ctx.Logger)
+	it.EqualValues(-1, ctx.cursor)
 }
 
 func Test_Context_Controller(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Empty(ctx.Controller())
+	it.Empty(ctx.Controller())
 }
 
 func Test_Context_Action(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Empty(ctx.Action())
+	it.Empty(ctx.Action())
 }
 
 func Test_ContextWithSettings(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Equal(0, len(ctx.settings))
-	assertion.Equal(0, len(ctx.frozenSettings))
+	it.Equal(0, len(ctx.settings))
+	it.Equal(0, len(ctx.frozenSettings))
 
 	// set
 	ctx.Set("middlewareKey", "middlewareValue")
-	assertion.Equal(1, len(ctx.settings))
-	assertion.Equal(0, len(ctx.frozenSettings))
+	it.Equal(1, len(ctx.settings))
+	it.Equal(0, len(ctx.frozenSettings))
 
 	// get
 	value, ok := ctx.Get("middlewareKey")
-	assertion.True(ok)
-	assertion.Equal("middlewareValue", value)
+	if it.True(ok) {
+		it.Equal("middlewareValue", value)
+	}
 
 	// get with empty
 	value, ok = ctx.Get("unknownSetting")
-	assertion.False(ok)
-	assertion.Empty(value)
+	if it.False(ok) {
+		it.Empty(value)
+	}
 
 	// MustGet
-	assertion.Equal("middlewareValue", ctx.MustGet("middlewareKey"))
+	it.Equal("middlewareValue", ctx.MustGet("middlewareKey"))
 
 	// MustGet with empty
-	assertion.Panics(func() {
+	it.Panics(func() {
 		ctx.MustGet("unknownSetting")
 	})
 }
 
 func Test_ContextWithFrozenSettings(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Equal(0, len(ctx.settings))
-	assertion.Equal(0, len(ctx.frozenSettings))
+	it.Equal(0, len(ctx.settings))
+	it.Equal(0, len(ctx.frozenSettings))
 
 	// final set
 	err := ctx.SetFinal("middlewareFinalKey", "middlewareFinalValue")
-	assertion.Nil(err)
-	assertion.Equal(0, len(ctx.settings))
-	assertion.Equal(1, len(ctx.frozenSettings))
+	if it.Nil(err) {
+		it.Equal(0, len(ctx.settings))
+		it.Equal(1, len(ctx.frozenSettings))
+	}
 
 	// final get
 	value, ok := ctx.GetFinal("middlewareFinalKey")
-	assertion.True(ok)
-	assertion.Equal("middlewareFinalValue", value)
+	if it.True(ok) {
+		it.Equal("middlewareFinalValue", value)
+	}
 
 	// final set with conflict
 	err = ctx.SetFinal("middlewareFinalKey", "newMiddlewareFinalValue")
-	assertion.EqualError(err, ErrSettingsKey.Error())
-	assertion.Equal(1, len(ctx.frozenSettings))
+	if it.NotNil(err) {
+		it.EqualError(ErrSettingsKey, err.Error())
+		it.Equal(1, len(ctx.frozenSettings))
+	}
 
 	value, ok = ctx.GetFinal("middlewareFinalKey")
-	assertion.True(ok)
-	assertion.Equal("middlewareFinalValue", value)
+	if it.True(ok) {
+		it.Equal("middlewareFinalValue", value)
+	}
 
 	// final get with empty
 	value, ok = ctx.GetFinal("unknownFinalSetting")
-	assertion.False(ok)
-	assertion.Empty(value)
+	if it.False(ok) {
+		it.Empty(value)
+	}
 
 	// MustSetFinal
 	ctx.MustSetFinal("mustMiddlewareFinalKey", "mustMiddlewareFinalValue")
 
 	// MustSetFinal with conflict
-	assertion.Panics(func() {
+	it.Panics(func() {
 		ctx.MustSetFinal("middlewareFinalKey", "newMiddlewareFinalValue")
 	})
 
 	// MustGetFinal
-	value = ctx.MustGetFinal("mustMiddlewareFinalKey")
-	assertion.Equal("mustMiddlewareFinalValue", value)
+	it.Equal("mustMiddlewareFinalValue", ctx.MustGetFinal("mustMiddlewareFinalKey"))
 
 	// MustGetFinal with empty
-	assertion.Panics(func() {
+	it.Panics(func() {
 		ctx.MustGetFinal("unknownMiddlewareFinalKey")
 	})
 }
 
 func Test_Context_RequestID(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Empty(ctx.RequestID())
+	it.Empty(ctx.RequestID())
 
-	ctx.Logger = NewAppLogger("stderr", "").New("requestID")
-	assertion.Equal("requestID", ctx.RequestID())
+	ctx.Logger = NewAppLogger("nil", "").New("requestID")
+	it.Equal("requestID", ctx.RequestID())
 }
 
 func Test_Context_RequestURI(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	ctx := NewContext()
-	assertion.Panics(func() {
+	it.Panics(func() {
 		ctx.RequestURI()
 	})
 
-	ctx.Request, _ = http.NewRequest(http.MethodGet, "https://example.com/path/to/resource", nil)
-	assertion.Equal("/path/to/resource", ctx.RequestURI())
+	var err error
 
-	ctx.Request, _ = http.NewRequest(http.MethodGet, "https://example.com/path/中文/resource", nil)
-	assertion.Equal("/path/中文/resource", ctx.RequestURI())
+	ctx.Request, err = http.NewRequest(http.MethodGet, "https://example.com/path/to/resource", nil)
+	if it.Nil(err) {
+		it.Equal("/path/to/resource", ctx.RequestURI())
+	}
+
+	ctx.Request, err = http.NewRequest(http.MethodGet, "https://example.com/path/中文/resource", nil)
+	if it.Nil(err) {
+		it.Equal("/path/中文/resource", ctx.RequestURI())
+	}
 }
 
 func Test_ContextWithHeader(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	request.Header.Add("X-Canonical-Key", "Canonical-Value")
@@ -161,115 +175,115 @@ func Test_ContextWithHeader(t *testing.T) {
 	ctx.Request = request
 
 	// HasRawHeader
-	assertion.True(ctx.HasRawHeader("X-Canonical-Key"))
-	assertion.False(ctx.HasRawHeader("x-canonical-key"))
-	assertion.True(ctx.HasRawHeader("x-normal-key"))
-	assertion.False(ctx.HasRawHeader("X-Normal-Key"))
+	it.True(ctx.HasRawHeader("X-Canonical-Key"))
+	it.False(ctx.HasRawHeader("x-canonical-key"))
+	it.True(ctx.HasRawHeader("x-normal-key"))
+	it.False(ctx.HasRawHeader("X-Normal-Key"))
 
 	// HasHeader
-	assertion.True(ctx.HasHeader("X-Canonical-Key"))
-	assertion.True(ctx.HasHeader("x-canonical-key"))
-	assertion.False(ctx.HasHeader("x-normal-key"))
-	assertion.False(ctx.HasHeader("X-Normal-Key"))
+	it.True(ctx.HasHeader("X-Canonical-Key"))
+	it.True(ctx.HasHeader("x-canonical-key"))
+	it.False(ctx.HasHeader("x-normal-key"))
+	it.False(ctx.HasHeader("X-Normal-Key"))
 
 	// RawHeader
-	assertion.Equal("Canonical-Value", ctx.RawHeader("X-Canonical-Key"))
-	assertion.Empty(ctx.RawHeader("x-canonical-key"))
-	assertion.Equal("normal value", ctx.RawHeader("x-normal-key"))
-	assertion.Empty(ctx.RawHeader("X-Normal-Key"))
+	it.Equal("Canonical-Value", ctx.RawHeader("X-Canonical-Key"))
+	it.Empty(ctx.RawHeader("x-canonical-key"))
+	it.Equal("normal value", ctx.RawHeader("x-normal-key"))
+	it.Empty(ctx.RawHeader("X-Normal-Key"))
 
 	// Header
-	assertion.Equal("Canonical-Value", ctx.Header("X-Canonical-Key"))
-	assertion.Equal("Canonical-Value", ctx.Header("x-canonical-key"))
-	assertion.Empty(ctx.Header("x-normal-key"))
-	assertion.Empty(ctx.Header("X-Normal-Key"))
+	it.Equal("Canonical-Value", ctx.Header("X-Canonical-Key"))
+	it.Equal("Canonical-Value", ctx.Header("x-canonical-key"))
+	it.Empty(ctx.Header("x-normal-key"))
+	it.Empty(ctx.Header("X-Normal-Key"))
 }
 
 func Test_Context_AddHeader(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	recorder := httptest.NewRecorder()
-	assertion.Empty(recorder.Header())
+	it.Empty(recorder.Header())
 
 	ctx := NewContext()
-	ctx.Response.Reset(recorder)
+	ctx.Response.Hijack(recorder)
 
 	ctx.AddHeader("key", "value")
-	assertion.NotEmpty(recorder.Header())
-	assertion.Equal("value", recorder.Header().Get("key"))
+	it.NotEmpty(recorder.Header())
+	it.Equal("value", recorder.Header().Get("key"))
 
 	// more
 	ctx.AddHeader("key", "value2")
-	assertion.NotEmpty(recorder.Header())
-	assertion.Equal("value", recorder.Header().Get("key"))
+	it.NotEmpty(recorder.Header())
+	it.Equal("value", recorder.Header().Get("key"))
 }
 
 func Test_Context_SetHeader(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	recorder := httptest.NewRecorder()
-	assertion.Empty(recorder.Header())
+	it.Empty(recorder.Header())
 
 	ctx := NewContext()
-	ctx.Response.Reset(recorder)
+	ctx.Response.Hijack(recorder)
 
 	ctx.SetHeader("key", "value")
-	assertion.NotEmpty(recorder.Header())
-	assertion.Equal("value", recorder.Header().Get("key"))
+	it.NotEmpty(recorder.Header())
+	it.Equal("value", recorder.Header().Get("key"))
 
 	// more
 	ctx.SetHeader("key", "value2")
-	assertion.NotEmpty(recorder.Header())
-	assertion.Equal("value2", recorder.Header().Get("key"))
+	it.NotEmpty(recorder.Header())
+	it.Equal("value2", recorder.Header().Get("key"))
 }
 
 func Test_Context_SetStatus(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	recorder := httptest.NewRecorder()
-	assertion.Equal(http.StatusOK, recorder.Code)
+	it.Equal(http.StatusOK, recorder.Code)
 
 	ctx := NewContext()
-	ctx.Response.Reset(recorder)
-	assertion.Equal(http.StatusOK, ctx.Response.Status())
+	ctx.Response.Hijack(recorder)
+	it.Equal(http.StatusNotImplemented, ctx.Response.Status())
 
 	ctx.SetStatus(http.StatusAccepted)
-	assertion.Equal(http.StatusOK, recorder.Code)
-	assertion.Equal(http.StatusAccepted, ctx.Response.Status())
+	it.Equal(http.StatusOK, recorder.Code)
+	it.Equal(http.StatusAccepted, ctx.Response.Status())
 
 	// more
 	ctx.SetStatus(http.StatusOK)
-	assertion.Equal(http.StatusOK, recorder.Code)
-	assertion.Equal(http.StatusOK, ctx.Response.Status())
+	it.Equal(http.StatusOK, recorder.Code)
+	it.Equal(http.StatusOK, ctx.Response.Status())
 }
 
 func Test_Context_Redirect(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
 
 	ctx := NewContext()
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
+	ctx.Response.Hijack(recorder)
 
 	ctx.Redirect(location)
 
-	assertion.Equal(http.StatusFound, recorder.Code)
-	assertion.Equal(location, recorder.Header().Get("Location"))
-	assertion.EqualValues(math.MaxInt8, ctx.cursor)
+	it.Equal(http.StatusFound, recorder.Code)
+	it.Equal(location, recorder.Header().Get("Location"))
+	it.EqualValues(math.MaxInt8, ctx.cursor)
 }
 
 func Test_Context_RedirectWithAbort(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	location := "https://www.example.com"
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
-	ctx.Logger = NewAppLogger("stderr", "")
+	ctx.Logger = NewAppLogger("nil", "")
 	ctx.middlewares = []Middleware{
 		func(ctx *Context) {
 			ctx.Redirect(location)
@@ -282,38 +296,39 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	}
 	ctx.Next()
 
-	assertion.Equal(location, recorder.Header().Get("Location"))
-	assertion.NotContains(recorder.Body.String(), "next render")
+	it.Equal(location, recorder.Header().Get("Location"))
+	it.NotContains(recorder.Body.String(), "next render")
 }
 
 func Test_Context_Return(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
 
 	// return with sample string
 	s := "Hello, world!"
 
 	err := ctx.Return(s)
-	assertion.Nil(err)
-	assertion.Equal(http.StatusOK, recorder.Code)
-	assertion.Equal(RenderDefaultContentType, recorder.Header().Get("Content-Type"))
-	assertion.Equal(s, recorder.Body.String())
+	if it.Nil(err) {
+		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal(RenderDefaultContentType, recorder.Header().Get("Content-Type"))
+		it.Equal(s, recorder.Body.String())
+	}
 }
 
 func Test_Context_ReturnWithJson(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	request.Header.Set("Accept", "application/json, text/xml; charset=utf-8")
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
 
 	// return with complex data type
 	data := struct {
@@ -322,21 +337,22 @@ func Test_Context_ReturnWithJson(t *testing.T) {
 	}{"gogo", 5}
 
 	err := ctx.Return(data)
-	assertion.Nil(err)
-	assertion.Equal(http.StatusOK, recorder.Code)
-	assertion.Equal("application/json", recorder.Header().Get("Content-Type"))
-	assertion.Contains(recorder.Body.String(), `{"Name":"gogo","Age":5}`)
+	if it.Nil(err) {
+		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal("application/json", recorder.Header().Get("Content-Type"))
+		it.Equal(`{"Name":"gogo","Age":5}`, strings.TrimSpace(recorder.Body.String()))
+	}
 }
 
 func Test_Context_ReturnWithXml(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 	request.Header.Set("Accept", "appication/json, text/xml; charset=utf-8")
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
 
 	// render with complex data type
 	data := struct {
@@ -349,14 +365,15 @@ func Test_Context_ReturnWithXml(t *testing.T) {
 	}
 
 	err := ctx.Return(data)
-	assertion.Nil(err)
-	assertion.Equal(http.StatusOK, recorder.Code)
-	assertion.Equal("text/xml", recorder.Header().Get("Content-Type"))
-	assertion.Contains(recorder.Body.String(), `<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>`)
+	if it.Nil(err) {
+		it.Equal(http.StatusNotImplemented, recorder.Code)
+		it.Equal("text/xml", recorder.Header().Get("Content-Type"))
+		it.Equal("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", strings.TrimSpace(recorder.Body.String()))
+	}
 }
 
 func Test_Context_Render(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
@@ -406,7 +423,7 @@ func Test_Context_Render(t *testing.T) {
 				Data:    123,
 			},
 		},
-		`js_callback({"success":true,"data":123});`: {
+		"js_callback({\"success\":true,\"data\":123}\n);": {
 			NewJsonpRender(ctx.Response, "js_callback"),
 			"application/javascript",
 			struct {
@@ -420,39 +437,42 @@ func Test_Context_Render(t *testing.T) {
 		recorder.Body.Reset()
 
 		err := ctx.Render(testCase.w, testCase.data)
-		assertion.Nil(err)
-		assertion.Equal(testCase.contentType, recorder.Header().Get("Content-Type"))
-		assertion.Contains(recorder.Body.String(), expected)
+		if it.Nil(err) {
+			it.Equal(testCase.contentType, recorder.Header().Get("Content-Type"))
+			it.Equal(expected, strings.TrimSpace(recorder.Body.String()))
+		}
 	}
 }
 
 func Test_Context_RenderWithStatusCoder(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
-	ctx := NewContext()
-	ctx.Request = request
-	ctx.Response.Reset(recorder)
-	ctx.Logger = NewAppLogger("stderr", "")
-
-	data := fakeContextStatusCoder{
+	statusCoder := fakeContextStatusCoder{
 		code: 123,
 	}
-	ctx.Render(NewDefaultRender(ctx.Response), data)
 
-	assertion.Equal(123, ctx.Response.Status())
+	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
+	ctx.Request = request
+	ctx.Logger = NewAppLogger("nil", "")
+
+	err := ctx.Render(NewDefaultRender(ctx.Response), statusCoder)
+	if it.Nil(err) {
+		it.Equal(123, ctx.Response.Status())
+	}
 }
 
 func Test_Context_RenderWithAbort(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	recorder := httptest.NewRecorder()
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response.Reset(recorder)
-	ctx.Logger = NewAppLogger("stderr", "")
+	ctx.Logger = NewAppLogger("nil", "")
 	ctx.middlewares = []Middleware{
 		func(ctx *Context) {
 			ctx.Render(NewDefaultRender(ctx.Response), "render")
@@ -465,12 +485,12 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	}
 	ctx.Next()
 
-	assertion.Equal("render", recorder.Body.String())
-	assertion.EqualValues(-128, ctx.cursor)
+	it.Equal("render", recorder.Body.String())
+	it.EqualValues(-128, ctx.cursor)
 }
 
 func Test_Context_Next(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	counter := 0
 	middleware1 := func(ctx *Context) {
@@ -485,16 +505,16 @@ func Test_Context_Next(t *testing.T) {
 	}
 
 	ctx := NewContext()
-	ctx.Logger = NewAppLogger("stderr", "")
+	ctx.Logger = NewAppLogger("nil", "")
 	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
 	ctx.Next()
 
-	assertion.EqualValues(2, ctx.cursor)
-	assertion.Equal(2, counter)
+	it.EqualValues(2, ctx.cursor)
+	it.Equal(2, counter)
 }
 
 func Test_Context_Abort(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	counter := 0
 	middleware1 := func(ctx *Context) {
@@ -509,22 +529,25 @@ func Test_Context_Abort(t *testing.T) {
 	}
 
 	ctx := NewContext()
-	ctx.Logger = NewAppLogger("stderr", "")
+	ctx.Logger = NewAppLogger("nil", "")
 	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
 	ctx.Abort()
 	ctx.Next()
 
-	assertion.EqualValues(-128, ctx.cursor)
-	assertion.Equal(0, counter)
+	it.EqualValues(-128, ctx.cursor)
+	it.Equal(0, counter)
 }
 
 func Benchmark_Context(b *testing.B) {
-	w := httptest.NewRecorder()
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	recorder := httptest.NewRecorder()
 
 	ctx := NewContext()
-	ctx.Logger = NewAppLogger("null", "")
+	ctx.Logger = NewAppLogger("nil", "")
 
 	for i := 0; i < b.N; i++ {
-		ctx.run(w, nil, nil)
+		ctx.run(recorder, nil, nil)
 	}
 }

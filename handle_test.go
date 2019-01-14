@@ -42,7 +42,7 @@ func (_ *_fakeController) Action(ctx *Context) {
 }
 
 func Test_ContextHandle(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	w := httptest.NewRecorder()
@@ -50,55 +50,55 @@ func Test_ContextHandle(t *testing.T) {
 	ch := NewContextHandle(fakeServer(), fakePackageHandler, nil)
 	ch.Handle(w, r, nil)
 
-	assertion.Equal("fakePackageHandler", w.Body.String())
+	it.Equal("fakePackageHandler", w.Body.String())
 }
 
 func Test_ContextHandleWithHandler(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	// global
 	ch := NewContextHandle(nil, fakeGlobalHandler, nil)
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("gogo", ch.ctrl)
-	assertion.Equal("<http.HandlerFunc>", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("gogo", ch.ctrl)
+	it.Equal("<http.HandlerFunc>", ch.action)
 
 	// package
 	ch = NewContextHandle(nil, fakePackageHandler, nil)
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("gogo", ch.ctrl)
-	assertion.Equal("fakePackageHandler", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("gogo", ch.ctrl)
+	it.Equal("fakePackageHandler", ch.action)
 
 	// controller
 	ch = NewContextHandle(nil, fakeControllerHandler.Action, nil)
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("*_fakeControllerHandler", ch.ctrl)
-	assertion.Equal("Action", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("*_fakeControllerHandler", ch.ctrl)
+	it.Equal("Action", ch.action)
 }
 
 func Test_ContextHandleWithAction(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	// global
 	ch := NewContextHandle(nil, nil, []Middleware{fakeGlobalAction})
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("gogo", ch.ctrl)
-	assertion.Equal("<http.HandlerFunc>", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("gogo", ch.ctrl)
+	it.Equal("<http.HandlerFunc>", ch.action)
 
 	// package
 	ch = NewContextHandle(nil, nil, []Middleware{fakePackageAction})
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("gogo", ch.ctrl)
-	assertion.Equal("fakePackageAction", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("gogo", ch.ctrl)
+	it.Equal("fakePackageAction", ch.action)
 
 	// controller
 	ch = NewContextHandle(nil, nil, []Middleware{fakeController.Action})
-	assertion.Equal("gogo", ch.pkg)
-	assertion.Equal("*_fakeController", ch.ctrl)
-	assertion.Equal("Action", ch.action)
+	it.Equal("gogo", ch.pkg)
+	it.Equal("*_fakeController", ch.ctrl)
+	it.Equal("Action", ch.action)
 }
 
 func Test_FakeHandle(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	w := httptest.NewRecorder()
@@ -106,5 +106,5 @@ func Test_FakeHandle(t *testing.T) {
 	fh := NewFakeHandle(fakeServer(), fakePackageHandler, nil, w)
 	fh.Handle(nil, r, nil)
 
-	assertion.Equal("fakePackageHandler", w.Body.String())
+	it.Equal("fakePackageHandler", w.Body.String())
 }

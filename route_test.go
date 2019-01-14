@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -13,18 +14,18 @@ import (
 )
 
 func Test_NewAppRoute(t *testing.T) {
+	it := assert.New(t)
 	prefix := "/prefix"
 	server := fakeServer()
-	assertion := assert.New(t)
 
 	route := NewAppRoute(prefix, server)
-	assertion.Empty(route.middlewares)
-	assertion.Equal(prefix, route.prefix)
-	assertion.Equal(server, route.server)
+	it.Empty(route.middlewares)
+	it.Equal(prefix, route.prefix)
+	it.Equal(server, route.server)
 }
 
 func Test_RouteHandle(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
 
 	testCases := map[string]struct {
@@ -89,23 +90,26 @@ func Test_RouteHandle(t *testing.T) {
 		request, _ := http.NewRequest(method, ts.URL+testCase.path, nil)
 
 		response, err := http.DefaultClient.Do(request)
-		assertion.Nil(err)
+		if it.Nil(err) {
 
-		body, err := ioutil.ReadAll(response.Body)
-		response.Body.Close()
+			body, err := ioutil.ReadAll(response.Body)
+			if it.Nil(err) {
+				response.Body.Close()
 
-		switch method {
-		case "HEAD":
-			assertion.Empty(body)
+				switch method {
+				case "HEAD":
+					it.Empty(body)
 
-		default:
-			assertion.Equal(method, string(body))
+				default:
+					it.Equal(method, string(body))
+				}
+			}
 		}
 	}
 }
 
 func Test_RouteHandleWithTailSlash(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
 
 	server.Handle("GET", "/:tailslash", func(ctx *Context) {
@@ -123,73 +127,82 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	request, _ := http.NewRequest("GET", ts.URL+"/tailslash", nil)
 
 	response, err := http.DefaultClient.Do(request)
-	assertion.Nil(err)
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err := ioutil.ReadAll(response.Body)
-	response.Body.Close()
-
-	assertion.Equal("GET /:tailslash", string(body))
+			it.Equal("GET /:tailslash", string(body))
+		}
+	}
 
 	// with tail slash
 	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/?query", nil)
 
 	response, err = http.DefaultClient.Do(request)
-	assertion.Nil(err)
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(response.Body)
-	response.Body.Close()
-
-	assertion.Equal("GET /:tailslash", string(body))
+			it.Equal("GET /:tailslash", string(body))
+		}
+	}
 
 	// with extra args without tail slash
 	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs", nil)
 
 	response, err = http.DefaultClient.Do(request)
-	assertion.Nil(err)
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(response.Body)
-	response.Body.Close()
-
-	assertion.Equal("GET /:tailslash/*extraargs", string(body))
+			it.Equal("GET /:tailslash/*extraargs", string(body))
+		}
+	}
 
 	// with extra args with tail slash
 	request, _ = http.NewRequest("GET", ts.URL+"/tailslash/extraargs/", nil)
 
 	response, err = http.DefaultClient.Do(request)
-	assertion.Nil(err)
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(response.Body)
-	response.Body.Close()
-
-	assertion.Equal("GET /:tailslash/*extraargs", string(body))
+			it.Equal("GET /:tailslash/*extraargs", string(body))
+		}
+	}
 }
 
 func Test_RouteProxyHandle(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
+	proxiedServer := fakeServer()
 
 	var n int32
 
 	// proxied handler
-	proxiedServer := server.Group("", func(ctx *Context) {
-		atomic.AddInt32(&n, 1)
-
-		ctx.Logger.Warn("proxy middleware")
-
-		ctx.Next()
-	})
 	proxiedServer.Handle("GET", "/backend", func(ctx *Context) {
 		atomic.AddInt32(&n, 1)
 
-		ctx.Text("Proxied!")
+		ctx.SetStatus(http.StatusOK)
+		ctx.Text("I AM BACKEND!")
 	})
+
+	// start proxy server
+	proxiedTs := httptest.NewServer(proxiedServer)
+	defer proxiedTs.Close()
+
+	proxiedURL, _ := url.Parse(proxiedTs.URL)
 
 	proxy := &httputil.ReverseProxy{
 		Director: func(r *http.Request) {
 			atomic.AddInt32(&n, 1)
 
 			r.URL.Scheme = "http"
-			r.URL.Host = r.Host
+			r.URL.Host = proxiedURL.Host
 			r.URL.Path = "/backend"
 			r.URL.RawPath = "/backend"
 		},
@@ -206,22 +219,25 @@ func Test_RouteProxyHandle(t *testing.T) {
 	request, _ := http.NewRequest("GET", ts.URL+"/proxy", nil)
 
 	response, err := http.DefaultClient.Do(request)
-	assertion.Nil(err)
-	assertion.EqualValues(3, n)
+	if it.Nil(err) {
+		it.EqualValues(2, n)
 
-	body, err := ioutil.ReadAll(response.Body)
-	response.Body.Close()
-	assertion.Nil(err)
-	assertion.Equal("PROXIED!", string(body))
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
+
+			it.Equal("I AM BACKEND!", string(body))
+		}
+	}
 }
 
 func Test_RouteMockHandle(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
-	response := httptest.NewRecorder()
+	recorder := httptest.NewRecorder()
 
 	// mock handler
-	server.MockHandle("GET", "/mock", response, func(ctx *Context) {
+	server.MockHandle("GET", "/mock", recorder, func(ctx *Context) {
 		ctx.Text("MOCK")
 	})
 
@@ -232,26 +248,28 @@ func Test_RouteMockHandle(t *testing.T) {
 	// testing by http request
 	request, _ := http.NewRequest("GET", ts.URL+"/mock", nil)
 
-	res, err := http.DefaultClient.Do(request)
-	assertion.Nil(err)
+	response, err := http.DefaultClient.Do(request)
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	assertion.Nil(err)
-	assertion.Empty(body)
+			it.Empty(body)
 
-	assertion.Equal(http.StatusOK, response.Code)
-	assertion.Equal("MOCK", response.Body.String())
+			it.Equal(http.StatusNotImplemented, recorder.Code)
+			it.Equal("MOCK", recorder.Body.String())
+		}
+	}
 }
 
 func Test_RouteGroup(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
-	route := server.Group("/group")
+	group := server.Group("/group")
 
 	// register handler
 	// GET /group/:method
-	route.Handle("GET", "/:method", func(ctx *Context) {
+	group.Handle("GET", "/:method", func(ctx *Context) {
 		ctx.Text(ctx.Params.Get("method"))
 	})
 
@@ -259,13 +277,15 @@ func Test_RouteGroup(t *testing.T) {
 	ts := httptest.NewServer(server)
 	defer ts.Close()
 
-	res, err := http.Get(ts.URL + "/group/testing")
-	assertion.Nil(err)
+	response, err := http.Get(ts.URL + "/group/testing")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal("testing", string(body))
+			it.Equal("testing", string(body))
+		}
+	}
 }
 
 type testGroupController struct{}
@@ -289,7 +309,7 @@ func (t *testUserController) Show(ctx *Context) {
 }
 
 func Test_RouteResource(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
 
 	// start server
@@ -300,35 +320,40 @@ func Test_RouteResource(t *testing.T) {
 	group := server.Resource("group", &testGroupController{})
 
 	// should work for GET /group/:group
-	res, err := http.Get(ts.URL + "/group/my-group")
-	assertion.Nil(err)
-
-	body, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal("GET /group/my-group", string(body))
+	response, err := http.Get(ts.URL + "/group/my-group")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
+			it.Equal("GET /group/my-group", string(body))
+		}
+	}
 
 	// user resource
 	group.Resource("user", &testUserController{})
 
 	// should work for GET /group/:group/user/:id
-	res, err = http.Get(ts.URL + "/group/my-group/user/my-user")
-	assertion.Nil(err)
+	response, err = http.Get(ts.URL + "/group/my-group/user/my-user")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal("GET /group/my-group/user/my-user", string(body))
+			it.Equal("GET /group/my-group/user/my-user", string(body))
+		}
+	}
 
 	// error for not found
-	res, err = http.Get(ts.URL + "/group/my-group/user/")
-	assertion.Nil(err)
+	response, err = http.Get(ts.URL + "/group/my-group/user/")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal(http.StatusNotFound, res.StatusCode)
-	assertion.Contains(string(body), "not found")
+			it.Equal(http.StatusNotFound, response.StatusCode)
+			it.Contains(string(body), "not found")
+		}
+	}
 }
 
 type testGroupMemberController struct{}
@@ -342,7 +367,7 @@ func (t *testGroupMemberController) Show(ctx *Context) {
 }
 
 func Test_RouteResourceWithSubPath(t *testing.T) {
-	assertion := assert.New(t)
+	it := assert.New(t)
 	server := fakeServer()
 
 	// start server
@@ -353,21 +378,25 @@ func Test_RouteResourceWithSubPath(t *testing.T) {
 	server.Resource("group/member", &testGroupMemberController{})
 
 	// should work for GET /group/member/:group
-	res, err := http.Get(ts.URL + "/group/member/my-group")
-	assertion.Nil(err)
+	response, err := http.Get(ts.URL + "/group/member/my-group")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal("GET /group/member/my-group", string(body))
+			it.Equal("GET /group/member/my-group", string(body))
+		}
+	}
 
 	// error for not found
-	res, err = http.Get(ts.URL + "/group/member/my-group/user")
-	assertion.Nil(err)
+	response, err = http.Get(ts.URL + "/group/member/my-group/user")
+	if it.Nil(err) {
+		body, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			response.Body.Close()
 
-	body, err = ioutil.ReadAll(res.Body)
-	res.Body.Close()
-
-	assertion.Equal(http.StatusNotFound, res.StatusCode)
-	assertion.Contains(string(body), "not found")
+			it.Equal(http.StatusNotFound, response.StatusCode)
+			it.Contains(string(body), "not found")
+		}
+	}
 }
