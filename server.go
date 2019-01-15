@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dolab/gogo/pkgs/gid"
 	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 	"golang.org/x/time/rate"
@@ -67,7 +68,7 @@ func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if s.hasRequestID() {
 		requestID = r.Header.Get(s.requestID)
 		if requestID == "" || len(requestID) > DefaultMaxHttpRequestIDLen {
-			requestID = NewGID().Hex()
+			requestID = gid.New().Hex()
 
 			// inject request header with new request id
 			r.Header.Set(s.requestID, requestID)
