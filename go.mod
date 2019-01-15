@@ -11,4 +11,7 @@ require (
 	github.com/golib/assert v0.0.0-20170825111607-0306abba9bd3
 	github.com/golib/cli v1.2.0
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	golang.org/x/net v0.0.0-20190110200230-915654e7eabc
+	golang.org/x/text v0.3.0 // indirect
+	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
 )
