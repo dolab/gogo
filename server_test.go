@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/dolab/httpdispatch"
+	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 )
@@ -29,11 +30,22 @@ var (
 		return server
 	}
 
-	fakeHTTPSServer = func() *AppServer {
+	fakeTcpServer = func() *AppServer {
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.https.json")
+		config, _ := fakeConfig("application.tcp.json")
+
+		server := NewAppServer(config, logger)
+
+		return server
+	}
+
+	fakeUnixServer = func() *AppServer {
+		logger := NewAppLogger("nil", "")
+		logger.SetSkip(3)
+
+		config, _ := fakeConfig("application.unix.json")
 
 		server := NewAppServer(config, logger)
 
@@ -46,14 +58,13 @@ func Test_NewAppServer(t *testing.T) {
 
 	server := fakeServer()
 	it.Implements((*http.Handler)(nil), server)
-	it.IsType(&Context{}, server.context.Get())
 }
 
 func Test_Server(t *testing.T) {
 	server := fakeServer()
 
 	server.GET("/server", func(ctx *Context) {
-		ctx.SetStatus(http.StatusNoContent)
+		ctx.SetStatus(http.StatusNotImplemented)
 		ctx.Return()
 	})
 
@@ -62,7 +73,7 @@ func Test_Server(t *testing.T) {
 
 	request := ts.New(t)
 	request.Get("/server", nil)
-	request.AssertStatus(http.StatusNoContent)
+	request.AssertStatus(http.StatusNotImplemented)
 	request.AssertEmpty()
 }
 
@@ -86,6 +97,59 @@ func Benchmark_Server(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		server.ServeHTTP(w, r)
+	}
+}
+
+func Test_Server_Race(t *testing.T) {
+	it := assert.New(t)
+	logger := NewAppLogger("nil", "")
+	config, _ := fakeConfig("application.json")
+
+	server := NewAppServer(config, logger)
+	server.hooks.RequestReceived.PushFront(func(w http.ResponseWriter, r *http.Request) bool {
+		time.Sleep(time.Millisecond)
+		r.Header.Add("X-Server-Race", r.Header.Get("X-Server-Race"))
+		return true
+	})
+
+	server.GET("/server/race", func(ctx *Context) {
+		ctx.Return(ctx.Header("X-Server-Race"))
+	})
+
+	ts := httptesting.NewServer(server, false)
+	defer ts.Close()
+
+	var (
+		wg sync.WaitGroup
+
+		routines = 3
+	)
+
+	bufc := make(chan []byte, routines)
+
+	wg.Add(routines)
+	for i := 0; i < routines; i++ {
+		go func(n int) {
+			defer wg.Done()
+
+			request := ts.New(t)
+			request.WithHeader("X-Server-Race", "Race#"+strconv.Itoa(n))
+			request.Get("/server/race", nil)
+
+			bufc <- request.ResponseBody
+		}(i)
+	}
+	wg.Wait()
+
+	close(bufc)
+
+	s := ""
+	for buf := range bufc {
+		s += string(buf)
+	}
+
+	for i := 0; i < routines; i++ {
+		it.Equal(1, strings.Count(s, "Race#"+strconv.Itoa(i)))
 	}
 }
 
@@ -191,7 +255,7 @@ func Test_ServerWithNotFound(t *testing.T) {
 	request := httptesting.New(ts.URL, false).New(t)
 	request.Get("/not/found", nil)
 	request.AssertNotFound()
-	request.AssertContains("Route(GET /not/found) not found")
+	request.AssertContains("Request(GET /not/found): not found")
 }
 
 func Test_ServerWithThroughput(t *testing.T) {
@@ -200,14 +264,13 @@ func Test_ServerWithThroughput(t *testing.T) {
 	config, _ := fakeConfig("application.throttle.json")
 
 	server := NewAppServer(config, logger)
-	server.newThrottle(1)
+	server.hooks.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(1))
 
 	server.GET("/server/throughput", func(ctx *Context) {
 		ctx.SetStatus(http.StatusNoContent)
-		ctx.Return()
 	})
 
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	var (
@@ -223,7 +286,7 @@ func Test_ServerWithThroughput(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			request := httptesting.New(ts.URL, false).New(t)
+			request := ts.New(t)
 			request.Get("/server/throughput", nil)
 
 			bufc <- request.ResponseBody
@@ -237,8 +300,13 @@ func Test_ServerWithThroughput(t *testing.T) {
 	for buf := range bufc {
 		s += string(buf)
 	}
-
 	it.Contains(s, "I'm a teapot")
+
+	// it should work for now
+	request := ts.New(t)
+	request.Get("/server/throughput", nil)
+	request.AssertStatus(http.StatusNoContent)
+	request.AssertEmpty()
 }
 
 func Test_ServerWithConcurrency(t *testing.T) {
@@ -247,16 +315,17 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	config, _ := fakeConfig("application.throttle.json")
 
 	server := NewAppServer(config, logger)
-	server.newSlowdown(1, 1)
+	server.hooks.RequestReceived.PushFrontNamed(hooks.NewServerDemotionHook(1, 1))
 
 	server.GET("/server/concurrency", func(ctx *Context) {
-		time.Sleep(time.Second)
+		if !ctx.Params.HasQuery("fast") {
+			time.Sleep(time.Second)
+		}
 
 		ctx.SetStatus(http.StatusNoContent)
-		ctx.Return()
 	})
 
-	ts := httptest.NewServer(server)
+	ts := httptesting.NewServer(server, false)
 	defer ts.Close()
 
 	var (
@@ -272,7 +341,7 @@ func Test_ServerWithConcurrency(t *testing.T) {
 		go func(routine int) {
 			defer wg.Done()
 
-			request := httptesting.New(ts.URL, false).New(t)
+			request := ts.New(t)
 			request.Get("/server/concurrency", nil)
 
 			bufc <- fmt.Sprintf("[routine@#%d] %s", routine, string(request.ResponseBody))
@@ -286,74 +355,65 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	for buf := range bufc {
 		s += string(buf)
 	}
-
 	it.Contains(s, "Too Many Requests")
-}
 
-func Test_HTTPS_Server(t *testing.T) {
-	server := fakeHTTPSServer()
-
-	server.GET("/https/server", func(ctx *Context) {
-		ctx.SetStatus(http.StatusNoContent)
-	})
-
-	ts := httptesting.NewServer(server, true)
-	defer ts.Close()
+	// it should work now
+	params := url.Values{}
+	params.Add("fast", "")
 
 	request := ts.New(t)
-	request.Get("/https/server", nil)
+	request.Get("/server/concurrency", params)
 	request.AssertStatus(http.StatusNoContent)
-	request.AssertEmpty()
+	request.AssertNotContains("Too Many Requests")
+
 }
 
-func Test_Server_newContext(t *testing.T) {
+func Test_Server_loggerNew(t *testing.T) {
 	it := assert.New(t)
-	recorder := httptest.NewRecorder()
-	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
-	params := NewAppParams(request, httpdispatch.Params{})
+	logger := NewAppLogger("nil", "")
+	config, _ := fakeConfig("application.throttle.json")
 
-	server := fakeServer()
-	ctx := server.newContext(request, "", "", params)
-	ctx.run(recorder, nil, nil)
+	server := NewAppServer(config, logger)
 
-	it.Equal(request, ctx.Request)
-	it.Equal(recorder.Header().Get(server.requestID), ctx.Response.Header().Get(server.requestID))
-	it.Equal(params, ctx.Params)
-	it.Nil(ctx.settings)
-	it.Nil(ctx.frozenSettings)
-	it.Empty(ctx.middlewares)
-	it.EqualValues(math.MaxInt8, ctx.cursor)
+	// new with request id
+	alog := server.loggerNew("di-tseuqer-x")
+	if it.NotNil(alog) {
+		it.Implements((*Logger)(nil), alog)
 
-	// creation
-	newCtx := server.newContext(request, "", "", params)
-	newCtx.run(recorder, nil, nil)
-
-	it.NotEqual(fmt.Sprintf("%p", ctx), fmt.Sprintf("%p", newCtx))
-}
-
-func Benchmark_Server_newContext(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	server := fakeServer()
-	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
-	params := NewAppParams(request, httpdispatch.Params{})
-
-	for i := 0; i < b.N; i++ {
-		server.newContext(request, "", "", params)
+		it.Equal("di-tseuqer-x", alog.RequestID())
 	}
+
+	blog := server.loggerNew("x-request-id")
+	if it.NotNil(blog) {
+		it.Implements((*Logger)(nil), blog)
+
+		it.NotEqual(fmt.Sprintf("%p", alog), fmt.Sprintf("%p", blog))
+	}
+
+	it.Equal("di-tseuqer-x", alog.RequestID())
 }
 
-func Benchmark_Server_newContextWithReuse(b *testing.B) {
-	b.ReportAllocs()
-	b.ResetTimer()
+func Test_Server_loggerNewWithReuse(t *testing.T) {
+	it := assert.New(t)
+	logger := NewAppLogger("nil", "")
+	config, _ := fakeConfig("application.throttle.json")
 
-	server := fakeServer()
-	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
-	params := NewAppParams(request, httpdispatch.Params{})
+	server := NewAppServer(config, logger)
 
-	for i := 0; i < b.N; i++ {
-		ctx := server.newContext(request, "", "", params)
-		server.reuseContext(ctx)
+	// new with request id
+	alog := server.loggerNew("di-tseuqer-x")
+	if it.NotNil(alog) {
+		it.Implements((*Logger)(nil), alog)
+
+		it.Equal("di-tseuqer-x", alog.RequestID())
+	}
+	server.loggerReuse(alog)
+
+	blog := server.loggerNew("x-request-id")
+	if it.NotNil(blog) {
+		it.Implements((*Logger)(nil), blog)
+
+		it.Equal(fmt.Sprintf("%p", alog), fmt.Sprintf("%p", blog))
+		it.Equal("x-request-id", alog.RequestID())
 	}
 }

@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"context"
 	"crypto"
 	"encoding/xml"
 	"math"
@@ -9,6 +10,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dolab/gogo/internal/params"
+	"github.com/dolab/gogo/internal/render"
+	"github.com/dolab/httpdispatch"
 	"github.com/golib/assert"
 )
 
@@ -28,7 +32,15 @@ func Test_NewContext(t *testing.T) {
 	it.Nil(ctx.Request)
 	it.Nil(ctx.Params)
 	it.Nil(ctx.Logger)
+	it.EqualValues(0, ctx.maxCursor)
 	it.EqualValues(-1, ctx.cursor)
+}
+
+func Test_Context_Package(t *testing.T) {
+	it := assert.New(t)
+
+	ctx := NewContext()
+	it.Empty(ctx.Package())
 }
 
 func Test_Context_Controller(t *testing.T) {
@@ -252,9 +264,9 @@ func Test_Context_SetStatus(t *testing.T) {
 	it.Equal(http.StatusAccepted, ctx.Response.Status())
 
 	// more
-	ctx.SetStatus(http.StatusOK)
+	ctx.SetStatus(http.StatusConflict)
 	it.Equal(http.StatusOK, recorder.Code)
-	it.Equal(http.StatusOK, ctx.Response.Status())
+	it.Equal(http.StatusConflict, ctx.Response.Status())
 }
 
 func Test_Context_Redirect(t *testing.T) {
@@ -284,17 +296,17 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	ctx.Response.Hijack(recorder)
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
-	ctx.middlewares = []Middleware{
+
+	ctx.run(nil, []Middleware{
 		func(ctx *Context) {
 			ctx.Redirect(location)
 
 			ctx.Next()
 		},
 		func(ctx *Context) {
-			ctx.Render(NewDefaultRender(ctx.Response), "next render")
+			ctx.Render(render.NewDefaultRender(ctx.Response), "next render")
 		},
-	}
-	ctx.Next()
+	})
 
 	it.Equal(location, recorder.Header().Get("Location"))
 	it.NotContains(recorder.Body.String(), "next render")
@@ -315,7 +327,7 @@ func Test_Context_Return(t *testing.T) {
 	err := ctx.Return(s)
 	if it.Nil(err) {
 		it.Equal(http.StatusOK, recorder.Code)
-		it.Equal(RenderDefaultContentType, recorder.Header().Get("Content-Type"))
+		it.Equal(render.ContentTypeDefault, recorder.Header().Get("Content-Type"))
 		it.Equal(s, recorder.Body.String())
 	}
 }
@@ -378,42 +390,40 @@ func Test_Context_Render(t *testing.T) {
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
 
 	ctx := NewContext()
+	ctx.Response.Hijack(recorder)
 	ctx.Request = request
-	ctx.Response = &Response{
-		ResponseWriter: recorder,
-	}
 
 	testCases := map[string]struct {
-		w           Render
+		w           render.Render
 		contentType string
 		data        interface{}
 	}{
 		"default render": {
-			NewDefaultRender(ctx.Response),
-			RenderDefaultContentType,
+			render.NewDefaultRender(ctx.Response),
+			render.ContentTypeDefault,
 			"default render",
 		},
 		"hashed render": {
-			NewHashRender(ctx.Response, crypto.MD5),
-			RenderDefaultContentType,
+			render.NewHashRender(ctx.Response, crypto.MD5),
+			render.ContentTypeDefault,
 			"hashed render",
 		},
 		"text render": {
-			NewTextRender(ctx.Response),
-			RenderDefaultContentType,
+			render.NewTextRender(ctx.Response),
+			render.ContentTypeDefault,
 			"text render",
 		},
 		`{"success":false,"error":"not found"}`: {
-			NewJsonRender(ctx.Response),
-			"application/json",
+			render.NewJsonRender(ctx.Response),
+			render.ContentTypeJSON,
 			struct {
 				Success bool   `json:"success"`
 				Error   string `json:"error"`
 			}{false, "not found"},
 		},
 		"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Result><Success>true</Success><Data>123</Data></Result>": {
-			NewXmlRender(ctx.Response),
-			"text/xml",
+			render.NewXmlRender(ctx.Response),
+			render.ContentTypeXML,
 			struct {
 				XMLName xml.Name `xml:"Result"`
 				Success bool     `xml:"Success"`
@@ -424,8 +434,8 @@ func Test_Context_Render(t *testing.T) {
 			},
 		},
 		"js_callback({\"success\":true,\"data\":123}\n);": {
-			NewJsonpRender(ctx.Response, "js_callback"),
-			"application/javascript",
+			render.NewJsonpRender(ctx.Response, "js_callback"),
+			render.ContentTypeJSONP,
 			struct {
 				Success bool `json:"success"`
 				Data    int  `json:"data"`
@@ -458,7 +468,7 @@ func Test_Context_RenderWithStatusCoder(t *testing.T) {
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
 
-	err := ctx.Render(NewDefaultRender(ctx.Response), statusCoder)
+	err := ctx.Render(render.NewDefaultRender(ctx.Response), statusCoder)
 	if it.Nil(err) {
 		it.Equal(123, ctx.Response.Status())
 	}
@@ -473,20 +483,20 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	ctx.Response.Hijack(recorder)
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
-	ctx.middlewares = []Middleware{
+
+	ctx.run(nil, []Middleware{
 		func(ctx *Context) {
-			ctx.Render(NewDefaultRender(ctx.Response), "render")
+			ctx.Render(render.NewDefaultRender(ctx.Response), "render")
 
 			ctx.Next()
 		},
 		func(ctx *Context) {
-			ctx.Render(NewDefaultRender(ctx.Response), "next render")
+			ctx.Render(render.NewDefaultRender(ctx.Response), "next render")
 		},
-	}
-	ctx.Next()
+	})
 
 	it.Equal("render", recorder.Body.String())
-	it.EqualValues(-128, ctx.cursor)
+	it.EqualValues(math.MaxInt8, ctx.cursor)
 }
 
 func Test_Context_Next(t *testing.T) {
@@ -505,50 +515,108 @@ func Test_Context_Next(t *testing.T) {
 	}
 
 	ctx := NewContext()
+	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
-	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
-	ctx.Next()
 
-	it.EqualValues(2, ctx.cursor)
+	ctx.run(nil, []Middleware{middleware1, middleware2})
+
 	it.Equal(2, counter)
+	it.EqualValues(math.MaxInt8, ctx.cursor)
 }
 
 func Test_Context_Abort(t *testing.T) {
 	it := assert.New(t)
 
 	counter := 0
+	middleware0 := func(ctx *Context) {
+		ctx.Abort()
+
+		ctx.Next()
+	}
 	middleware1 := func(ctx *Context) {
 		counter++
 
 		ctx.Next()
 	}
 	middleware2 := func(ctx *Context) {
-		counter += 2
+		counter++
 
 		ctx.Next()
 	}
 
 	ctx := NewContext()
+	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
-	ctx.middlewares = append(ctx.middlewares, middleware1, middleware2)
-	ctx.Abort()
-	ctx.Next()
 
-	it.EqualValues(-128, ctx.cursor)
+	ctx.run(nil, []Middleware{middleware0, middleware1, middleware2})
+
 	it.Equal(0, counter)
+	it.EqualValues(math.MaxInt8, ctx.cursor)
 }
 
-func Benchmark_Context(b *testing.B) {
+func Test_contextNew(t *testing.T) {
+	it := assert.New(t)
+
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
+	request = request.WithContext(context.WithValue(request.Context(), ctxLoggerKey, NewAppLogger("nil", "")))
+	params := params.NewParams(request, httpdispatch.Params{})
+
+	ctx := contextNew(recorder, request, params, "package", "controller", "action")
+	it.Equal(recorder, ctx.Response.(*Response).ResponseWriter)
+	it.Equal(request, ctx.Request)
+	it.Equal(params, ctx.Params)
+	it.Nil(ctx.settings)
+	it.Nil(ctx.frozenSettings)
+	it.Empty(ctx.middlewares)
+	it.EqualValues(0, ctx.maxCursor)
+	it.EqualValues(-1, ctx.cursor)
+	it.Equal("package", ctx.pkg)
+	it.Equal("controller", ctx.ctrl)
+	it.Equal("action", ctx.action)
+}
+
+func Benchmark_contextNew(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-
-	ctx := NewContext()
-	ctx.Request = httptest.NewRequest(http.MethodGet, "https://example.com", nil)
-	ctx.Logger = NewAppLogger("nil", "")
+	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
+	request = request.WithContext(context.WithValue(request.Context(), ctxLoggerKey, NewAppLogger("nil", "")))
+	params := params.NewParams(request, httpdispatch.Params{})
 
 	for i := 0; i < b.N; i++ {
-		ctx.run(recorder, nil, nil)
+		contextNew(recorder, request, params, "", "", "")
+	}
+}
+
+func Benchmark_contextNewWithReuse(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
+	request = request.WithContext(context.WithValue(request.Context(), ctxLoggerKey, NewAppLogger("nil", "")))
+	params := params.NewParams(request, httpdispatch.Params{})
+
+	for i := 0; i < b.N; i++ {
+		ctx := contextNew(recorder, request, params, "", "", "")
+		contextReuse(ctx)
+	}
+}
+
+func Benchmark_Context_run(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	recorder := httptest.NewRecorder()
+	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
+	request = request.WithContext(context.WithValue(request.Context(), ctxLoggerKey, NewAppLogger("nil", "")))
+	params := params.NewParams(request, httpdispatch.Params{})
+
+	ctx := contextNew(recorder, request, params, "package", "controller", "action")
+
+	for i := 0; i < b.N; i++ {
+		ctx.run(nil, nil)
 	}
 }

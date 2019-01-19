@@ -75,12 +75,17 @@ func (r *Response) FlushHeader() {
 // It returns error when failed.
 // It also invokes before filters if exist.
 func (r *Response) Write(data []byte) (size int, err error) {
+	r.FlushHeader()
+
+	// shortcut for nil
+	if data == nil {
+		return
+	}
+
 	// apply filters
 	for i := len(r.filters) - 1; i >= 0; i-- {
 		data = r.filters[i](r, data)
 	}
-
-	r.FlushHeader()
 
 	size, err = r.ResponseWriter.Write(data)
 

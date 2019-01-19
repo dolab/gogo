@@ -2,21 +2,33 @@ package gogo
 
 import (
 	"log"
+	"net/http"
 	"os"
 	"path"
+
+	"github.com/dolab/gogo/internal/params"
+)
+
+// gogo schema
+const (
+	GogoSchema = "gogo://"
 )
 
 var (
 	// FindModeConfigFile returns config file for specified run mode.
 	// You could custom your own run mode config file by overwriting.
 	FindModeConfigFile = func(runMode, srcPath string) string {
+		if len(srcPath) == 0 {
+			return GogoSchema
+		}
+
 		// adjust srcPath
 		srcPath = path.Clean(srcPath)
 
 		// is srcPath exist?
 		finfo, ferr := os.Stat(srcPath)
 		if ferr != nil {
-			return SchemaConfig
+			return GogoSchema
 		}
 
 		// is srcPath a regular file?
@@ -39,12 +51,12 @@ var (
 
 		}
 
-		file := path.Join(srcPath, "config", filename)
-		if _, err := os.Stat(file); os.IsNotExist(err) {
-			file = path.Join(srcPath, "config", "application.json")
+		filepath := path.Join(srcPath, "config", filename)
+		if _, err := os.Stat(filepath); os.IsNotExist(err) {
+			filepath = path.Join(srcPath, "config", "application.json")
 		}
 
-		return file
+		return filepath
 	}
 )
 
@@ -59,6 +71,11 @@ func New(runMode, srcPath string) *AppServer {
 	}
 
 	return NewWithConfiger(config)
+}
+
+// NewDefaults creates application server with defaults.
+func NewDefaults() *AppServer {
+	return New("development", "")
 }
 
 // NewWithConfiger creates application server with custom Configer and
@@ -79,4 +96,9 @@ func NewWithLogger(config Configer, logger Logger) *AppServer {
 	logger.Printf("Initialized %s in %s mode", config.RunName(), config.RunMode())
 
 	return NewAppServer(config, logger)
+}
+
+// NewParams returns *params.Params related with http request
+func NewParams(r *http.Request) *params.Params {
+	return params.New(r)
 }

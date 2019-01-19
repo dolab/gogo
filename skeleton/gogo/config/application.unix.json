@@ -1,0 +1,24 @@
+{
+    "name": "for unix",
+    "mode": "test",
+    "sections": {
+        "test": {
+            "server": {
+                "addr": "unix:/tmp/gogo.sock",
+                "port": 0,
+                "ssl": false,
+                "throttle": 0,
+                "slowdown": 0,
+                "request_id": "X-Request-Id"
+            },
+            "logger": {
+                "output": "nil",
+                "level": "debug",
+                "filter_params": [
+                    "password",
+                    "password_confirmation"
+                ]
+            }
+        }
+    }
+}

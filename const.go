@@ -1,10 +1,5 @@
 package gogo
 
-// internal schema
-const (
-	SchemaConfig = "gogo://config"
-)
-
 // run mode
 const (
 	Development RunMode = "development"
@@ -12,25 +7,12 @@ const (
 	Production  RunMode = "production"
 )
 
-// http config
+// server defaults
 const (
-	DefaultMaxMultiformBytes = 32 << 20 // 32M
-	DefaultMaxHeaderBytes    = 64 << 10 // 64k
-)
-
-// server config
-const (
-	DefaultHttpRequestID       = "X-Request-Id"
-	DefaultMaxHttpRequestIDLen = 32
-	DefaultHttpRequestTimeout  = 30 // 30s
-	DefaultHttpResponseTimeout = 30 // 30s
-)
-
-const (
-	RenderDefaultContentType = "text/plain; charset=utf-8"
-	RenderJsonContentType    = "application/json"
-	RenderJsonPContentType   = "application/javascript"
-	RednerXmlContentType     = "text/xml"
+	DefaultRequestIDKey    = "X-Request-Id"
+	DefaultRequestIDMaxLen = 32
+	DefaultRequestTimeout  = 10 // 10s
+	DefaultResponseTimeout = 10 // 10s
 )
 
 // RunMode defines app run mode
@@ -64,3 +46,9 @@ func (mode RunMode) IsProduction() bool {
 func (mode RunMode) String() string {
 	return string(mode)
 }
+
+type contextKey int
+
+const (
+	ctxLoggerKey contextKey = iota + 1
+)
