@@ -1,4 +1,4 @@
-package gogo
+package render
 
 import (
 	"bytes"
@@ -9,15 +9,16 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net/http"
 	"net/url"
 )
 
 // DefaultRender responses with default Content-Type header
 type DefaultRender struct {
-	w Responser
+	w http.ResponseWriter
 }
 
-func NewDefaultRender(w Responser) Render {
+func NewDefaultRender(w http.ResponseWriter) Render {
 	render := &DefaultRender{w}
 
 	return render
@@ -26,7 +27,7 @@ func NewDefaultRender(w Responser) Render {
 func (render *DefaultRender) ContentType() string {
 	contentType := render.w.Header().Get("Content-Type")
 	if contentType == "" {
-		contentType = RenderDefaultContentType
+		contentType = ContentTypeDefault
 	}
 
 	return contentType
@@ -53,10 +54,10 @@ func (render *DefaultRender) Render(v interface{}) error {
 
 	default:
 		switch render.ContentType() {
-		case RenderJsonContentType, RenderJsonPContentType:
+		case ContentTypeJSON, ContentTypeJSONP:
 			err = json.NewEncoder(render.w).Encode(v)
 
-		case RednerXmlContentType:
+		case ContentTypeXML:
 			err = xml.NewEncoder(render.w).Encode(v)
 
 		default:
@@ -70,18 +71,18 @@ func (render *DefaultRender) Render(v interface{}) error {
 // HashRender responses with Etag header calculated from render data dynamically.
 // NOTE: This always write response by copy if the render data is an io.Reader!!!
 type HashRender struct {
-	w    Responser
-	hash hash.Hash
+	w http.ResponseWriter
+	h hash.Hash
 }
 
-func NewHashRender(w Responser, hasher crypto.Hash) Render {
+func NewHashRender(w http.ResponseWriter, hasher crypto.Hash) Render {
 	if !hasher.Available() {
 		panic(ErrHash.Error())
 	}
 
 	render := &HashRender{
-		w:    w,
-		hash: hasher.New(),
+		w: w,
+		h: hasher.New(),
 	}
 
 	return render
@@ -90,7 +91,7 @@ func NewHashRender(w Responser, hasher crypto.Hash) Render {
 func (render *HashRender) ContentType() string {
 	contentType := render.w.Header().Get("Content-Type")
 	if contentType == "" {
-		contentType = RenderDefaultContentType
+		contentType = ContentTypeDefault
 	}
 
 	return contentType
@@ -119,11 +120,11 @@ func (render *HashRender) Render(v interface{}) error {
 
 	default:
 		switch render.ContentType() {
-		case RenderJsonContentType, RenderJsonPContentType:
+		case ContentTypeJSON, ContentTypeJSONP:
 			buf = bytes.NewBuffer(nil)
 			err = json.NewEncoder(buf).Encode(v)
 
-		case RednerXmlContentType:
+		case ContentTypeXML:
 			buf = bytes.NewBuffer(nil)
 			err = xml.NewEncoder(buf).Encode(v)
 
@@ -137,13 +138,13 @@ func (render *HashRender) Render(v interface{}) error {
 	}
 
 	// hijack response header of etag
-	render.hash.Reset()
-	_, err = render.hash.Write(buf.Bytes())
+	render.h.Reset()
+	_, err = render.h.Write(buf.Bytes())
 	if err != nil {
 		return err
 	}
 
-	render.w.Header().Set("Etag", hex.EncodeToString(render.hash.Sum(nil)))
+	render.w.Header().Set("Etag", hex.EncodeToString(render.h.Sum(nil)))
 
 	_, err = io.Copy(render.w, buf)
 	return err
@@ -152,17 +153,17 @@ func (render *HashRender) Render(v interface{}) error {
 // TextRender responses with Content-Type: text/plain header
 // It transform response data by stringify.
 type TextRender struct {
-	w Responser
+	w http.ResponseWriter
 }
 
-func NewTextRender(w Responser) Render {
+func NewTextRender(w http.ResponseWriter) Render {
 	render := &TextRender{w}
 
 	return render
 }
 
 func (render *TextRender) ContentType() string {
-	return RenderDefaultContentType
+	return ContentTypeDefault
 }
 
 func (render *TextRender) Render(v interface{}) error {
@@ -194,17 +195,17 @@ func (render *TextRender) Render(v interface{}) error {
 // JsonRender responses with Content-Type: application/json header
 // It transform response data by json.Marshal.
 type JsonRender struct {
-	w Responser
+	w http.ResponseWriter
 }
 
-func NewJsonRender(w Responser) Render {
+func NewJsonRender(w http.ResponseWriter) Render {
 	render := &JsonRender{w}
 
 	return render
 }
 
 func (render *JsonRender) ContentType() string {
-	return RenderJsonContentType
+	return ContentTypeJSON
 }
 
 func (render *JsonRender) Render(v interface{}) error {
@@ -214,11 +215,11 @@ func (render *JsonRender) Render(v interface{}) error {
 // XmlRender responses with Content-Type: text/xml header
 // It transform response data by xml.Marshal.
 type XmlRender struct {
-	w      Responser
+	w      http.ResponseWriter
 	header io.Reader
 }
 
-func NewXmlRender(w Responser) Render {
+func NewXmlRender(w http.ResponseWriter) Render {
 	render := &XmlRender{
 		w:      w,
 		header: bytes.NewBufferString(xml.Header),
@@ -228,7 +229,7 @@ func NewXmlRender(w Responser) Render {
 }
 
 func (render *XmlRender) ContentType() string {
-	return RednerXmlContentType
+	return ContentTypeXML
 }
 
 func (render *XmlRender) Render(v interface{}) error {
@@ -244,27 +245,27 @@ func (render *XmlRender) Render(v interface{}) error {
 // JsonpRender responses with Content-Type: application/javascript header
 // It transform response data by json.Marshal.
 type JsonpRender struct {
-	w        Responser
-	callback io.Reader
-	tailer   io.Reader
+	w      http.ResponseWriter
+	prefix io.Reader
+	suffix io.Reader
 }
 
-func NewJsonpRender(w Responser, callback string) Render {
+func NewJsonpRender(w http.ResponseWriter, prefix string) Render {
 	render := &JsonpRender{
-		w:        w,
-		callback: bytes.NewBufferString(callback + "("),
-		tailer:   bytes.NewBufferString(");"),
+		w:      w,
+		prefix: bytes.NewBufferString(prefix + "("),
+		suffix: bytes.NewBufferString(");"),
 	}
 
 	return render
 }
 
 func (render *JsonpRender) ContentType() string {
-	return RenderJsonPContentType
+	return ContentTypeJSONP
 }
 
 func (render *JsonpRender) Render(v interface{}) error {
-	_, err := io.Copy(render.w, render.callback)
+	_, err := io.Copy(render.w, render.prefix)
 	if err != nil {
 		return err
 	}
@@ -274,6 +275,6 @@ func (render *JsonpRender) Render(v interface{}) error {
 		return err
 	}
 
-	_, err = io.Copy(render.w, render.tailer)
+	_, err = io.Copy(render.w, render.suffix)
 	return err
 }

@@ -472,7 +472,7 @@ import (
 
 func Test_Recovery(t *testing.T) {
 	// register temp resource for testing
-	app := gogoapp.Group("", Recovery())
+	app := gogoapp.NewGroup("", Recovery())
 
 	app.GET("/middlewares/recovery", func(ctx *gogo.Context) {
 		panic("Recover testing")
@@ -736,7 +736,7 @@ import (
 
 func Test_{{.Name}}(t *testing.T) {
 	// register temp resource for testing
-	app := gogoapp.Group("", {{.Name}}())
+	app := gogoapp.NewGroup("", {{.Name}}())
 
 	app.GET("/middlewares/{{.Name|lowercase}}", func(ctx *gogo.Context) {
 		ctx.Return()

@@ -3,6 +3,7 @@ package gogo
 import (
 	"encoding/json"
 	"io/ioutil"
+	"strings"
 
 	"github.com/dolab/logger"
 )
@@ -11,8 +12,10 @@ var (
 	DefaultServerConfig = &ServerConfig{
 		Addr:      "127.0.0.1",
 		Port:      9090,
+		RTimeout:  10, // 10s
+		WTimeout:  10, // 10s
 		Ssl:       false,
-		RequestID: DefaultHttpRequestID,
+		RequestID: DefaultRequestIDKey,
 	}
 
 	DefaultLoggerConfig = &LoggerConfig{
@@ -38,7 +41,7 @@ type AppConfig struct {
 
 // NewAppConfig returns *AppConfig by parsing application.json
 func NewAppConfig(filename string) (*AppConfig, error) {
-	if filename == SchemaConfig {
+	if strings.HasPrefix(filename, GogoSchema) {
 		return NewAppConfigFromDefault()
 	}
 
@@ -76,6 +79,7 @@ func NewAppConfigFromString(s string) (*AppConfig, error) {
 func NewAppConfigFromDefault() (*AppConfig, error) {
 	data, _ := json.Marshal(map[string]interface{}{
 		"mode": Development,
+		"name": "gogo",
 		"sections": map[RunMode]interface{}{
 			Development: DefaultSectionConfig,
 			Test:        DefaultSectionConfig,
@@ -137,13 +141,13 @@ type SectionConfig struct {
 
 // ServerConfig defines config spec of AppServer
 type ServerConfig struct {
-	HTTP2          bool   `json:"http2"`            // use http2 server
 	Addr           string `json:"addr"`             // listen address
 	Port           int    `json:"port"`             // listen port
 	RTimeout       int    `json:"request_timeout"`  // unit in second
 	WTimeout       int    `json:"response_timeout"` // unit in second
 	MaxHeaderBytes int    `json:"max_header_bytes"` // unit in byte
 
+	HTTP2   bool   `json:"http2"` // use http2 server
 	Ssl     bool   `json:"ssl"`
 	SslCert string `json:"ssl_cert"`
 	SslKey  string `json:"ssl_key"`

@@ -1,11 +1,13 @@
 package gogo
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"runtime"
 	"strings"
 
+	"github.com/dolab/gogo/internal/params"
 	"github.com/dolab/httpdispatch"
 )
 
@@ -32,33 +34,33 @@ func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Mid
 	// formated in "/path/to/main.(*_Controller).Action-fm"
 	name := runtime.FuncForPC(rval.Pointer()).Name()
 
-	tmpvars := strings.Split(name, "/")
-	if len(tmpvars) > 1 {
-		name = tmpvars[len(tmpvars)-1]
+	vars := strings.Split(name, "/")
+	if len(vars) > 1 {
+		name = vars[len(vars)-1]
 	}
 
-	tmpvars = strings.Split(name, ".")
-	switch len(tmpvars) {
+	vars = strings.Split(name, ".")
+	switch len(vars) {
 	case 3:
 		// adjust controller name
-		tmpvars[1] = strings.TrimLeft(tmpvars[1], "(")
-		tmpvars[1] = strings.TrimRight(tmpvars[1], ")")
+		vars[1] = strings.TrimLeft(vars[1], "(")
+		vars[1] = strings.TrimRight(vars[1], ")")
 
 		// adjust action name
-		tmpvars[2] = strings.SplitN(tmpvars[2], "-", 2)[0]
+		vars[2] = strings.SplitN(vars[2], "-", 2)[0]
 
 	case 2:
 		// package func
-		tmpvars = []string{tmpvars[0], tmpvars[0], tmpvars[1]}
+		vars = []string{vars[0], vars[0], vars[1]}
 
 	default:
-		tmpvars = []string{tmpvars[0], tmpvars[0], "<http.HandlerFunc>"}
+		vars = []string{vars[0], vars[0], "<http.HandlerFunc>"}
 	}
 
 	return &ContextHandle{
-		pkg:     tmpvars[0],
-		ctrl:    tmpvars[1],
-		action:  tmpvars[2],
+		pkg:     vars[0],
+		ctrl:    vars[1],
+		action:  vars[2],
 		server:  server,
 		handler: handler,
 		filters: filters,
@@ -66,33 +68,37 @@ func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Mid
 }
 
 // Handle implements httpdispatch.Handler interface
-func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, params httpdispatch.Params) {
-	ctx := ch.server.newContext(r, ch.ctrl, ch.action, NewAppParams(r, params))
-	defer ch.server.reuseContext(ctx)
+func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpdispatch.Params) {
+	// invoke ResponseAlways
+	defer ch.server.hooks.ResponseAlways.Run(w, r)
 
-	if ch.server.hasRequestID() {
-		w.Header().Set(ch.server.requestID, ctx.RequestID())
+	if !ch.server.hooks.RequestRouted.Run(w, r) {
+		return
 	}
 
+	ctx := contextNew(w, r, params.NewParams(r, ps), ch.pkg, ch.ctrl, ch.action)
+	defer contextReuse(ctx)
+
 	if ch.handler == nil {
-		ctx.run(w, nil, ch.filters)
+		ctx.run(nil, ch.filters)
 	} else {
-		ctx.run(w, ch.handler, ch.filters)
+		ctx.run(ch.handler, ch.filters)
 	}
 }
 
 // FakeHandle defines a wrapper of handler for testing
+// NOTE: DO NOT use this for real!!!
 type FakeHandle struct {
 	*ContextHandle
 
-	w http.ResponseWriter
+	recorder http.ResponseWriter
 }
 
 // NewFakeHandle returns new handler with stubbed http.ResponseWriter
-func NewFakeHandle(server *AppServer, handler http.HandlerFunc, filters []Middleware, w http.ResponseWriter) *FakeHandle {
+func NewFakeHandle(server *AppServer, handler http.HandlerFunc, filters []Middleware, recorder http.ResponseWriter) *FakeHandle {
 	ch := &FakeHandle{
 		ContextHandle: NewContextHandle(server, handler, filters),
-		w:             w,
+		recorder:      recorder,
 	}
 
 	return ch
@@ -100,16 +106,47 @@ func NewFakeHandle(server *AppServer, handler http.HandlerFunc, filters []Middle
 
 // Handle implements httpdispatch.Handler interface
 func (ch *FakeHandle) Handle(w http.ResponseWriter, r *http.Request, params httpdispatch.Params) {
-	ctx := ch.server.newContext(r, ch.ctrl, ch.action, NewAppParams(r, params))
-	defer ch.server.reuseContext(ctx)
+	ch.ContextHandle.Handle(ch.recorder, r, params)
+}
 
-	if ch.server.hasRequestID() {
-		ch.w.Header().Set(ch.server.requestID, ctx.RequestID())
-	}
+// NotFoundHandle defines a wrapper of handler for route not found
+type NotFoundHandle struct {
+	*ContextHandle
+}
 
-	if ch.handler == nil {
-		ctx.run(ch.w, nil, ch.filters)
-	} else {
-		ctx.run(ch.w, ch.handler, ch.filters)
+// NewNotFoundHandle creates a new handler with route not found
+func NewNotFoundHandle(server *AppServer) *NotFoundHandle {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, fmt.Sprintf("Request(%s %s): not found", r.Method, r.URL.RequestURI()), http.StatusNotFound)
+	})
+
+	return &NotFoundHandle{
+		ContextHandle: NewContextHandle(server, handler, nil),
 	}
+}
+
+// ServeHTTP implements http.Handler interface
+func (h *NotFoundHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.ContextHandle.Handle(w, r, nil)
+}
+
+// MethodNotAllowedHandle defines a wrapper of handler for not allowed request mehtod
+type MethodNotAllowedHandle struct {
+	*ContextHandle
+}
+
+// NewMethodNotAllowedHandle creates a new handler with request method not allowed
+func NewMethodNotAllowedHandle(server *AppServer) *MethodNotAllowedHandle {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, fmt.Sprintf("Request(%s %s): method not allowed", r.Method, r.URL.RequestURI()), http.StatusMethodNotAllowed)
+	})
+
+	return &MethodNotAllowedHandle{
+		ContextHandle: NewContextHandle(server, handler, nil),
+	}
+}
+
+// ServeHTTP implements http.Handler interface
+func (h *MethodNotAllowedHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.ContextHandle.Handle(w, r, nil)
 }

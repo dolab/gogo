@@ -1,4 +1,4 @@
-package gogo
+package render
 
 import (
 	"crypto"
@@ -15,18 +15,17 @@ import (
 func Test_DefaultRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with normal string
 	s := "Hello, world!"
 
-	render := NewDefaultRender(response)
-	it.Equal(RenderDefaultContentType, render.ContentType())
+	render := NewDefaultRender(recorder)
+	it.Equal(ContentTypeDefault, render.ContentType())
 
 	err := render.Render(s)
 	if it.Nil(err) {
 		it.Equal(http.StatusOK, recorder.Code)
-		it.Empty(recorder.Header())
+		it.Equal(ContentTypeDefault, recorder.Header().Get("Content-Type"))
 		it.Equal(s, recorder.Body.String())
 	}
 }
@@ -36,11 +35,10 @@ func Benchmark_DefaultRender(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	s := "Hello, world!"
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -51,17 +49,16 @@ func Benchmark_DefaultRender(b *testing.B) {
 func Test_DefaultRenderWithReader(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	s := "Hello, world!"
 
-	response.Header().Add("Content-Length", fmt.Sprintf("%d", len(s)))
-	response.Header().Add("Content-Type", "text/plain")
+	recorder.Header().Add("Content-Length", fmt.Sprintf("%d", len(s)))
+	recorder.Header().Add("Content-Type", "text/plain")
 
 	// render with normal string
 	reader := strings.NewReader(s)
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	it.Equal("text/plain", render.ContentType())
 
 	err := render.Render(reader)
@@ -76,11 +73,10 @@ func Benchmark_DefaultRenderWithReader(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	reader := strings.NewReader("Hello, world!")
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -91,8 +87,7 @@ func Benchmark_DefaultRenderWithReader(b *testing.B) {
 func Test_DefaultRenderWithJson(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "application/json")
+	recorder.Header().Set("Content-Type", "application/json")
 
 	// render with complex data type
 	data := struct {
@@ -100,7 +95,7 @@ func Test_DefaultRenderWithJson(t *testing.T) {
 		Age  int
 	}{"gogo", 5}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -113,15 +108,14 @@ func Benchmark_DefaultRenderWithJson(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "application/json")
+	recorder.Header().Set("Content-Type", "application/json")
 
 	data := struct {
 		Name string
 		Age  int
 	}{"gogo", 5}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -132,12 +126,11 @@ func Benchmark_DefaultRenderWithJson(b *testing.B) {
 func Test_DefaultRenderWithXml(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "text/xml")
+	recorder.Header().Set("Content-Type", "text/xml")
 
 	// render with complex data type
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -145,11 +138,11 @@ func Test_DefaultRenderWithXml(t *testing.T) {
 		Content: "Hello, world!",
 	}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
-		it.Equal("<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", recorder.Body.String())
+		it.Equal("<recorder><Result><Success>true</Success><Content>Hello, world!</Content></Result></recorder>", recorder.Body.String())
 	}
 }
 
@@ -158,11 +151,10 @@ func Benchmark_DefaultRenderWithXml(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "text/xml")
+	recorder.Header().Set("Content-Type", "text/xml")
 
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -170,7 +162,7 @@ func Benchmark_DefaultRenderWithXml(b *testing.B) {
 		Content: "Hello, world!",
 	}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -181,7 +173,6 @@ func Benchmark_DefaultRenderWithXml(b *testing.B) {
 func Test_DefaultRenderWithStringify(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with complex data type
 	data := struct {
@@ -189,7 +180,7 @@ func Test_DefaultRenderWithStringify(t *testing.T) {
 		Age  int
 	}{"gogo", 5}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -202,14 +193,13 @@ func Benchmark_DefaultRenderWithStringify(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Name string
 		Age  int
 	}{"gogo", 5}
 
-	render := NewDefaultRender(response)
+	render := NewDefaultRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -220,13 +210,12 @@ func Benchmark_DefaultRenderWithStringify(b *testing.B) {
 func Test_HashRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with normal string
 	s := "Hello, world!"
 
-	render := NewHashRender(response, crypto.MD5)
-	it.Equal(RenderDefaultContentType, render.ContentType())
+	render := NewHashRender(recorder, crypto.MD5)
+	it.Equal(ContentTypeDefault, render.ContentType())
 
 	err := render.Render(s)
 	if it.Nil(err) {
@@ -239,13 +228,12 @@ func Test_HashRender(t *testing.T) {
 func Test_HashRenderWithReader(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with io.Reader
 	reader := strings.NewReader("Hello, world!")
 
-	render := NewHashRender(response, crypto.MD5)
-	it.Equal(RenderDefaultContentType, render.ContentType())
+	render := NewHashRender(recorder, crypto.MD5)
+	it.Equal(ContentTypeDefault, render.ContentType())
 
 	err := render.Render(reader)
 	if it.Nil(err) {
@@ -260,11 +248,10 @@ func Benchmark_HashRenderWithReader(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	reader := strings.NewReader("Hello, world!")
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -275,8 +262,7 @@ func Benchmark_HashRenderWithReader(b *testing.B) {
 func Test_HashRenderWithJson(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "application/json")
+	recorder.Header().Set("Content-Type", "application/json")
 
 	// render with complex data type
 	data := struct {
@@ -284,7 +270,7 @@ func Test_HashRenderWithJson(t *testing.T) {
 		Age  int
 	}{"gogo", 5}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -298,15 +284,14 @@ func Benchmark_HashRenderWithJson(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "application/json")
+	recorder.Header().Set("Content-Type", "application/json")
 
 	data := struct {
 		Name string
 		Age  int
 	}{"gogo", 5}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -318,12 +303,11 @@ func Test_HashRenderWithXml(t *testing.T) {
 	it := assert.New(t)
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "text/xml")
+	recorder.Header().Set("Content-Type", "text/xml")
 
 	// render with complex data type
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -331,12 +315,12 @@ func Test_HashRenderWithXml(t *testing.T) {
 		Content: "Hello, world!",
 	}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 
 	err := render.Render(data)
 	if it.Nil(err) {
-		it.Equal("882dcefe3dd48e4dc99354002c4ce6e8", recorder.Header().Get("Etag"))
-		it.Equal("<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", recorder.Body.String())
+		it.Equal("65693ee59f678f04bc8bedf16f980f5a", recorder.Header().Get("Etag"))
+		it.Equal("<recorder><Result><Success>true</Success><Content>Hello, world!</Content></Result></recorder>", recorder.Body.String())
 	}
 }
 
@@ -345,11 +329,10 @@ func Benchmark_HashRenderWithXml(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Set("Content-Type", "text/xml")
+	recorder.Header().Set("Content-Type", "text/xml")
 
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -357,7 +340,7 @@ func Benchmark_HashRenderWithXml(b *testing.B) {
 		Content: "Hello, world!",
 	}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -368,7 +351,6 @@ func Benchmark_HashRenderWithXml(b *testing.B) {
 func Test_HashRenderWithStringify(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with complex data type
 	data := struct {
@@ -376,7 +358,7 @@ func Test_HashRenderWithStringify(t *testing.T) {
 		Age  int
 	}{"gogo", 5}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -390,14 +372,13 @@ func Benchmark_HashRenderWithStringify(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Name string
 		Age  int
 	}{"gogo", 5}
 
-	render := NewHashRender(response, crypto.MD5)
+	render := NewHashRender(recorder, crypto.MD5)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -408,13 +389,12 @@ func Benchmark_HashRenderWithStringify(b *testing.B) {
 func Test_TextRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	// render with normal string
 	s := "Hello, world!"
 
-	render := NewTextRender(response)
-	it.Equal(RenderDefaultContentType, render.ContentType())
+	render := NewTextRender(recorder)
+	it.Equal(ContentTypeDefault, render.ContentType())
 
 	err := render.Render(s)
 	if it.Nil(err) {
@@ -426,15 +406,14 @@ func Test_TextRender(t *testing.T) {
 func Test_TextRenderWithReader(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Add("Content-Type", "text/plain")
+	recorder.Header().Add("Content-Type", "text/plain")
 
 	// render with io.Reader
 	s := "Hello, world!"
 	reader := strings.NewReader(s)
 
-	render := NewTextRender(response)
-	it.Equal(RenderDefaultContentType, render.ContentType())
+	render := NewTextRender(recorder)
+	it.Equal(ContentTypeDefault, render.ContentType())
 
 	err := render.Render(reader)
 	if it.Nil(err) {
@@ -447,11 +426,10 @@ func Benchmark_TextRenderWithReader(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	reader := strings.NewReader("Hello, world!")
 
-	render := NewTextRender(response)
+	render := NewTextRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -462,8 +440,7 @@ func Benchmark_TextRenderWithReader(b *testing.B) {
 func Test_TextRenderWithStringify(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
-	response.Header().Add("Content-Type", "text/plain")
+	recorder.Header().Add("Content-Type", "text/plain")
 
 	// render with complex data type
 	data := struct {
@@ -471,7 +448,7 @@ func Test_TextRenderWithStringify(t *testing.T) {
 		Content string
 	}{true, "Hello, world!"}
 
-	render := NewTextRender(response)
+	render := NewTextRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -484,14 +461,13 @@ func Benchmark_TextRenderWithStringify(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Success bool
 		Content string
 	}{true, "Hello, world!"}
 
-	render := NewTextRender(response)
+	render := NewTextRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -502,14 +478,13 @@ func Benchmark_TextRenderWithStringify(b *testing.B) {
 func Test_JsonRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Success bool   `json:"success"`
 		Content string `json:"content"`
 	}{true, "Hello, world!"}
 
-	render := NewJsonRender(response)
+	render := NewJsonRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -524,14 +499,13 @@ func Benchmark_JsonRender(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Success bool   `json:"success"`
 		Content string `json:"content"`
 	}{true, "Hello, world!"}
 
-	render := NewJsonRender(response)
+	render := NewJsonRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -542,10 +516,9 @@ func Benchmark_JsonRender(b *testing.B) {
 func Test_XmlRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -553,13 +526,13 @@ func Test_XmlRender(t *testing.T) {
 		Content: "Hello, world!",
 	}
 
-	render := NewXmlRender(response)
+	render := NewXmlRender(recorder)
 
 	err := render.Render(data)
 	if it.Nil(err) {
 		it.Equal(http.StatusOK, recorder.Code)
 		it.Equal("text/xml", render.ContentType())
-		it.Equal("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Result><Success>true</Success><Content>Hello, world!</Content></Result></Response>", recorder.Body.String())
+		it.Equal("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<recorder><Result><Success>true</Success><Content>Hello, world!</Content></Result></recorder>", recorder.Body.String())
 	}
 }
 
@@ -568,10 +541,9 @@ func Benchmark_XmlRender(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
-		XMLName xml.Name `xml:"Response"`
+		XMLName xml.Name `xml:"recorder"`
 		Success bool     `xml:"Result>Success"`
 		Content string   `xml:"Result>Content"`
 	}{
@@ -579,7 +551,7 @@ func Benchmark_XmlRender(b *testing.B) {
 		Content: "Hello, world!",
 	}
 
-	render := NewXmlRender(response)
+	render := NewXmlRender(recorder)
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()
 
@@ -590,14 +562,13 @@ func Benchmark_XmlRender(b *testing.B) {
 func Test_JsonpRender(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Success bool   `json:"success"`
 		Content string `json:"content"`
 	}{true, "Hello, world!"}
 
-	render := NewJsonpRender(response, "jsCallback")
+	render := NewJsonpRender(recorder, "jsCallback")
 
 	err := render.Render(data)
 	if it.Nil(err) {
@@ -612,14 +583,13 @@ func Benchmark_JsonpRender(b *testing.B) {
 	b.ResetTimer()
 
 	recorder := httptest.NewRecorder()
-	response := NewResponse(recorder)
 
 	data := struct {
 		Success bool   `json:"success"`
 		Content string `json:"content"`
 	}{true, "Hello, world!"}
 
-	render := NewJsonpRender(response, "js_callback")
+	render := NewJsonpRender(recorder, "js_callback")
 
 	for i := 0; i < b.N; i++ {
 		recorder.Body.Reset()

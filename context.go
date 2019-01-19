@@ -8,27 +8,61 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dolab/gogo/internal/params"
+	"github.com/dolab/gogo/internal/render"
+)
+
+var (
+	contextPool = sync.Pool{
+		New: func() interface{} {
+			return NewContext()
+		},
+	}
+
+	// contextNew returns a new context for the request
+	contextNew = func(w http.ResponseWriter, r *http.Request, ps *params.Params, pkg, ctrl, action string) *Context {
+		ctx := contextPool.Get().(*Context)
+
+		ctx.Response.Hijack(w)
+		ctx.Request = r
+		ctx.Params = ps
+		ctx.Logger = NewContextLogger(r)
+		ctx.pkg = pkg
+		ctx.ctrl = ctrl
+		ctx.action = action
+
+		return ctx
+	}
+
+	// contextReuse puts the context back to pool for later usage
+	contextReuse = func(ctx *Context) {
+		contextPool.Put(ctx)
+	}
 )
 
 // Context defines context of a request
 type Context struct {
 	Response Responser
 	Request  *http.Request
-	Params   *AppParams
+	Params   *params.Params
 	Logger   Logger
 
-	controller     string
-	action         string
+	mux            sync.RWMutex
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
-	middlewares    []Middleware
-	issuedAt       time.Time
 
-	mux    sync.RWMutex
-	cursor int8
+	pkg      string
+	ctrl     string
+	action   string
+	issuedAt time.Time
+
+	middlewares []Middleware
+	maxCursor   int8
+	cursor      int8
 }
 
-// NewContext returns a *Context with *AppServer
+// NewContext returns a *Context without initialization
 func NewContext() *Context {
 	return &Context{
 		Response: NewResponse(nil),
@@ -36,12 +70,17 @@ func NewContext() *Context {
 	}
 }
 
-// Controller returns controller name of routed handler
-func (c *Context) Controller() string {
-	return c.controller
+// Package returns package path of routed request.
+func (c *Context) Package() string {
+	return c.pkg
 }
 
-// Action returns action name of routed handler
+// Controller returns controller name of routed request.
+func (c *Context) Controller() string {
+	return c.ctrl
+}
+
+// Action returns action name of routed request.
 func (c *Context) Action() string {
 	return c.action
 }
@@ -117,7 +156,7 @@ func (c *Context) GetFinal(key string) (v interface{}, ok bool) {
 func (c *Context) MustSetFinal(key string, value interface{}) {
 	err := c.SetFinal(key, value)
 	if err != nil {
-		c.Logger.Panicf("Freese key %s duplicated!", key)
+		c.Logger.Panicf("Freeze key %s duplicated!", key)
 	}
 }
 
@@ -184,6 +223,11 @@ func (c *Context) Header(key string) string {
 	return c.Request.Header.Get(key)
 }
 
+// SetStatus sets response status code
+func (c *Context) SetStatus(code int) {
+	c.Response.WriteHeader(code)
+}
+
 // AddHeader adds response header with key/value pair
 func (c *Context) AddHeader(key, value string) {
 	c.Response.Header().Add(key, value)
@@ -192,11 +236,6 @@ func (c *Context) AddHeader(key, value string) {
 // SetHeader sets response header with key/value pair
 func (c *Context) SetHeader(key, value string) {
 	c.Response.Header().Set(key, value)
-}
-
-// SetStatus sets response status code
-func (c *Context) SetStatus(code int) {
-	c.Response.WriteHeader(code)
 }
 
 // Redirect returns a HTTP redirect to the specific location.
@@ -221,69 +260,69 @@ func (c *Context) Redirect(location string) {
 
 // Return returns response with auto detected Content-Type
 func (c *Context) Return(body ...interface{}) error {
-	var render Render
+	var tmprender render.Render
 
 	// auto detect response content-type from request header of accept
 	if len(c.Response.Header().Get("Content-Type")) == 0 {
 		accept := c.Request.Header.Get("Accept")
 		for _, enc := range strings.Split(accept, ",") {
 			switch {
-			case strings.Contains(enc, RenderJsonContentType), strings.Contains(enc, RenderJsonPContentType):
-				render = NewJsonRender(c.Response)
+			case strings.Contains(enc, render.ContentTypeJSON), strings.Contains(enc, render.ContentTypeJSONP):
+				tmprender = render.NewJsonRender(c.Response)
 
-			case strings.Contains(enc, RednerXmlContentType):
-				render = NewXmlRender(c.Response)
+			case strings.Contains(enc, render.ContentTypeXML):
+				tmprender = render.NewXmlRender(c.Response)
 
 			}
-			if render != nil {
+			if tmprender != nil {
 				break
 			}
 		}
 	}
 
 	// third, use default render
-	if render == nil {
-		render = NewDefaultRender(c.Response)
+	if tmprender == nil {
+		tmprender = render.NewDefaultRender(c.Response)
 	}
 
 	if len(body) > 0 {
-		return c.Render(render, body[0])
+		return c.Render(tmprender, body[0])
 	}
 
-	return c.Render(render, nil)
+	return c.Render(tmprender, nil)
 }
 
 // HashedReturn returns response with ETag header calculated hash of response.Body dynamically
 func (c *Context) HashedReturn(hasher crypto.Hash, body ...interface{}) error {
 	if len(body) > 0 {
-		return c.Render(NewHashRender(c.Response, hasher), body[0])
+		return c.Render(render.NewHashRender(c.Response, hasher), body[0])
 	}
 
-	return c.Render(NewHashRender(c.Response, hasher), "")
+	return c.Render(render.NewHashRender(c.Response, hasher), "")
 }
 
 // Text returns response with Content-Type: text/plain header
 func (c *Context) Text(data interface{}) error {
-	return c.Render(NewTextRender(c.Response), data)
+	return c.Render(render.NewTextRender(c.Response), data)
 }
 
 // Json returns response with json codec and Content-Type: application/json header
 func (c *Context) Json(data interface{}) error {
-	return c.Render(NewJsonRender(c.Response), data)
+	return c.Render(render.NewJsonRender(c.Response), data)
 }
 
 // JsonP returns response with json codec and Content-Type: application/javascript header
 func (c *Context) JsonP(callback string, data interface{}) error {
-	return c.Render(NewJsonpRender(c.Response, callback), data)
+	return c.Render(render.NewJsonpRender(c.Response, callback), data)
 }
 
 // Xml returns response with xml codec and Content-Type: text/xml header
 func (c *Context) Xml(data interface{}) error {
-	return c.Render(NewXmlRender(c.Response), data)
+	return c.Render(render.NewXmlRender(c.Response), data)
 }
 
 // Render responses client with data rendered by Render
-func (c *Context) Render(w Render, data interface{}) error {
+func (c *Context) Render(w render.Render, data interface{}) error {
 	// always abort
 	c.Abort()
 
@@ -314,9 +353,14 @@ func (c *Context) Render(w Render, data interface{}) error {
 // Next executes the remain middlewares in the chain.
 // NOTE: It ONLY used in the middlewares!
 func (c *Context) Next() {
+	// is aborted?
+	if c.cursor >= math.MaxInt8 {
+		return
+	}
+
 	c.cursor++
 
-	if c.cursor >= 0 && c.cursor < int8(len(c.middlewares)) {
+	if c.cursor >= 0 && c.cursor < c.maxCursor {
 		c.middlewares[c.cursor](c)
 	} else {
 		c.Logger.Warn("No more executer in the chain.")
@@ -329,15 +373,13 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares []Middleware) {
-	// hijack Responser with correct http.ResponseWriter
-	c.Response.Hijack(w)
-
+func (c *Context) run(handler http.Handler, middlewares []Middleware) {
 	// reset internal
 	c.settings = nil
 	c.frozenSettings = nil
-	c.middlewares = middlewares
 	c.issuedAt = time.Now()
+	c.middlewares = middlewares
+	c.maxCursor = int8(len(c.middlewares))
 	c.cursor = -1
 
 	// start chains
@@ -351,9 +393,7 @@ func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares [
 			handler.ServeHTTP(c.Response, c.Request)
 		} else {
 			// ghost, response status code only
-			if !c.Response.HeaderFlushed() {
-				w.WriteHeader(c.Response.Status())
-			}
+			c.Response.FlushHeader()
 		}
 	}
 }

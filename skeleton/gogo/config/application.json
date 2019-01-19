@@ -39,7 +39,7 @@
             },
             "logger": {
                 "output": "nil",
-                "level": "error",
+                "level": "debug",
                 "filter_params": [
                     "password",
                     "password_confirmation"

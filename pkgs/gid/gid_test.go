@@ -1,19 +1,20 @@
-package gogo
+package gid
 
 import (
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/golib/assert"
 )
 
-func Test_NewGID(t *testing.T) {
+func Test_New(t *testing.T) {
 	it := assert.New(t)
 
 	// Generate 10 ids
 	ids := make([]GID, 10)
 	for i := 0; i < 10; i++ {
-		ids[i] = NewGID()
+		ids[i] = New()
 	}
 
 	for i := 1; i < 10; i++ {
@@ -41,27 +42,49 @@ func Test_NewGID(t *testing.T) {
 	}
 }
 
-func Benchmark_NewGID(b *testing.B) {
+func Test_NewWithRace(t *testing.T) {
+	it := assert.New(t)
+
+	n := 10
+	ids := sync.Map{}
+
+	var wg sync.WaitGroup
+	wg.Add(n)
+
+	for i := 0; i < n; i++ {
+		go func() {
+			_, ok := ids.LoadOrStore(New().Hex(), true)
+			it.False(ok)
+
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+}
+
+func Benchmark_New(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		NewGID()
+		New()
 	}
 }
 
-func Test_NewGIDWithTime(t *testing.T) {
-	ts := time.Unix(12345678, 0)
-	id := NewGIDWithTime(ts)
-
+func Test_NewWithTime(t *testing.T) {
 	it := assert.New(t)
+
+	ts := time.Unix(12345678, 0)
+	id := NewWithTime(ts)
+
 	it.Equal(ts, id.Time())
 	it.Equal([]byte{0x00, 0x00, 0x00}, id.Mac())
 	it.EqualValues(0, id.Pid())
 	it.EqualValues(0, id.Counter())
 }
 
-func Test_IsGIDHex(t *testing.T) {
+func Test_IsHex(t *testing.T) {
 	it := assert.New(t)
 
 	testCases := []struct {
@@ -75,15 +98,16 @@ func Test_IsGIDHex(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		it.Equal(testCase.valid, IsGIDHex(testCase.id))
+		it.Equal(testCase.valid, IsHex(testCase.id))
 	}
 }
 
-func Test_GIDHex(t *testing.T) {
-	s := "4d88e15b60f486e428412dc9"
-	id := GIDHex(s)
-
+func Test_Hex(t *testing.T) {
 	it := assert.New(t)
+
+	s := "4d88e15b60f486e428412dc9"
+	id := Hex(s)
+
 	it.True(id.Valid())
 	it.Equal(s, id.Hex())
 	it.EqualValues(1300816219, id.Time().Unix())

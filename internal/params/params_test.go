@@ -1,4 +1,4 @@
-package gogo
+package params
 
 import (
 	"bytes"
@@ -17,18 +17,18 @@ import (
 	"github.com/golib/assert"
 )
 
-func Test_AppParamsHasQuery(t *testing.T) {
+func Test_ParamsHasQuery(t *testing.T) {
 	it := assert.New(t)
 
 	request, _ := http.NewRequest("GET", "/path/to/resource?test&key=url_value", nil)
 
-	p := NewAppParams(request, httpdispatch.Params{})
+	p := NewParams(request, httpdispatch.Params{})
 	it.True(p.HasQuery("test"))
 	it.True(p.HasQuery("key"))
 	it.False(p.HasQuery("un-existed-key"))
 }
 
-func Test_AppParamsHasForm(t *testing.T) {
+func Test_ParamsHasForm(t *testing.T) {
 	it := assert.New(t)
 
 	params := url.Values{}
@@ -37,12 +37,12 @@ func Test_AppParamsHasForm(t *testing.T) {
 	request, _ := http.NewRequest("PUT", "/path/to/resource?test&key=url_value", bytes.NewBufferString(params.Encode()))
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	p := NewAppParams(request, httpdispatch.Params{})
+	p := NewParams(request, httpdispatch.Params{})
 	it.True(p.HasForm("key"))
 	it.False(p.HasForm("un-existed-key"))
 }
 
-func Test_AppParamsRawBody(t *testing.T) {
+func Test_ParamsRawBody(t *testing.T) {
 	it := assert.New(t)
 
 	params := url.Values{}
@@ -51,7 +51,7 @@ func Test_AppParamsRawBody(t *testing.T) {
 	request, _ := http.NewRequest("POST", "/path/to/resource?test&key=url_value", bytes.NewBufferString(params.Encode()))
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
 
-	p := NewAppParams(request, httpdispatch.Params{})
+	p := NewParams(request, httpdispatch.Params{})
 
 	body, err := p.RawBody()
 	if it.Nil(err) {
@@ -71,7 +71,7 @@ func Test_AppParamsRawBody(t *testing.T) {
 	it.Equal(params.Get("key"), request.FormValue("key"))
 }
 
-func Test_AppParamsGet(t *testing.T) {
+func Test_ParamsGet(t *testing.T) {
 	it := assert.New(t)
 
 	request, _ := http.NewRequest("GET", "/path/to/resource?key=url_value&test=url_true", nil)
@@ -80,13 +80,13 @@ func Test_AppParamsGet(t *testing.T) {
 		httpdispatch.Param{"test", ""},
 	}
 
-	p := NewAppParams(request, routeParams)
+	p := NewParams(request, routeParams)
 	it.Equal("route_value", p.Get("key"))
 	it.Equal("url_true", p.Get("test"))
 	it.Empty(p.Get("un-existed-key"))
 }
 
-func Test_AppParamsPost(t *testing.T) {
+func Test_ParamsForm(t *testing.T) {
 	it := assert.New(t)
 
 	params := url.Values{}
@@ -98,9 +98,9 @@ func Test_AppParamsPost(t *testing.T) {
 		httpdispatch.Param{"test", "route_true"},
 	}
 
-	p := NewAppParams(request, routeParams)
-	it.Equal("post_value", p.Post("key"))
-	it.Equal("url_true", p.Post("test"))
+	p := NewParams(request, routeParams)
+	it.Equal("post_value", p.Form("key"))
+	it.Equal("url_true", p.Form("test"))
 }
 
 func fakeForm() (filename, contentType string, buf *bytes.Buffer) {
@@ -108,7 +108,7 @@ func fakeForm() (filename, contentType string, buf *bytes.Buffer) {
 		root, _ = os.Getwd()
 	)
 
-	filename = root + "/param.go"
+	filename = root + "/const.go"
 	buf = bytes.NewBuffer(nil)
 
 	// build multipart form
@@ -124,7 +124,7 @@ func fakeForm() (filename, contentType string, buf *bytes.Buffer) {
 	return
 }
 
-func Test_AppParamsFile(t *testing.T) {
+func Test_ParamsFile(t *testing.T) {
 	it := assert.New(t)
 
 	filename, contentType, buf := fakeForm()
@@ -135,9 +135,9 @@ func Test_AppParamsFile(t *testing.T) {
 		httpdispatch.Param{"test", "route_true"},
 	}
 
-	p := NewAppParams(request, routeParams)
-	it.Equal("url_value", p.Post("key"))
-	it.Equal("url_true", p.Post("test"))
+	p := NewParams(request, routeParams)
+	it.Equal("url_value", p.Form("key"))
+	it.Equal("url_true", p.Form("test"))
 
 	// validate uploaded content
 	f, fh, err := p.File("file")
@@ -147,13 +147,14 @@ func Test_AppParamsFile(t *testing.T) {
 		buf.Reset()
 		io.Copy(buf, f)
 
-		content, _ := ioutil.ReadFile(filename)
-
-		it.Equal(content, buf.Bytes())
+		content, err := ioutil.ReadFile(filename)
+		if it.Nil(err) {
+			it.Equal(content, buf.Bytes())
+		}
 	}
 }
 
-func Test_AppParamsJson(t *testing.T) {
+func Test_ParamsJson(t *testing.T) {
 	it := assert.New(t)
 
 	str := `{"key":"json_value", "test":true}`
@@ -164,7 +165,7 @@ func Test_AppParamsJson(t *testing.T) {
 		httpdispatch.Param{"test", "route_true"},
 	}
 
-	p := NewAppParams(request, routeParams)
+	p := NewParams(request, routeParams)
 
 	var params struct {
 		Key  string `json:"key"`
@@ -177,7 +178,7 @@ func Test_AppParamsJson(t *testing.T) {
 	}
 }
 
-func Test_AppParamsXml(t *testing.T) {
+func Test_ParamsXml(t *testing.T) {
 	it := assert.New(t)
 
 	str := `<Params><Key>xml_value</Key><Test>true</Test></Params>`
@@ -188,7 +189,7 @@ func Test_AppParamsXml(t *testing.T) {
 		httpdispatch.Param{"test", "route_true"},
 	}
 
-	p := NewAppParams(request, routeParams)
+	p := NewParams(request, routeParams)
 
 	var params struct {
 		XMLName xml.Name `xml:"Params"`
@@ -202,7 +203,7 @@ func Test_AppParamsXml(t *testing.T) {
 	}
 }
 
-func Test_AppParamsGob(t *testing.T) {
+func Test_ParamsGob(t *testing.T) {
 	it := assert.New(t)
 
 	type data struct {
@@ -222,7 +223,7 @@ func Test_AppParamsGob(t *testing.T) {
 		request, _ := http.NewRequest("POST", "/path/to/resource?key=url_value&test=url_true", strings.NewReader(buf.String()))
 		request.Header.Set("Content-Type", "application/gob")
 
-		p := NewAppParams(request, httpdispatch.Params{})
+		p := NewParams(request, httpdispatch.Params{})
 
 		var temp data
 

@@ -61,7 +61,7 @@ func Test_NewWithFilename(t *testing.T) {
 	it.Equal("gogo", app.config.RunName())
 }
 
-func Test_Response(t *testing.T) {
+func Test_Gogo_Response(t *testing.T) {
 	app := fakeApp("product")
 	app.GET("/ping", func(ctx *Context) {
 		ctx.SetStatus(http.StatusConflict)

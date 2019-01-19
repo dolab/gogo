@@ -49,16 +49,10 @@ type StatusCoder interface {
 	StatusCode() int
 }
 
-// Render represents HTTP response render
-type Render interface {
-	ContentType() string
-	Render(v interface{}) error
-}
-
 // Logger defines interface of application log apis.
 type Logger interface {
 	New(requestID string) Logger
-	Reuse(log Logger)
+	Reuse(l Logger)
 	RequestID() string
 	SetLevelByName(level string) error
 	SetColor(color bool)

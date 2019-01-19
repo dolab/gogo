@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +23,8 @@ var (
 )
 
 func fakePackageHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("fakePackageHandler"))
+	w.WriteHeader(http.StatusNotImplemented)
+	w.Write(nil)
 }
 
 func fakePackageAction(ctx *Context) {
@@ -44,13 +46,29 @@ func (_ *_fakeController) Action(ctx *Context) {
 func Test_ContextHandle(t *testing.T) {
 	it := assert.New(t)
 
-	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
 
 	ch := NewContextHandle(fakeServer(), fakePackageHandler, nil)
 	ch.Handle(w, r, nil)
 
-	it.Equal("fakePackageHandler", w.Body.String())
+	it.Equal(http.StatusNotImplemented, w.Code)
+	it.Empty(w.Body.Bytes())
+}
+
+func Benchmark_ContextHandle(b *testing.B) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
+
+	ch := NewContextHandle(fakeServer(), fakePackageHandler, nil)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		ch.Handle(w, r, nil)
+	}
 }
 
 func Test_ContextHandleWithHandler(t *testing.T) {
@@ -100,11 +118,73 @@ func Test_ContextHandleWithAction(t *testing.T) {
 func Test_FakeHandle(t *testing.T) {
 	it := assert.New(t)
 
-	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
 
 	fh := NewFakeHandle(fakeServer(), fakePackageHandler, nil, w)
 	fh.Handle(nil, r, nil)
 
-	it.Equal("fakePackageHandler", w.Body.String())
+	it.Equal(http.StatusNotImplemented, w.Code)
+	it.Empty(w.Body.Bytes())
+}
+
+func Test_NotFoundHandle(t *testing.T) {
+	it := assert.New(t)
+
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
+
+	h := NewNotFoundHandle(fakeServer())
+	h.ServeHTTP(w, r)
+
+	it.Equal(http.StatusNotFound, w.Code)
+	it.Contains(w.Body.String(), "Request(GET /): not found")
+}
+
+func Benchmark_NotFoundHandle(b *testing.B) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
+
+	h := NewNotFoundHandle(fakeServer())
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Body.Reset()
+
+		h.ServeHTTP(w, r)
+	}
+}
+
+func Test_MethodNotAllowedHandle(t *testing.T) {
+	it := assert.New(t)
+
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
+
+	h := NewMethodNotAllowedHandle(fakeServer())
+	h.ServeHTTP(w, r)
+
+	it.Equal(http.StatusMethodNotAllowed, w.Code)
+	it.Contains(w.Body.String(), "Request(GET /): method not allowed")
+}
+
+func Benchmark_MethodNotAllowedHandle(b *testing.B) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest(http.MethodGet, "https://example.com", nil)
+	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
+
+	h := NewMethodNotAllowedHandle(fakeServer())
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		w.Body.Reset()
+
+		h.ServeHTTP(w, r)
+	}
 }

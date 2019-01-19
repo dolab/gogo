@@ -14,18 +14,67 @@ import (
 	"github.com/golib/assert"
 )
 
-func Test_NewAppRoute(t *testing.T) {
+func Test_NewAppGroup(t *testing.T) {
 	it := assert.New(t)
-	prefix := "/prefix"
 	server := fakeServer()
+	prefix := "/prefix"
 
-	route := NewAppRoute(prefix, server)
-	it.Empty(route.middlewares)
-	it.Equal(prefix, route.prefix)
-	it.Equal(server, route.server)
+	group := NewAppGroup(prefix, server)
+	it.Equal(server, group.server)
+	it.Equal(prefix, group.prefix)
+	it.NotNil(group.handler)
+	it.Empty(group.filters)
 }
 
-func Test_RouteHandle(t *testing.T) {
+func Test_Group_Proxy(t *testing.T) {
+	it := assert.New(t)
+	server := fakeServer()
+	proxiedServer := fakeServer()
+
+	var n int32
+
+	// proxied handler
+	proxiedServer.Handle("GET", "/backend", func(ctx *Context) {
+		atomic.AddInt32(&n, 1)
+
+		ctx.SetStatus(http.StatusOK)
+		ctx.Text("I AM BACKEND!")
+	})
+
+	// start proxy server
+	proxiedTs := httptest.NewServer(proxiedServer)
+	defer proxiedTs.Close()
+
+	proxiedURL, _ := url.Parse(proxiedTs.URL)
+
+	proxy := &httputil.ReverseProxy{
+		Director: func(r *http.Request) {
+			atomic.AddInt32(&n, 1)
+
+			r.URL.Scheme = "http"
+			r.URL.Host = proxiedURL.Host
+			r.URL.Path = "/backend"
+			r.URL.RawPath = "/backend"
+		},
+	}
+	server.Proxy("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
+		return []byte(strings.ToUpper(string(b)))
+	})
+
+	// start server
+	ts := httptesting.NewServer(server, false)
+	defer ts.Close()
+
+	// testing by http request
+	request := ts.New(t)
+	request.Get("/proxy")
+	request.AssertOK()
+	request.AssertContains("I AM BACKEND!")
+
+	it.EqualValues(2, n)
+}
+
+func Test_Group_Handle(t *testing.T) {
 	it := assert.New(t)
 	server := fakeServer()
 
@@ -109,7 +158,7 @@ func Test_RouteHandle(t *testing.T) {
 	}
 }
 
-func Test_RouteHandleWithTailSlash(t *testing.T) {
+func Test_Group_HandleWithTailSlash(t *testing.T) {
 	server := fakeServer()
 
 	server.Handle("GET", "/:tailslash", func(ctx *Context) {
@@ -148,55 +197,7 @@ func Test_RouteHandleWithTailSlash(t *testing.T) {
 	request.AssertContains("GET /:tailslash/*extraargs")
 }
 
-func Test_RouteProxyHandle(t *testing.T) {
-	it := assert.New(t)
-	server := fakeServer()
-	proxiedServer := fakeServer()
-
-	var n int32
-
-	// proxied handler
-	proxiedServer.Handle("GET", "/backend", func(ctx *Context) {
-		atomic.AddInt32(&n, 1)
-
-		ctx.SetStatus(http.StatusOK)
-		ctx.Text("I AM BACKEND!")
-	})
-
-	// start proxy server
-	proxiedTs := httptest.NewServer(proxiedServer)
-	defer proxiedTs.Close()
-
-	proxiedURL, _ := url.Parse(proxiedTs.URL)
-
-	proxy := &httputil.ReverseProxy{
-		Director: func(r *http.Request) {
-			atomic.AddInt32(&n, 1)
-
-			r.URL.Scheme = "http"
-			r.URL.Host = proxiedURL.Host
-			r.URL.Path = "/backend"
-			r.URL.RawPath = "/backend"
-		},
-	}
-	server.ProxyHandle("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
-		return []byte(strings.ToUpper(string(b)))
-	})
-
-	// start server
-	ts := httptesting.NewServer(server, false)
-	defer ts.Close()
-
-	// testing by http request
-	request := ts.New(t)
-	request.Get("/proxy")
-	request.AssertOK()
-	request.AssertContains("I AM BACKEND!")
-
-	it.EqualValues(2, n)
-}
-
-func Test_RouteMockHandle(t *testing.T) {
+func Test_Group_MockHandle(t *testing.T) {
 	it := assert.New(t)
 	server := fakeServer()
 	recorder := httptest.NewRecorder()
@@ -220,9 +221,9 @@ func Test_RouteMockHandle(t *testing.T) {
 	it.Equal("MOCK", recorder.Body.String())
 }
 
-func Test_RouteGroup(t *testing.T) {
+func Test_Group_NewGroup(t *testing.T) {
 	server := fakeServer()
-	group := server.Group("/group")
+	group := server.NewGroup("/group")
 
 	// register handler
 	// GET /group/:method
@@ -260,7 +261,7 @@ func (t *testUserController) Show(ctx *Context) {
 	ctx.Text("GET /group/" + ctx.Params.Get("group") + "/user/" + ctx.Params.Get("id"))
 }
 
-func Test_RouteResource(t *testing.T) {
+func Test_Group_Resource(t *testing.T) {
 	server := fakeServer()
 
 	// start server
@@ -302,7 +303,7 @@ func (t *testGroupMemberController) Show(ctx *Context) {
 	ctx.Text("GET /group/member/" + ctx.Params.Get("member"))
 }
 
-func Test_RouteResourceWithSubPath(t *testing.T) {
+func Test_Group_ResourceWithSubPath(t *testing.T) {
 	server := fakeServer()
 
 	// start server
