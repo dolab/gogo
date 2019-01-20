@@ -48,6 +48,13 @@ var (
 	}
 )
 
+// NewDefaults creates a *AppServer for quick start
+func NewDefaults() *AppServer {
+	cfger, _ := NewAppConfigFromDefault()
+
+	return NewWithConfiger(cfger)
+}
+
 // New creates application server with config resolved
 // from file <srcPath>/config/application[.<runMode>].json.
 // NOTE: You can custom resolver by overwriting FindModeConfigFile.
