@@ -2,6 +2,8 @@
 
 [![CircleCI](https://circleci.com/gh/dolab/gogo/tree/master.svg?style=svg)](https://circleci.com/gh/dolab/gogo/tree/master) [![Coverage](http://gocover.io/_badge/github.com/dolab/gogo?0)](http://gocover.io/github.com/dolab/gogo) [![GoDoc](https://godoc.org/github.com/dolab/gogo?status.svg)](http://godoc.org/github.com/dolab/gogo)
 
+> **NOTE**: This is `VERSION 1` compactible upgrade!
+
 `gogo` is an open source, high performance RESTful api framework for the [Golang](https://golang.org) programming language.
 
 It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
@@ -57,14 +59,14 @@ import (
 )
 
 func main() {
-    // load config from config/application.json
-    // app := gogo.New("development", "/path/to/[config/application.json]")
+	// load config from config/application.json
+	// app := gogo.New("development", "/path/to/[config/application.json]")
 
-    // load config frome filename
-    // app := gogo.New("development", "/path/to/config.json")
+	// load config from filename
+	// app := gogo.New("development", "/path/to/config.json")
 
-    // use default config
-    app := gogo.New("development", "")
+	// use default config
+	app := gogo.NewDefaults()
 
 	// GET /
 	app.GET("/", func(ctx *gogo.Context) {
@@ -94,30 +96,32 @@ func main() {
 package main
 
 import (
-    "github.com/dolab/gogo"
+	"github.com/dolab/gogo"
 )
 
 func main() {
-    app := gogo.New("development", "")
+	app := gogo.NewDefaults()
 
-    // avoid server quit by registering a recovery middleware
-    app.Use(func(ctx *gogo.Context) {
-        if panicErr := recover(); panicErr != nil {
-            ctx.Abort()
+	// avoid server quit by registering a recovery middleware
+	app.Use(func(ctx *gogo.Context) {
+		if panicErr := recover(); panicErr != nil {
+			ctx.Logger.Errorf("[PANICED] %v", panicErr)
 
-            ctx.Logger.Errorf("[PANICED] %v", panicErr)
-            return
-        }
+			ctx.Return(map[string]interface{}{
+				"panic": panicErr,
+			})
+			return
+		}
 
-        ctx.Next()
-    })
+		ctx.Next()
+	})
 
-    // GET /
-    app.GET("/", func(ctx *gogo.Context) {
-        panic("Oops ~ ~ ~")
-    })
+	// GET /
+	app.GET("/", func(ctx *gogo.Context) {
+		panic("Oops ~ ~ ~")
+	})
 
-    app.Run()
+	app.Run()
 }
 ```
 
@@ -127,77 +131,80 @@ func main() {
 package main
 
 import (
-    "encoding/base64"
-    "net/http"
-    "strings"
+	"encoding/base64"
+	"net/http"
+	"strings"
 
-    "github.com/dolab/gogo"
+	"github.com/dolab/gogo"
 )
 
 func main() {
-    app := gogo.New("development", "")
+	app := gogo.NewDefaults()
 
-    // avoid server quit by registering recovery func global
-    app.Use(func(ctx *gogo.Context) {
-        if panicErr := recover(); panicErr != nil {
-            ctx.Abort()
+	// avoid server quit by registering recovery func global
+	app.Use(func(ctx *gogo.Context) {
+		if panicErr := recover(); panicErr != nil {
+			ctx.Logger.Errorf("[PANICED] %v", panicErr)
 
-            ctx.Logger.Errorf("[PANICED] %v", panicErr)
-        }
+			ctx.Return(map[string]interface{}{
+				"panic": panicErr,
+			})
+		}
 
-        ctx.Next()
-    })
+		ctx.Next()
+	})
+	
 
-    // GET /
-    app.GET("/", func(ctx *gogo.Context) {
-        panic("Oops ~ ~ ~")
-    })
+	// GET /
+	app.GET("/", func(ctx *gogo.Context) {
+		panic("Oops ~ ~ ~")
+	})
 
-    // prefix resources with /v1 and apply basic auth middleware for all sub-resources
-    // NOTE: it combines recovery middleware from previous.
-    v1 := app.Group("/v1", func(ctx *gogo.Context) {
-        auth := ctx.Header("Authorization")
-        if !strings.HasPrefix(auth, "Basic ") {
-            ctx.Abort()
+	// prefix resources with /v1 and apply basic auth middleware for all sub-resources
+	// NOTE: it combines recovery middleware from previous.
+	v1 := app.Group("/v1", func(ctx *gogo.Context) {
+		auth := ctx.Header("Authorization")
+		if !strings.HasPrefix(auth, "Basic ") {
+			ctx.Abort()
 
-            ctx.SetStatus(http.StatusForbidden)
-            ctx.Return()
-            return
-        }
+			ctx.SetStatus(http.StatusForbidden)
+			ctx.Return()
+			return
+		}
 
-        b, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
-        if err != nil {
-            ctx.Logger.Errorf("Base64 decode error: %v", err)
-            ctx.Abort()
+		b, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(auth, "Basic "))
+		if err != nil {
+			ctx.Logger.Errorf("Base64 decode error: %v", err)
+			ctx.Abort()
 
-            ctx.SetStatus(http.StatusForbidden)
-            ctx.Return()
-            return
-        }
+			ctx.SetStatus(http.StatusForbidden)
+			ctx.Return()
+			return
+		}
 
-        tmp := strings.SplitN(string(b), ":", 2)
-        if len(tmp) != 2 || tmp[0] != "gogo" || tmp[1] != "ogog" {
-            ctx.Abort()
+		tmp := strings.SplitN(string(b), ":", 2)
+		if len(tmp) != 2 || tmp[0] != "gogo" || tmp[1] != "ogog" {
+			ctx.Abort()
 
-            ctx.SetStatus(http.StatusForbidden)
-            ctx.Return()
-            return
-        }
+			ctx.SetStatus(http.StatusForbidden)
+			ctx.Return()
+			return
+		}
 
-        // settings which can used by following middlewares and handler
-        ctx.Set("username", tmp[0])
+		// settings which can used by following middlewares and handler
+		ctx.Set("username", tmp[0])
 
-        ctx.Next()
-    })
+		ctx.Next()
+	})
 
-    // GET /v1
-    v1.GET("/", func(ctx *gogo.Context) {
-        username := ctx.MustGet("username").(string)
+	// GET /v1
+	v1.GET("/", func(ctx *gogo.Context) {
+		username := ctx.MustGet("username").(string)
 
-        ctx.Text("Hello, " + username + "!")
-    })
+		ctx.Text("Hello, " + username + "!")
+	})
 
-    app.Run()
+	app.Run()
 }
 ```
 
@@ -213,7 +220,7 @@ you can overwrite default id key by implementing `ControllerID` interface.
 package main
 
 import (
-    "github.com/dolab/gogo"
+	"github.com/dolab/gogo"
 )
 
 type GroupController struct{}
@@ -241,7 +248,7 @@ func (t *UserController) Show(ctx *gogo.Context) {
 }
 
 func main() {
-	app := gogo.New("development", "")
+	app := gogo.NewDefaults()
 
 	// register group controller with default :group key
 	group := app.Resource("/group", &GroupController{})
@@ -260,16 +267,16 @@ func main() {
 
 ```json
 {
-    "addr": "localhost",
-    "port": 9090,
-    "throttle": 3000, // RPS, throughput of per-seconds
-    "slowdown": 30000, // TPS, concurrency of server
-    "request_timeout": 30,
-    "response_timeout": 30,
-    "ssl": false,
-    "ssl_cert": "/path/to/ssl/cert",
-    "ssl_key": "/path/to/ssl/key",
-    "request_id": "X-Request-Id"
+	"addr": "localhost",
+	"port": 9090,
+	"throttle": 3000, // RPS, throughput of per-seconds
+	"slowdown": 30000, // TPS, concurrency of server
+	"request_timeout": 30,
+	"response_timeout": 30,
+	"ssl": false,
+	"ssl_cert": "/path/to/ssl/cert",
+	"ssl_key": "/path/to/ssl/key",
+	"request_id": "X-Request-Id"
 }
 ```
 
