@@ -3,6 +3,7 @@ package gogo
 import (
 	"encoding/xml"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -49,7 +50,7 @@ func Test_ServerNewContext(t *testing.T) {
 	assertion.Nil(ctx.settings)
 	assertion.Nil(ctx.frozenSettings)
 	assertion.Empty(ctx.middlewares)
-	assertion.EqualValues(0, ctx.cursor)
+	assertion.EqualValues(math.MaxInt8, ctx.cursor)
 
 	// creation
 	newCtx := server.newContext(request, "", "", params)

@@ -337,8 +337,15 @@ func (c *Context) run(w http.ResponseWriter, handler http.Handler, middlewares [
 	// start chains
 	c.Next()
 
-	// invoke http.Handler if existed
-	if c.cursor >= 0 && c.cursor < math.MaxInt8 && handler != nil {
-		handler.ServeHTTP(c.Response, c.Request)
+	// ghost without render
+	if c.cursor >= 0 && c.cursor < math.MaxInt8 {
+		c.Abort()
+
+		// invoke http.Handler if existed
+		if handler != nil {
+			handler.ServeHTTP(c.Response, c.Request)
+		} else {
+			c.Response.FlushHeader()
+		}
 	}
 }
