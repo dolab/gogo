@@ -7,6 +7,12 @@ const (
 	Production  RunMode = "production"
 )
 
+// gogo schema and internal route
+const (
+	GogoSchema  = "gogo://"
+	GogoHealthz = "/-/healthz"
+)
+
 // server defaults
 const (
 	DefaultRequestIDKey    = "X-Request-Id"

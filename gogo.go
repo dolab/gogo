@@ -9,11 +9,6 @@ import (
 	"github.com/dolab/gogo/internal/params"
 )
 
-// gogo schema
-const (
-	GogoSchema = "gogo://"
-)
-
 var (
 	// FindModeConfigFile returns config file for specified run mode.
 	// You could custom your own resolver by overwriting it.

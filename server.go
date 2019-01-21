@@ -108,6 +108,11 @@ func (s *AppServer) Run() {
 		maxHeaderBytes = 0
 	)
 
+	// register healthz
+	if config.Server.Healthz {
+		s.registerHealthz()
+	}
+
 	// throughput of rate limit
 	if config.Server.Throttle > 0 {
 		s.hooks.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(config.Server.Throttle))

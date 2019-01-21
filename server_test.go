@@ -51,6 +51,17 @@ var (
 
 		return server
 	}
+
+	fakeHealthzServer = func() *AppServer {
+		logger := NewAppLogger("nil", "")
+		logger.SetSkip(3)
+
+		config, _ := fakeConfig("application.healthz.json")
+
+		server := NewAppServer(config, logger)
+
+		return server
+	}
 )
 
 func Test_NewAppServer(t *testing.T) {
@@ -414,6 +425,6 @@ func Test_Server_loggerNewWithReuse(t *testing.T) {
 		it.Implements((*Logger)(nil), blog)
 
 		it.Equal(fmt.Sprintf("%p", alog), fmt.Sprintf("%p", blog))
-		it.Equal("x-request-id", alog.RequestID())
+		it.Equal("x-request-id", blog.RequestID())
 	}
 }

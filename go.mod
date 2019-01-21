@@ -2,7 +2,6 @@ module github.com/dolab/gogo
 
 require (
 	github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23 // indirect
-	github.com/codegangsta/cli v1.20.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dolab/colorize v0.0.0-20180106055552-10753a0b4d68 // indirect
 	github.com/dolab/httpdispatch v0.0.0-20181226112803-e1ca81cd1d36

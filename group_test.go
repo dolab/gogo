@@ -325,3 +325,32 @@ func Test_Group_ResourceWithSubPath(t *testing.T) {
 	request.AssertStatus(http.StatusNotFound)
 	request.AssertContains("not found")
 }
+
+func Test_GroupWithReservedRoute(t *testing.T) {
+	it := assert.New(t)
+	server := fakeServer()
+
+	it.Panics(func() {
+		server.GET("/-/healthz", func(ctx *Context) {
+			ctx.SetStatus(http.StatusInternalServerError)
+		})
+	})
+
+	it.Panics(func() {
+		server.Handler(http.MethodGet, "/-/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}))
+	})
+
+	it.Panics(func() {
+		server.Handle(http.MethodGet, "/-/healthz", func(ctx *Context) {
+			ctx.SetStatus(http.StatusInternalServerError)
+		})
+	})
+
+	it.Panics(func() {
+		server.MockHandle(http.MethodGet, "/-/healthz", httptest.NewRecorder(), func(ctx *Context) {
+			ctx.SetStatus(http.StatusInternalServerError)
+		})
+	})
+}

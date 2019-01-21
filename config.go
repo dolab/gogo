@@ -8,6 +8,7 @@ import (
 	"github.com/dolab/logger"
 )
 
+// default configurations
 var (
 	DefaultServerConfig = &ServerConfig{
 		Addr:      "127.0.0.1",
@@ -15,6 +16,7 @@ var (
 		RTimeout:  10, // 10s
 		WTimeout:  10, // 10s
 		Ssl:       false,
+		Healthz:   true,
 		RequestID: DefaultRequestIDKey,
 	}
 
@@ -147,10 +149,12 @@ type ServerConfig struct {
 	WTimeout       int    `json:"response_timeout"` // unit in second
 	MaxHeaderBytes int    `json:"max_header_bytes"` // unit in byte
 
-	HTTP2   bool   `json:"http2"` // use http2 server
 	Ssl     bool   `json:"ssl"`
 	SslCert string `json:"ssl_cert"`
 	SslKey  string `json:"ssl_key"`
+
+	HTTP2   bool `json:"http2"`   // enable http2
+	Healthz bool `json:"healthz"` // enable /-/healthz
 
 	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
 	Slowdown  int    `json:"slowdown"`
