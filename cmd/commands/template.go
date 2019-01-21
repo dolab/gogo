@@ -545,6 +545,7 @@ func Test_Setup(t *testing.T) {
 			"server": {
 				"addr": "localhost",
 				"port": 9090,
+				"healthz": true,
 				"ssl": false,
 				"request_timeout": 3,
 				"response_timeout": 10,
@@ -585,6 +586,7 @@ func Test_Setup(t *testing.T) {
 			"server": {
 				"addr": "localhost",
 				"port": 9090,
+				"healthz": true,
 				"ssl": true,
 				"ssl_cert": "/path/to/ssl/cert",
 				"ssl_key": "/path/to/ssl/key",

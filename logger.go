@@ -26,6 +26,7 @@ func NewContextLogger(r *http.Request) Logger {
 type AppLogger struct {
 	*logger.Logger
 
+	mux       sync.RWMutex
 	pool      sync.Pool
 	requestID string
 }
@@ -63,9 +64,13 @@ func NewAppLogger(output, filename string) *AppLogger {
 // New returns a new Logger with provided requestID which shared writer with current logger
 func (alog *AppLogger) New(requestID string) Logger {
 	// shortcut
+	alog.mux.RLock()
 	if alog.requestID == requestID {
+		alog.mux.RUnlock()
+
 		return alog
 	}
+	defer alog.mux.RUnlock()
 
 	lg := alog.pool.Get()
 	if nlog, ok := lg.(*AppLogger); ok {

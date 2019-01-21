@@ -279,12 +279,20 @@ func (r *AppGroup) Serve(resp http.ResponseWriter, req *http.Request) {
 	r.handler.ServeHTTP(resp, req)
 }
 
-func (r *AppGroup) buildPrefix(suffix string) string {
+func (r *AppGroup) buildPrefix(suffix string) (prefix string) {
+	defer func() {
+		// assert for internal routes
+		if strings.HasPrefix(prefix, GogoHealthz) {
+			panic(ErrReservedRoute)
+		}
+	}()
+
 	if len(suffix) == 0 {
-		return r.prefix
+		prefix = r.prefix
+		return
 	}
 
-	prefix := path.Join(r.prefix, suffix)
+	prefix = path.Join(r.prefix, suffix)
 
 	// adjust path.Join side effect
 	if suffix[len(suffix)-1] == '/' && prefix[len(prefix)-1] != '/' {
@@ -300,4 +308,11 @@ func (r *AppGroup) buildFilters(middlewares ...Middleware) []Middleware {
 	copy(combined[len(r.filters):], middlewares)
 
 	return combined
+}
+
+func (r *AppGroup) registerHealthz() {
+	handler := NewHealthzHandle(r.server)
+
+	r.handler.Handle(http.MethodGet, GogoHealthz, handler)
+	r.handler.Handle(http.MethodPost, GogoHealthz, handler)
 }

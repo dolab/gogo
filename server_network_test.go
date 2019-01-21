@@ -15,6 +15,31 @@ import (
 	"github.com/golib/assert"
 )
 
+var testServerWithHealthzOnce sync.Once
+
+func Test_ServerWithHealthz(t *testing.T) {
+	server := fakeHealthzServer()
+
+	var addr string
+	testServerWithHealthzOnce.Do(func() {
+		go server.Run()
+		for {
+			if len(server.Address()) > 0 {
+				break
+			}
+		}
+
+		addr = server.Address()
+	})
+
+	client := httptesting.New(addr, false)
+
+	request := client.New(t)
+	request.Get(GogoHealthz, nil)
+	request.AssertOK()
+	request.AssertEmpty()
+}
+
 var testServerWithTcpOnce sync.Once
 
 func Test_ServerWithTcp(t *testing.T) {

@@ -69,12 +69,12 @@ func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Mid
 
 // Handle implements httpdispatch.Handler interface
 func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpdispatch.Params) {
-	// invoke ResponseAlways
-	defer ch.server.hooks.ResponseAlways.Run(w, r)
-
 	if !ch.server.hooks.RequestRouted.Run(w, r) {
 		return
 	}
+
+	// invoke ResponseAlways
+	defer ch.server.hooks.ResponseAlways.Run(w, r)
 
 	ctx := contextNew(w, r, params.NewParams(r, ps), ch.pkg, ch.ctrl, ch.action)
 	defer contextReuse(ctx)
@@ -84,6 +84,19 @@ func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpd
 	} else {
 		ctx.run(ch.handler, ch.filters)
 	}
+}
+
+// HealthzHandle defines a wrapper of handler for /-/healthz
+type HealthzHandle struct{}
+
+// NewHealthzHandle creates a new handler with route not found
+func NewHealthzHandle(server *AppServer) *HealthzHandle {
+	return &HealthzHandle{}
+}
+
+// Handle implements httpdispatch.Handler interface
+func (h *HealthzHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpdispatch.Params) {
+	w.WriteHeader(http.StatusOK)
 }
 
 // FakeHandle defines a wrapper of handler for testing
@@ -128,7 +141,7 @@ func NewNotFoundHandle(server *AppServer) *NotFoundHandle {
 
 // ServeHTTP implements http.Handler interface
 func (h *NotFoundHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.ContextHandle.Handle(w, r, nil)
+	h.Handle(w, r, nil)
 }
 
 // MethodNotAllowedHandle defines a wrapper of handler for not allowed request mehtod
@@ -149,5 +162,5 @@ func NewMethodNotAllowedHandle(server *AppServer) *MethodNotAllowedHandle {
 
 // ServeHTTP implements http.Handler interface
 func (h *MethodNotAllowedHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.ContextHandle.Handle(w, r, nil)
+	h.Handle(w, r, nil)
 }
