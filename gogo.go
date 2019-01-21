@@ -16,7 +16,7 @@ const (
 
 var (
 	// FindModeConfigFile returns config file for specified run mode.
-	// You could custom your own run mode config file by overwriting.
+	// You could custom your own resolver by overwriting it.
 	FindModeConfigFile = func(runMode, srcPath string) string {
 		if len(srcPath) == 0 {
 			return GogoSchema
@@ -62,6 +62,7 @@ var (
 
 // New creates application server with config resolved
 // from file <srcPath>/config/application[.<runMode>].json.
+//
 // NOTE: You can custom resolver by overwriting FindModeConfigFile.
 func New(runMode, srcPath string) *AppServer {
 	// resolve config from application.json

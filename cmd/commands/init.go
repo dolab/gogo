@@ -35,10 +35,11 @@ func init() {
 		"lowercase": strings.ToLower,
 	})
 
-	template.Must(box.New("env").Parse(envTemplate))
-	template.Must(box.New("makefile").Parse(Space2Tab(makefileTemplate)))
 	template.Must(box.New("gitignore").Parse(gitIgnoreTemplate))
+	template.Must(box.New("env").Parse(envTemplate))
 	template.Must(box.New("readme").Parse(readmeTemplate))
+	template.Must(box.New("go.mod").Parse(modTemplate))
+	template.Must(box.New("makefile").Parse(Space2Tab(makefileTemplate)))
 	template.Must(box.New("main").Parse(Space2Tab(mainTemplate)))
 	// controllers
 	template.Must(box.New("application").Parse(Space2Tab(applicationTemplates["application"])))

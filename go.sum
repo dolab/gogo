@@ -16,6 +16,8 @@ github.com/golib/assert v0.0.0-20170825111607-0306abba9bd3 h1:oulReRd2nZaxbc0zJw
 github.com/golib/assert v0.0.0-20170825111607-0306abba9bd3/go.mod h1:vPapUz+xrnvoZuYjBvR3UnfcP/Gnv/jU3HANuQk2WHI=
 github.com/golib/cli v1.2.0 h1:3SLFNlF4UONr7wGh8HHWY+pZIacN5SbS70g6g2F6Zfw=
 github.com/golib/cli v1.2.0/go.mod h1:cbPTaYYpwmK4s+YKhW6vAUeRyIKKTZcQDDQcAxYq/rk=
+github.com/golib/cli v1.2.1-0.20160801031116-168c95418e66 h1:+0Uxj0HLq8Oz19He10Wf1lq9YgZlR+2tcN1g92XVv9E=
+github.com/golib/cli v1.2.1-0.20160801031116-168c95418e66/go.mod h1:cbPTaYYpwmK4s+YKhW6vAUeRyIKKTZcQDDQcAxYq/rk=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 golang.org/x/net v0.0.0-20190110200230-915654e7eabc h1:Yx9JGxI1SBhVLFjpAkWMaO1TF+xyqtHLjZpvQboJGiM=

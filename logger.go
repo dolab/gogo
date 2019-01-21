@@ -9,7 +9,8 @@ import (
 	"github.com/dolab/logger"
 )
 
-// NewContextLogger returns a Logger related with *http.Request
+// NewContextLogger returns a Logger related with *http.Request.
+//
 // NOTE: It returns a dummy *AppLogger when no available Logger for the request.
 func NewContextLogger(r *http.Request) Logger {
 	alog, ok := r.Context().Value(ctxLoggerKey).(Logger)

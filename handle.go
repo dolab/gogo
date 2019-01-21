@@ -87,6 +87,7 @@ func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpd
 }
 
 // FakeHandle defines a wrapper of handler for testing
+//
 // NOTE: DO NOT use this for real!!!
 type FakeHandle struct {
 	*ContextHandle

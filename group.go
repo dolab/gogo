@@ -11,7 +11,7 @@ import (
 	"github.com/dolab/httpdispatch"
 )
 
-// AppGroup defines a group component of gogo
+// AppGroup defines a grouped server of gogo.
 type AppGroup struct {
 	mux sync.Mutex
 
@@ -55,6 +55,7 @@ func (r *AppGroup) SetHandler(handler Handler) {
 }
 
 // Use registers new middlewares to the route
+//
 // TODO: ignore duplicated middlewares?
 func (r *AppGroup) Use(middlewares ...Middleware) {
 	r.mux.Lock()
@@ -72,7 +73,8 @@ func (r *AppGroup) Middlewares() []Middleware {
 }
 
 // CleanMiddlewares removes all registered middlewares of AppGroup
-// NOTE: it's useful in testing cases.
+//
+// NOTE: It's useful in testing cases.
 func (r *AppGroup) CleanMiddlewares() {
 	r.mux.Lock()
 	r.filters = []Middleware{}
