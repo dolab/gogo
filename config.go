@@ -30,8 +30,8 @@ var (
 	}
 )
 
-// AppConfig defines config component of gogo
-// It implements Configer interface
+// AppConfig defines config component of gogo.
+// It implements Configer interface.
 type AppConfig struct {
 	Mode RunMode `json:"mode"`
 	Name string  `json:"name"`
@@ -109,8 +109,8 @@ func (config *AppConfig) SetMode(mode RunMode) {
 	config.Mode = mode
 }
 
-// Section is shortcut of retreving app server and logger configurations at one time
-// It returns SectionConfig if exists, otherwise returns DefaultSectionConfig instead
+// Section is shortcut of retreving app server and logger configurations at once.
+// It returns SectionConfig if exists, otherwise returns DefaultSectionConfig instead.
 func (config *AppConfig) Section() *SectionConfig {
 	var sconfig *SectionConfig
 

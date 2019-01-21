@@ -24,6 +24,7 @@ type Handler interface {
 }
 
 // Middleware represents request filters and resource handler
+//
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
 type Middleware func(ctx *Context)
 

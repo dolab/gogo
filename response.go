@@ -19,6 +19,7 @@ type Response struct {
 }
 
 // NewResponse returns a Responser with w given.
+//
 // NOTE: It sets response status code to http.StatusOK by default.
 func NewResponse(w http.ResponseWriter) Responser {
 	response := &Response{
@@ -71,9 +72,8 @@ func (r *Response) FlushHeader() {
 	r.ResponseWriter.WriteHeader(r.status)
 }
 
-// Write writes data to client, and returns size of data written.
-// It returns error when failed.
-// It also invokes before filters if exist.
+// Write writes data to client, and returns size of data written. It also
+// invokes before filters if exist. It returns error when failed.
 func (r *Response) Write(data []byte) (size int, err error) {
 	r.FlushHeader()
 

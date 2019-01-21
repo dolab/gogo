@@ -41,7 +41,7 @@ var (
 	}
 )
 
-// Context defines context of a request
+// Context defines context of a request for gogo.
 type Context struct {
 	Response Responser
 	Request  *http.Request
@@ -351,6 +351,7 @@ func (c *Context) Render(w render.Render, data interface{}) error {
 }
 
 // Next executes the remain middlewares in the chain.
+//
 // NOTE: It ONLY used in the middlewares!
 func (c *Context) Next() {
 	// is aborted?

@@ -66,6 +66,7 @@ func (s *AppServer) Address() string {
 }
 
 // ServeHTTP implements the http.Handler interface with throughput and concurrency support.
+//
 // NOTE: It serves client by forwarding request to AppGroup.
 func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// hijack request id if required
