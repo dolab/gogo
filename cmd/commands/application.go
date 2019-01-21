@@ -124,11 +124,14 @@ func (_ *_Application) Action() cli.ActionFunc {
 		// generate env.sh
 		Application.genEnvFile(path.Join(root, "env.sh"), appName, appNamespace)
 
-		// generate Makefile
-		Application.genMakefile(path.Join(root, "Makefile"), appName, appNamespace)
-
 		// generate readme.md
 		Application.genReadme(path.Join(root, "README.md"), appName, appNamespace)
+
+		// generate go.mod
+		Application.genModfile(path.Join(appRoot, "go.mod"), appName, appNamespace)
+
+		// generate Makefile
+		Application.genMakefile(path.Join(appRoot, "Makefile"), appName, appNamespace)
 
 		// generate default controller dependences
 		Application.genControllers(path.Join(appRoot, "app", "controllers"), appName, appNamespace)
@@ -161,6 +164,22 @@ func (_ *_Application) genEnvFile(file, app, namespace string) {
 	}
 
 	err = box.Lookup("env").Execute(fd, templateData{
+		Namespace:   namespace,
+		Application: app,
+	})
+	if err != nil {
+		stderr.Error(err.Error())
+	}
+}
+
+func (_ *_Application) genModfile(file, app, namespace string) {
+	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		stderr.Error(err.Error())
+		return
+	}
+
+	err = box.Lookup("go.mod").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})

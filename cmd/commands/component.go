@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"errors"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/dolab/gogo/pkgs/named"
 	"github.com/golib/cli"
 )
 
@@ -39,6 +39,9 @@ func (ct ComponentType) Root(pwd string) string {
 		return pwd
 	}
 
+	pwd = strings.TrimSuffix(pwd, "/")
+	pwd = strings.TrimSuffix(pwd, "/gogo")
+
 	return path.Clean(path.Join(pwd, "gogo", path.Join(dirs...)))
 }
 
@@ -60,6 +63,7 @@ func (ct ComponentType) String() string {
 
 type ComTemplateModel struct {
 	Name string
+	Args []string
 }
 
 type _Component struct{}
@@ -76,8 +80,14 @@ func (_ *_Component) Command() cli.Command {
 				Name:    "controller",
 				Aliases: []string{"c"},
 				Usage:   "generate controller component.",
-				Flags:   []cli.Flag{},
-				Action:  Component.NewController(),
+				Flags: []cli.Flag{
+					cli.StringSliceFlag{
+						Name:  "actions",
+						Usage: "specify actions to generating, defaults to gogo resources.",
+						Value: &cli.StringSlice{"index", "create", "show", "update", "destroy"},
+					},
+				},
+				Action: Component.NewController(),
 			},
 			{
 				Name:    "middleware",
@@ -103,6 +113,10 @@ func (_ *_Component) Flags() []cli.Flag {
 			Name:   "skip-testing",
 			EnvVar: "GOGO_COMPONENT",
 		},
+		cli.StringSliceFlag{
+			Name:  "controller-actions",
+			Value: &cli.StringSlice{"index", "create", "show", "update", "destroy"},
+		},
 	}
 }
 
@@ -111,13 +125,13 @@ func (_ *_Component) Action() cli.ActionFunc {
 		name := path.Clean(ctx.Args().First())
 
 		// controller
-		err := Component.newComponent(name, ComTypeController)
+		err := Component.newComponent(ComTypeController, name, ctx.StringSlice("controller-actions")...)
 		if err != nil {
 			return err
 		}
 
 		// model
-		err = Component.newComponent(name, ComTypeModel)
+		err = Component.newComponent(ComTypeModel, name)
 		if err != nil {
 			return err
 		}
@@ -130,7 +144,12 @@ func (_ *_Component) NewController() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
-		return Component.newComponent(name, ComTypeController)
+		actions := ctx.StringSlice("actions")
+		if len(actions) == 0 {
+			actions = []string{"index", "create", "show", "update", "destroy"}
+		}
+
+		return Component.newComponent(ComTypeController, name, actions...)
 	}
 }
 
@@ -138,7 +157,7 @@ func (_ *_Component) NewMiddleware() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
-		return Component.newComponent(name, ComTypeMiddleware)
+		return Component.newComponent(ComTypeMiddleware, name)
 	}
 }
 
@@ -146,13 +165,13 @@ func (_ *_Component) NewModel() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
-		return Component.newComponent(name, ComTypeModel)
+		return Component.newComponent(ComTypeModel, name)
 	}
 }
 
-func (_ *_Component) newComponent(name string, ctype ComponentType) error {
-	if !ctype.Valid() {
-		return errors.New("Invalid component type")
+func (_ *_Component) newComponent(com ComponentType, name string, args ...string) error {
+	if !com.Valid() {
+		return ErrComponentType
 	}
 
 	root, err := os.Getwd()
@@ -162,8 +181,16 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 		return err
 	}
 
-	comRoot := ctype.Root(root)
+	comRoot := com.Root(root)
+	if !strings.Contains(comRoot, "/gogo/") {
+		return ErrInvalidRoot
+	}
+
 	comName := name
+	comArgs := &ComTemplateModel{
+		Name: Component.toCamelCase(comName),
+		Args: args,
+	}
 
 	// generate xxx.go
 	fd, err := os.OpenFile(path.Join(comRoot, Component.toFilename(comName)), os.O_CREATE|os.O_WRONLY, 0644)
@@ -173,9 +200,7 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 		return err
 	}
 
-	err = box.Lookup("template_"+ctype.String()).Execute(fd, &ComTemplateModel{
-		Name: Component.toCamelCase(comName),
-	})
+	err = box.Lookup("template_"+com.String()).Execute(fd, comArgs)
 	if err != nil {
 		stderr.Errorf(err.Error())
 
@@ -190,9 +215,7 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 		return err
 	}
 
-	err = box.Lookup("template_"+ctype.String()+"_test").Execute(fd, &ComTemplateModel{
-		Name: Component.toCamelCase(comName),
-	})
+	err = box.Lookup("template_"+com.String()+"_test").Execute(fd, comArgs)
 	if err != nil {
 		stderr.Errorf(err.Error())
 
@@ -203,7 +226,7 @@ func (_ *_Component) newComponent(name string, ctype ComponentType) error {
 }
 
 func (_ *_Component) toCamelCase(name string) (capitalName string) {
-	names := ToCamelCase(name)
+	names := named.ToCamelCase(name)
 	for i, tmpname := range names {
 		tmpnames := strings.Split(tmpname, "_")
 		for j := 0; j < len(tmpnames); j++ {
@@ -219,7 +242,7 @@ func (_ *_Component) toCamelCase(name string) (capitalName string) {
 func (_ *_Component) toFilename(name string) (filename string) {
 	filenames := []string{}
 
-	names := ToCamelCase(name)
+	names := named.ToCamelCase(name)
 	for i := 0; i < len(names); i++ {
 		if names[i] == "_" {
 			continue

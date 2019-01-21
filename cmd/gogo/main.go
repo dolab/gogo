@@ -33,7 +33,7 @@ func init() {
 func main() {
 	app := cli.NewApp()
 	app.Name = "gogo"
-	app.Version = "1.3.0"
+	app.Version = "2.0.0"
 	app.Usage = "gogo COMMAND [ARGS]"
 
 	app.Authors = []cli.Author{
