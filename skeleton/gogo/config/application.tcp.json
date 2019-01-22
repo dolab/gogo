@@ -5,7 +5,7 @@
         "test": {
             "server": {
                 "addr": "localhost",
-                "port": 9090,
+                "port": 9080,
                 "ssl": false,
                 "throttle": 0,
                 "slowdown": 0,

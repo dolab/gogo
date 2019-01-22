@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"net/http/httputil"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dolab/gogo/pkgs/gid"
 	"github.com/dolab/httpdispatch"
 )
 
@@ -39,6 +41,9 @@ func NewAppGroup(prefix string, server *AppServer) *AppGroup {
 
 // NewGroup returns a new *AppGroup which has the same prefix path and middlewares
 func (r *AppGroup) NewGroup(prefix string, middlewares ...Middleware) *AppGroup {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+
 	return &AppGroup{
 		server:  r.server,
 		prefix:  r.buildPrefix(prefix),
@@ -138,12 +143,10 @@ func (r *AppGroup) Static(rpath, root string) {
 }
 
 // Proxy registers a new resource with a *httputil.ReverseProxy
-func (r *AppGroup) Proxy(method string, rpath string, proxy *httputil.ReverseProxy, filters ...ResponseFilter) {
+//
+// NOTE: filters is deprecated!
+func (r *AppGroup) Proxy(method string, rpath string, proxy *httputil.ReverseProxy) {
 	handler := func(ctx *Context) {
-		for _, filter := range filters {
-			ctx.Response.Before(filter)
-		}
-
 		proxy.ServeHTTP(ctx.Response, ctx.Request)
 	}
 
@@ -255,7 +258,10 @@ func (r *AppGroup) Handler(method, uri string, handler http.Handler) {
 	uri = r.buildPrefix(uri)
 	middlewares := r.buildFilters()
 
-	r.handler.Handle(method, uri, NewContextHandle(r.server, handler.ServeHTTP, middlewares))
+	r.handler.Handle(method, uri, NewContextHandle(
+		handler.ServeHTTP, middlewares,
+		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
+	))
 }
 
 // Handle registers a new resource
@@ -263,7 +269,10 @@ func (r *AppGroup) Handle(method string, uri string, handler Middleware) {
 	uri = r.buildPrefix(uri)
 	middlewares := r.buildFilters(handler)
 
-	r.handler.Handle(method, uri, NewContextHandle(r.server, nil, middlewares))
+	r.handler.Handle(method, uri, NewContextHandle(
+		nil, middlewares,
+		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
+	))
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
@@ -271,11 +280,41 @@ func (r *AppGroup) MockHandle(method string, rpath string, recorder http.Respons
 	uri := r.buildPrefix(rpath)
 	middlewares := r.buildFilters(handler)
 
-	r.handler.Handle(method, uri, NewFakeHandle(r.server, nil, middlewares, recorder))
+	r.handler.Handle(method, uri, NewFakeHandle(
+		nil, middlewares, recorder,
+		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
+	))
 }
 
-// Serve handles request by forwarding to underline Handler
-func (r *AppGroup) Serve(resp http.ResponseWriter, req *http.Request) {
+// ServeHTTP implements the http.Handler interface
+//
+// NOTE: ServeHTTP handles request by forwarding to underline Handler
+func (r *AppGroup) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	// hijack request id if required
+	var logID string
+	if r.server.hasRequestID() {
+		logID = req.Header.Get(r.server.requestID)
+		if logID == "" || len(logID) > DefaultRequestIDMaxLen {
+			logID = gid.New().Hex()
+
+			// inject request header with new request id
+			req.Header.Set(r.server.requestID, logID)
+		}
+
+		resp.Header().Set(r.server.requestID, logID)
+	}
+
+	// hijack logger for request
+	log := r.server.loggerNew(logID)
+	defer r.server.loggerReuse(log)
+
+	req = req.WithContext(context.WithValue(req.Context(), ctxLoggerKey, log))
+
+	// invoke RequestReceived
+	if !r.server.RequestReceived.Run(resp, req) {
+		return
+	}
+
 	r.handler.ServeHTTP(resp, req)
 }
 

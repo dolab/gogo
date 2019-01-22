@@ -20,8 +20,8 @@ type ServerHooks struct {
 	// particular handler of the server.
 	RequestRouted HookList
 
-	// ResponseReady is invoked when a request has been handled and a
-	// response is ready to be sent to the client.
+	// ResponseReady is invoked when a request has been handled, between response header
+	// has been flushed and response data is ready to be sent to the client.
 	ResponseReady HookList
 
 	// ResponseAlways is invoked when all bytes of a response (including an error

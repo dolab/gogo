@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/dolab/gogo/pkgs/hooks"
+
 	"github.com/dolab/gogo/internal/params"
 	"github.com/dolab/gogo/internal/render"
 	"github.com/dolab/httpdispatch"
@@ -32,7 +34,6 @@ func Test_NewContext(t *testing.T) {
 	it.Nil(ctx.Request)
 	it.Nil(ctx.Params)
 	it.Nil(ctx.Logger)
-	it.EqualValues(0, ctx.maxCursor)
 	it.EqualValues(-1, ctx.cursor)
 }
 
@@ -306,7 +307,7 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 		func(ctx *Context) {
 			ctx.Render(render.NewDefaultRender(ctx.Response), "next render")
 		},
-	})
+	}, hooks.HookList{})
 
 	it.Equal(location, recorder.Header().Get("Location"))
 	it.NotContains(recorder.Body.String(), "next render")
@@ -493,7 +494,7 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 		func(ctx *Context) {
 			ctx.Render(render.NewDefaultRender(ctx.Response), "next render")
 		},
-	})
+	}, hooks.HookList{})
 
 	it.Equal("render", recorder.Body.String())
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -518,7 +519,7 @@ func Test_Context_Next(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{middleware1, middleware2})
+	ctx.run(nil, []Middleware{middleware1, middleware2}, hooks.HookList{})
 
 	it.Equal(2, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -548,7 +549,7 @@ func Test_Context_Abort(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{middleware0, middleware1, middleware2})
+	ctx.run(nil, []Middleware{middleware0, middleware1, middleware2}, hooks.HookList{})
 
 	it.Equal(0, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -569,7 +570,6 @@ func Test_contextNew(t *testing.T) {
 	it.Nil(ctx.settings)
 	it.Nil(ctx.frozenSettings)
 	it.Empty(ctx.middlewares)
-	it.EqualValues(0, ctx.maxCursor)
 	it.EqualValues(-1, ctx.cursor)
 	it.Equal("package", ctx.pkg)
 	it.Equal("controller", ctx.ctrl)
@@ -613,10 +613,11 @@ func Benchmark_Context_run(b *testing.B) {
 	request, _ := http.NewRequest("GET", "https://www.example.com/resource?key=url_value&test=url_true", nil)
 	request = request.WithContext(context.WithValue(request.Context(), ctxLoggerKey, NewAppLogger("nil", "")))
 	params := params.NewParams(request, httpdispatch.Params{})
+	filters := hooks.HookList{}
 
 	ctx := contextNew(recorder, request, params, "package", "controller", "action")
 
 	for i := 0; i < b.N; i++ {
-		ctx.run(nil, nil)
+		ctx.run(nil, nil, filters)
 	}
 }

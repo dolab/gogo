@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/dolab/gogo/internal/listeners"
-	"github.com/dolab/gogo/pkgs/gid"
 	"github.com/dolab/gogo/pkgs/hooks"
 	"golang.org/x/net/http2"
 )
@@ -24,10 +23,10 @@ var (
 // AppServer defines a server component of gogo
 type AppServer struct {
 	*AppGroup
+	hooks.ServerHooks
 
 	config       Configer
 	logger       Logger
-	hooks        hooks.ServerHooks
 	requestID    string   // request id header name
 	filterFields []string // filter out params when logging
 
@@ -65,38 +64,9 @@ func (s *AppServer) Address() string {
 	return s.localAddr
 }
 
-// ServeHTTP implements the http.Handler interface with throughput and concurrency support.
+// Run starts the http server with AppGroup as http.Handler
 //
-// NOTE: It serves client by forwarding request to AppGroup.
-func (s *AppServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// hijack request id if required
-	var logID string
-	if s.hasRequestID() {
-		logID = r.Header.Get(s.requestID)
-		if logID == "" || len(logID) > DefaultRequestIDMaxLen {
-			logID = gid.New().Hex()
-
-			// inject request header with new request id
-			r.Header.Set(s.requestID, logID)
-		}
-
-		w.Header().Set(s.requestID, logID)
-	}
-
-	// hijack logger for request
-	log := s.loggerNew(logID)
-	defer s.loggerReuse(log)
-
-	r = r.WithContext(context.WithValue(r.Context(), ctxLoggerKey, log))
-
-	if !s.hooks.RequestReceived.Run(w, r) {
-		return
-	}
-
-	s.AppGroup.Serve(w, r)
-}
-
-// Run starts the http server with httpdispatch.Router handler
+// NOTE: Run apply throughput and concurrency to http.Server.
 func (s *AppServer) Run() {
 	var (
 		config         = s.config.Section()
@@ -115,12 +85,16 @@ func (s *AppServer) Run() {
 
 	// throughput of rate limit
 	if config.Server.Throttle > 0 {
-		s.hooks.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(config.Server.Throttle))
+		s.RequestReceived.PushFrontNamed(
+			hooks.NewServerThrottleHook(config.Server.Throttle),
+		)
 	}
 
 	// concurrency of bucket token
 	if config.Server.Slowdown > 0 {
-		s.hooks.RequestReceived.PushBackNamed(hooks.NewServerDemotionHook(config.Server.Slowdown, config.Server.RTimeout))
+		s.RequestReceived.PushBackNamed(
+			hooks.NewServerDemotionHook(config.Server.Slowdown, config.Server.RTimeout),
+		)
 	}
 
 	// adjust app server request id if specified
@@ -160,20 +134,21 @@ func (s *AppServer) Run() {
 		maxHeaderBytes = config.Server.MaxHeaderBytes
 	}
 
-	listener := listeners.New(config.Server.HTTP2)
-	s.hooks.RequestReceived.PushFrontNamed(listener.RequestReceivedHook())
-
+	// register server
 	log := s.loggerNew("GOGO")
+
+	listener := listeners.New(config.Server.HTTP2)
+	s.RequestReceived.PushFrontNamed(listener.RequestReceivedHook())
 
 	conn, err := listener.Listen(network, addr)
 	if err != nil {
-		log.Fatalf("net.Listen(%s, %s): %v", network, addr, err)
+		log.Fatalf("listeners.Listen(%s, %s): %v", network, addr, err)
 	}
-	log.Infof("Listened on %s:%s", network, addr)
+	log.Infof("Listened on %s://%s", network, addr)
 
 	server := &http.Server{
 		Addr:           s.localAddr,
-		Handler:        s,
+		Handler:        s.AppGroup,
 		ReadTimeout:    time.Duration(rtimeout) * time.Second,
 		WriteTimeout:   time.Duration(wtimeout) * time.Second,
 		MaxHeaderBytes: maxHeaderBytes,
@@ -223,18 +198,17 @@ func (s *AppServer) RunWithHandler(handler Handler) {
 
 // Serve runs a server with graceful shutdown feature
 func (s *AppServer) Serve() {
-	localSig := make(chan os.Signal, 1)
-	signal.Notify(localSig, os.Interrupt)
+	s.localSig = make(chan os.Signal, 1)
+	signal.Notify(s.localSig, os.Interrupt)
 
-	if len(localSig) == 0 {
-		go s.Run()
-	}
+	go s.Run()
 
-	<-localSig
+	<-s.localSig
 
 	log := s.loggerNew("GOGO")
 	log.Info("Shutting down server ....")
 
+	// NOTE: 500*time.Millinsecond is copied from net/http
 	ctx, _ := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	s.localServ.Shutdown(ctx)
 

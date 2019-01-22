@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -57,9 +56,7 @@ func Test_Group_Proxy(t *testing.T) {
 			r.URL.RawPath = "/backend"
 		},
 	}
-	server.Proxy("GET", "/proxy", proxy, func(w Responser, b []byte) []byte {
-		return []byte(strings.ToUpper(string(b)))
-	})
+	server.Proxy("GET", "/proxy", proxy)
 
 	// start server
 	ts := httptesting.NewServer(server, false)

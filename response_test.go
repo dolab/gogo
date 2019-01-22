@@ -45,29 +45,6 @@ func Test_ResponseFlushHeader(t *testing.T) {
 	it.NotEqual(http.StatusOK, recorder.Code)
 }
 
-func Test_ResponseFlushHeaderWithFilters(t *testing.T) {
-	it := assert.New(t)
-	counter := 0
-	recorder := httptest.NewRecorder()
-	filter1 := func(r Responser, b []byte) []byte {
-		counter++
-
-		return b
-	}
-	filter2 := func(r Responser, b []byte) []byte {
-		counter++
-
-		return b
-	}
-
-	response := NewResponse(recorder)
-	response.Before(filter1)
-	response.Before(filter2)
-
-	response.Write([]byte(""))
-	it.Equal(2, counter)
-}
-
 func Test_ResponseWrite(t *testing.T) {
 	it := assert.New(t)
 	recorder := httptest.NewRecorder()
