@@ -34,6 +34,10 @@ func (render *DefaultRender) ContentType() string {
 }
 
 func (render *DefaultRender) Render(v interface{}) error {
+	if v == nil {
+		return nil
+	}
+
 	var (
 		err error
 	)
@@ -98,6 +102,14 @@ func (render *HashRender) ContentType() string {
 }
 
 func (render *HashRender) Render(v interface{}) error {
+	if v == nil {
+		render.h.Reset()
+		render.h.Write([]byte(""))
+		render.w.Header().Set("Etag", hex.EncodeToString(render.h.Sum(nil)))
+
+		return nil
+	}
+
 	var (
 		// using bytes.Buffer for efficient I/O
 		buf *bytes.Buffer
@@ -209,6 +221,10 @@ func (render *JsonRender) ContentType() string {
 }
 
 func (render *JsonRender) Render(v interface{}) error {
+	if v == nil {
+		return nil
+	}
+
 	return json.NewEncoder(render.w).Encode(v)
 }
 
@@ -233,6 +249,10 @@ func (render *XmlRender) ContentType() string {
 }
 
 func (render *XmlRender) Render(v interface{}) error {
+	if v == nil {
+		return nil
+	}
+
 	// hijack xml header
 	_, err := io.Copy(render.w, render.header)
 	if err != nil {
@@ -270,9 +290,11 @@ func (render *JsonpRender) Render(v interface{}) error {
 		return err
 	}
 
-	err = json.NewEncoder(render.w).Encode(v)
-	if err != nil {
-		return err
+	if v != nil {
+		err = json.NewEncoder(render.w).Encode(v)
+		if err != nil {
+			return err
+		}
 	}
 
 	_, err = io.Copy(render.w, render.suffix)

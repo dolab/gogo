@@ -117,7 +117,7 @@ func Test_Server_Race(t *testing.T) {
 	config, _ := fakeConfig("application.json")
 
 	server := NewAppServer(config, logger)
-	server.hooks.RequestReceived.PushFront(func(w http.ResponseWriter, r *http.Request) bool {
+	server.RequestReceived.PushFront(func(w http.ResponseWriter, r *http.Request) bool {
 		time.Sleep(time.Millisecond)
 		r.Header.Add("X-Server-Race", r.Header.Get("X-Server-Race"))
 		return true
@@ -275,7 +275,7 @@ func Test_ServerWithThroughput(t *testing.T) {
 	config, _ := fakeConfig("application.throttle.json")
 
 	server := NewAppServer(config, logger)
-	server.hooks.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(1))
+	server.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(1))
 
 	server.GET("/server/throughput", func(ctx *Context) {
 		ctx.SetStatus(http.StatusNoContent)
@@ -326,7 +326,7 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	config, _ := fakeConfig("application.throttle.json")
 
 	server := NewAppServer(config, logger)
-	server.hooks.RequestReceived.PushFrontNamed(hooks.NewServerDemotionHook(1, 1))
+	server.RequestReceived.PushFrontNamed(hooks.NewServerDemotionHook(1, 1))
 
 	server.GET("/server/concurrency", func(ctx *Context) {
 		if !ctx.Params.HasQuery("fast") {

@@ -8,25 +8,30 @@ import (
 	"strings"
 
 	"github.com/dolab/gogo/internal/params"
+	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httpdispatch"
 )
 
 // ContextHandle wraps handler with extra metadata, such as package name, controller name and action name, etc.
 type ContextHandle struct {
-	pkg     string
-	ctrl    string
-	action  string
-	server  *AppServer
-	handler http.HandlerFunc
-	filters []Middleware
+	// server  *AppServer
+	pkg            string
+	ctrl           string
+	action         string
+	handler        http.HandlerFunc
+	middlewares    []Middleware
+	requestRouted  hooks.HookList
+	responseReady  hooks.HookList
+	responseAlways hooks.HookList
 }
 
 // NewContextHandle returns new *ContextHandle with handler and metadata
-func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Middleware) *ContextHandle {
+func NewContextHandle(handler http.HandlerFunc, middlewares []Middleware,
+	requestRouted, responseReady, responseAlways hooks.HookList) *ContextHandle {
 	var rval reflect.Value
 
 	if handler == nil {
-		rval = reflect.ValueOf(filters[len(filters)-1])
+		rval = reflect.ValueOf(middlewares[len(middlewares)-1])
 	} else {
 		rval = reflect.ValueOf(handler)
 	}
@@ -58,31 +63,34 @@ func NewContextHandle(server *AppServer, handler http.HandlerFunc, filters []Mid
 	}
 
 	return &ContextHandle{
-		pkg:     vars[0],
-		ctrl:    vars[1],
-		action:  vars[2],
-		server:  server,
-		handler: handler,
-		filters: filters,
+		pkg:            vars[0],
+		ctrl:           vars[1],
+		action:         vars[2],
+		handler:        handler,
+		middlewares:    middlewares,
+		requestRouted:  requestRouted,
+		responseReady:  responseReady,
+		responseAlways: responseAlways,
 	}
 }
 
 // Handle implements httpdispatch.Handler interface
 func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpdispatch.Params) {
-	if !ch.server.hooks.RequestRouted.Run(w, r) {
+	// invoke ResponseAlways
+	defer ch.responseAlways.Run(w, r)
+
+	// invoke RequestRouted
+	if !ch.requestRouted.Run(w, r) {
 		return
 	}
-
-	// invoke ResponseAlways
-	defer ch.server.hooks.ResponseAlways.Run(w, r)
 
 	ctx := contextNew(w, r, params.NewParams(r, ps), ch.pkg, ch.ctrl, ch.action)
 	defer contextReuse(ctx)
 
 	if ch.handler == nil {
-		ctx.run(nil, ch.filters)
+		ctx.run(nil, ch.middlewares, ch.responseReady)
 	} else {
-		ctx.run(ch.handler, ch.filters)
+		ctx.run(ch.handler, ch.middlewares, ch.responseReady)
 	}
 }
 
@@ -109,9 +117,10 @@ type FakeHandle struct {
 }
 
 // NewFakeHandle returns new handler with stubbed http.ResponseWriter
-func NewFakeHandle(server *AppServer, handler http.HandlerFunc, filters []Middleware, recorder http.ResponseWriter) *FakeHandle {
+func NewFakeHandle(handler http.HandlerFunc, filters []Middleware, recorder http.ResponseWriter,
+	requestRouted, responseReady, responseAlways hooks.HookList) *FakeHandle {
 	ch := &FakeHandle{
-		ContextHandle: NewContextHandle(server, handler, filters),
+		ContextHandle: NewContextHandle(handler, filters, requestRouted, responseReady, responseAlways),
 		recorder:      recorder,
 	}
 
@@ -135,7 +144,7 @@ func NewNotFoundHandle(server *AppServer) *NotFoundHandle {
 	})
 
 	return &NotFoundHandle{
-		ContextHandle: NewContextHandle(server, handler, nil),
+		ContextHandle: NewContextHandle(handler, nil, hooks.HookList{}, hooks.HookList{}, hooks.HookList{}),
 	}
 }
 
@@ -156,7 +165,7 @@ func NewMethodNotAllowedHandle(server *AppServer) *MethodNotAllowedHandle {
 	})
 
 	return &MethodNotAllowedHandle{
-		ContextHandle: NewContextHandle(server, handler, nil),
+		ContextHandle: NewContextHandle(handler, nil, hooks.HookList{}, hooks.HookList{}, hooks.HookList{}),
 	}
 }
 

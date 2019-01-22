@@ -11,6 +11,7 @@ import (
 
 	"github.com/dolab/gogo/internal/params"
 	"github.com/dolab/gogo/internal/render"
+	"github.com/dolab/gogo/pkgs/hooks"
 )
 
 var (
@@ -51,15 +52,14 @@ type Context struct {
 	mux            sync.RWMutex
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
+	responseReady  hooks.HookList
+	cursor         int8
 
-	pkg      string
-	ctrl     string
-	action   string
-	issuedAt time.Time
-
+	pkg         string
+	ctrl        string
+	action      string
 	middlewares []Middleware
-	maxCursor   int8
-	cursor      int8
+	issuedAt    time.Time
 }
 
 // NewContext returns a *Context without initialization
@@ -322,7 +322,7 @@ func (c *Context) Xml(data interface{}) error {
 }
 
 // Render responses client with data rendered by Render
-func (c *Context) Render(w render.Render, data interface{}) error {
+func (c *Context) Render(rr render.Render, data interface{}) error {
 	// always abort
 	c.Abort()
 
@@ -331,20 +331,27 @@ func (c *Context) Render(w render.Render, data interface{}) error {
 		c.SetStatus(coder.StatusCode())
 	}
 
-	// currect response header of content-type
-	c.SetHeader("Content-Type", w.ContentType())
+	// currect response content-type header
+	if contentType := rr.ContentType(); contentType != "" {
+		c.SetHeader("Content-Type", contentType)
+	}
 
 	// flush header
 	c.Response.FlushHeader()
 
-	// shortcut for nil
+	// invoke ResponseReady
+	if !c.responseReady.Run(c.Response, c.Request) {
+		return nil
+	}
+
+	// shortcut for nil data
 	if data == nil {
 		return nil
 	}
 
-	err := w.Render(data)
+	err := rr.Render(data)
 	if err != nil {
-		c.Logger.Errorf("%T.Render(?): %v", w, err)
+		c.Logger.Errorf("%T.Render(?): %v", rr, err)
 	}
 
 	return err
@@ -361,7 +368,7 @@ func (c *Context) Next() {
 
 	c.cursor++
 
-	if c.cursor >= 0 && c.cursor < c.maxCursor {
+	if c.cursor >= 0 && c.cursor < int8(len(c.middlewares)) {
 		c.middlewares[c.cursor](c)
 	} else {
 		c.Logger.Warn("No more executer in the chain.")
@@ -374,26 +381,35 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(handler http.Handler, middlewares []Middleware) {
+func (c *Context) run(handler http.Handler, middlewares []Middleware, responseReady hooks.HookList) {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	// reset internal
 	c.settings = nil
 	c.frozenSettings = nil
-	c.issuedAt = time.Now()
+	c.responseReady = responseReady
 	c.middlewares = middlewares
-	c.maxCursor = int8(len(c.middlewares))
+	c.issuedAt = time.Now()
 	c.cursor = -1
 
 	// start chains
 	c.Next()
 
-	// invoke http.Handler if chained
+	// ghost for non render
 	if c.cursor >= 0 && c.cursor < math.MaxInt8 {
 		c.Abort()
 
+		// invoke ResponseReady
+		if !c.responseReady.Run(c.Response, c.Request) {
+			return
+		}
+
+		// invoke http.Handler if defined
 		if handler != nil {
 			handler.ServeHTTP(c.Response, c.Request)
 		} else {
-			// ghost, response status code only
+			// response status code always
 			c.Response.FlushHeader()
 		}
 	}

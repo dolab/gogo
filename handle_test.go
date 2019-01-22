@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dolab/gogo/pkgs/hooks"
+
 	"github.com/golib/assert"
 )
 
@@ -46,11 +48,12 @@ func (_ *_fakeController) Action(ctx *Context) {
 func Test_ContextHandle(t *testing.T) {
 	it := assert.New(t)
 
+	h := hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
 
-	ch := NewContextHandle(fakeServer(), fakePackageHandler, nil)
+	ch := NewContextHandle(fakePackageHandler, nil, h, h, h)
 	ch.Handle(w, r, nil)
 
 	it.Equal(http.StatusNotImplemented, w.Code)
@@ -58,11 +61,12 @@ func Test_ContextHandle(t *testing.T) {
 }
 
 func Benchmark_ContextHandle(b *testing.B) {
+	h := hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
 
-	ch := NewContextHandle(fakeServer(), fakePackageHandler, nil)
+	ch := NewContextHandle(fakePackageHandler, nil, h, h, h)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -74,20 +78,22 @@ func Benchmark_ContextHandle(b *testing.B) {
 func Test_ContextHandleWithHandler(t *testing.T) {
 	it := assert.New(t)
 
+	h := hooks.HookList{}
+
 	// global
-	ch := NewContextHandle(nil, fakeGlobalHandler, nil)
+	ch := NewContextHandle(fakeGlobalHandler, nil, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("<http.HandlerFunc>", ch.action)
 
 	// package
-	ch = NewContextHandle(nil, fakePackageHandler, nil)
+	ch = NewContextHandle(fakePackageHandler, nil, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("fakePackageHandler", ch.action)
 
 	// controller
-	ch = NewContextHandle(nil, fakeControllerHandler.Action, nil)
+	ch = NewContextHandle(fakeControllerHandler.Action, nil, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("*_fakeControllerHandler", ch.ctrl)
 	it.Equal("Action", ch.action)
@@ -96,20 +102,22 @@ func Test_ContextHandleWithHandler(t *testing.T) {
 func Test_ContextHandleWithAction(t *testing.T) {
 	it := assert.New(t)
 
+	h := hooks.HookList{}
+
 	// global
-	ch := NewContextHandle(nil, nil, []Middleware{fakeGlobalAction})
+	ch := NewContextHandle(nil, []Middleware{fakeGlobalAction}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("<http.HandlerFunc>", ch.action)
 
 	// package
-	ch = NewContextHandle(nil, nil, []Middleware{fakePackageAction})
+	ch = NewContextHandle(nil, []Middleware{fakePackageAction}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("fakePackageAction", ch.action)
 
 	// controller
-	ch = NewContextHandle(nil, nil, []Middleware{fakeController.Action})
+	ch = NewContextHandle(nil, []Middleware{fakeController.Action}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("*_fakeController", ch.ctrl)
 	it.Equal("Action", ch.action)
@@ -118,11 +126,12 @@ func Test_ContextHandleWithAction(t *testing.T) {
 func Test_FakeHandle(t *testing.T) {
 	it := assert.New(t)
 
+	h := hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
 
-	fh := NewFakeHandle(fakeServer(), fakePackageHandler, nil, w)
+	fh := NewFakeHandle(fakePackageHandler, nil, w, h, h, h)
 	fh.Handle(nil, r, nil)
 
 	it.Equal(http.StatusNotImplemented, w.Code)

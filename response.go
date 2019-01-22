@@ -13,9 +13,8 @@ const (
 type Response struct {
 	http.ResponseWriter
 
-	filters []ResponseFilter
-	status  int
-	size    int
+	status int
+	size   int
 }
 
 // NewResponse returns a Responser with w given.
@@ -31,9 +30,42 @@ func NewResponse(w http.ResponseWriter) Responser {
 	return response
 }
 
-// Before registers filters which invoked before response has written
-func (r *Response) Before(filter ResponseFilter) {
-	r.filters = append(r.filters, filter)
+// WriteHeader sets response status code by overwriting underline
+func (r *Response) WriteHeader(code int) {
+	if code > 0 {
+		r.status = code
+
+		if r.HeaderFlushed() {
+			log.Println("[WARN]", ErrHeaderFlushed.Error())
+		}
+	}
+}
+
+// Write send data to client, and returns size of data written. It
+// returns error of underline failed.
+func (r *Response) Write(data []byte) (size int, err error) {
+	r.FlushHeader()
+
+	// shortcut for nil
+	if data == nil {
+		return
+	}
+
+	size, err = r.ResponseWriter.Write(data)
+
+	r.size += size
+
+	return
+}
+
+// Flush tryes flushing to client if possible
+func (r *Response) Flush() {
+	flusher, ok := r.ResponseWriter.(http.Flusher)
+	if ok {
+		flusher.Flush()
+	} else {
+		log.Println("[WARN] http.ResponseWriter does not implement http.Flusher")
+	}
 }
 
 // Status returns current response status code
@@ -51,17 +83,6 @@ func (r *Response) HeaderFlushed() bool {
 	return r.size != nonHeaderFlushed
 }
 
-// WriteHeader sets response status code by overwriting underline
-func (r *Response) WriteHeader(code int) {
-	if code > 0 {
-		r.status = code
-
-		if r.HeaderFlushed() {
-			log.Println("[WARN] ", ErrHeaderFlushed.Error())
-		}
-	}
-}
-
 // FlushHeader writes response headers of status code, and resets size of response.
 func (r *Response) FlushHeader() {
 	if r.HeaderFlushed() {
@@ -72,39 +93,9 @@ func (r *Response) FlushHeader() {
 	r.ResponseWriter.WriteHeader(r.status)
 }
 
-// Write writes data to client, and returns size of data written. It also
-// invokes before filters if exist. It returns error when failed.
-func (r *Response) Write(data []byte) (size int, err error) {
-	r.FlushHeader()
-
-	// shortcut for nil
-	if data == nil {
-		return
-	}
-
-	// apply filters
-	for i := len(r.filters) - 1; i >= 0; i-- {
-		data = r.filters[i](r, data)
-	}
-
-	size, err = r.ResponseWriter.Write(data)
-
-	r.size += size
-	return
-}
-
-// Flush tryes flushing to client if possible
-func (r *Response) Flush() {
-	flush, ok := r.ResponseWriter.(http.Flusher)
-	if ok {
-		flush.Flush()
-	}
-}
-
 // Hijack resets the current *Response with new http.ResponseWriter
 func (r *Response) Hijack(w http.ResponseWriter) {
 	r.ResponseWriter = w
 	r.status = http.StatusOK
 	r.size = nonHeaderFlushed
-	r.filters = nil
 }
