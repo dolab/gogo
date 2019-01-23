@@ -20,14 +20,14 @@ type ContextHandle struct {
 	action         string
 	handler        http.HandlerFunc
 	middlewares    []Middleware
-	requestRouted  hooks.HookList
-	responseReady  hooks.HookList
-	responseAlways hooks.HookList
+	requestRouted  *hooks.HookList
+	responseReady  *hooks.HookList
+	responseAlways *hooks.HookList
 }
 
 // NewContextHandle returns new *ContextHandle with handler and metadata
 func NewContextHandle(handler http.HandlerFunc, middlewares []Middleware,
-	requestRouted, responseReady, responseAlways hooks.HookList) *ContextHandle {
+	requestRouted, responseReady, responseAlways *hooks.HookList) *ContextHandle {
 	var rval reflect.Value
 
 	if handler == nil {
@@ -118,7 +118,7 @@ type FakeHandle struct {
 
 // NewFakeHandle returns new handler with stubbed http.ResponseWriter
 func NewFakeHandle(handler http.HandlerFunc, filters []Middleware, recorder http.ResponseWriter,
-	requestRouted, responseReady, responseAlways hooks.HookList) *FakeHandle {
+	requestRouted, responseReady, responseAlways *hooks.HookList) *FakeHandle {
 	ch := &FakeHandle{
 		ContextHandle: NewContextHandle(handler, filters, requestRouted, responseReady, responseAlways),
 		recorder:      recorder,
@@ -142,9 +142,10 @@ func NewNotFoundHandle(server *AppServer) *NotFoundHandle {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Request(%s %s): not found", r.Method, r.URL.RequestURI()), http.StatusNotFound)
 	})
+	hook := &hooks.HookList{}
 
 	return &NotFoundHandle{
-		ContextHandle: NewContextHandle(handler, nil, hooks.HookList{}, hooks.HookList{}, hooks.HookList{}),
+		ContextHandle: NewContextHandle(handler, nil, hook, hook, hook),
 	}
 }
 
@@ -163,9 +164,10 @@ func NewMethodNotAllowedHandle(server *AppServer) *MethodNotAllowedHandle {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Request(%s %s): method not allowed", r.Method, r.URL.RequestURI()), http.StatusMethodNotAllowed)
 	})
+	hook := &hooks.HookList{}
 
 	return &MethodNotAllowedHandle{
-		ContextHandle: NewContextHandle(handler, nil, hooks.HookList{}, hooks.HookList{}, hooks.HookList{}),
+		ContextHandle: NewContextHandle(handler, nil, hook, hook, hook),
 	}
 }
 

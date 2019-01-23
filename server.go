@@ -23,7 +23,7 @@ var (
 // AppServer defines a server component of gogo
 type AppServer struct {
 	*AppGroup
-	hooks.ServerHooks
+	*hooks.ServerHooks
 
 	config       Configer
 	logger       Logger
@@ -45,6 +45,9 @@ func NewAppServer(config Configer, logger Logger) *AppServer {
 
 	// init AppGroup for server
 	server.AppGroup = NewAppGroup("/", server)
+
+	// init ServerHooks
+	server.ServerHooks = hooks.NewServerHooks()
 
 	return server
 }

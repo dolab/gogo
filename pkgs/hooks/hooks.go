@@ -25,8 +25,8 @@ type HookList struct {
 	AfterEach func(item HookItem) bool
 }
 
-// copy creates a copy of the hook list.
-func (l *HookList) copy() HookList {
+// Copy creates a copy of the hook list.
+func (l *HookList) Copy() HookList {
 	list := HookList{
 		AfterEach: l.AfterEach,
 	}
@@ -171,6 +171,10 @@ type HookItem struct {
 
 // Run executes all hooks in the list with given http.ResponseWriter and *http.Request.
 func (l *HookList) Run(w http.ResponseWriter, r *http.Request) bool {
+	if l == nil {
+		return true
+	}
+
 	for i, h := range l.list {
 		if !h.Apply(w, r) {
 			return false
