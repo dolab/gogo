@@ -52,7 +52,7 @@ type Context struct {
 	mux            sync.RWMutex
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
-	responseReady  hooks.HookList
+	responseReady  *hooks.HookList
 	cursor         int8
 
 	pkg         string
@@ -381,15 +381,15 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(handler http.Handler, middlewares []Middleware, responseReady hooks.HookList) {
+func (c *Context) run(handler http.Handler, middlewares []Middleware, responseReady *hooks.HookList) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
 	// reset internal
 	c.settings = nil
 	c.frozenSettings = nil
-	c.responseReady = responseReady
 	c.middlewares = middlewares
+	c.responseReady = responseReady
 	c.issuedAt = time.Now()
 	c.cursor = -1
 

@@ -55,7 +55,7 @@ func Test_NewWithFilename(t *testing.T) {
 	it := assert.New(t)
 
 	root, _ := os.Getwd()
-	filename := path.Join(root, "skeleton", "gogo", "config", "application.json")
+	filename := path.Join(root, "skeleton", "config", "application.json")
 
 	app := New("development", filename)
 	it.Equal("gogo", app.config.RunName())

@@ -14,19 +14,29 @@ import (
 type ServerHooks struct {
 	// RequestReceived is invoked as soon as a request enters the
 	// server at the earliest available moment.
-	RequestReceived HookList
+	RequestReceived *HookList
 
 	// RequestRouted is invoked when a request has been routed to a
 	// particular handler of the server.
-	RequestRouted HookList
+	RequestRouted *HookList
 
 	// ResponseReady is invoked when a request has been handled, between response header
 	// has been flushed and response data is ready to be sent to the client.
-	ResponseReady HookList
+	ResponseReady *HookList
 
 	// ResponseAlways is invoked when all bytes of a response (including an error
 	// response) have been written.
-	ResponseAlways HookList
+	ResponseAlways *HookList
+}
+
+// NewServerHooks returns empty hooks container for server
+func NewServerHooks() *ServerHooks {
+	return &ServerHooks{
+		RequestReceived: &HookList{},
+		RequestRouted:   &HookList{},
+		ResponseReady:   &HookList{},
+		ResponseAlways:  &HookList{},
+	}
 }
 
 // NewServerDebugLogHook returns a func for server debugging with log.

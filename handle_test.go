@@ -48,7 +48,7 @@ func (_ *_fakeController) Action(ctx *Context) {
 func Test_ContextHandle(t *testing.T) {
 	it := assert.New(t)
 
-	h := hooks.HookList{}
+	h := &hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
@@ -61,7 +61,7 @@ func Test_ContextHandle(t *testing.T) {
 }
 
 func Benchmark_ContextHandle(b *testing.B) {
-	h := hooks.HookList{}
+	h := &hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))
@@ -78,7 +78,7 @@ func Benchmark_ContextHandle(b *testing.B) {
 func Test_ContextHandleWithHandler(t *testing.T) {
 	it := assert.New(t)
 
-	h := hooks.HookList{}
+	h := &hooks.HookList{}
 
 	// global
 	ch := NewContextHandle(fakeGlobalHandler, nil, h, h, h)
@@ -102,7 +102,7 @@ func Test_ContextHandleWithHandler(t *testing.T) {
 func Test_ContextHandleWithAction(t *testing.T) {
 	it := assert.New(t)
 
-	h := hooks.HookList{}
+	h := &hooks.HookList{}
 
 	// global
 	ch := NewContextHandle(nil, []Middleware{fakeGlobalAction}, h, h, h)
@@ -126,7 +126,7 @@ func Test_ContextHandleWithAction(t *testing.T) {
 func Test_FakeHandle(t *testing.T) {
 	it := assert.New(t)
 
-	h := hooks.HookList{}
+	h := &hooks.HookList{}
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest(http.MethodGet, "https://exmaple.com", nil)
 	r = r.WithContext(context.WithValue(context.Background(), ctxLoggerKey, NewAppLogger("nil", "")))

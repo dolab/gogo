@@ -403,28 +403,3 @@ func Test_Server_loggerNew(t *testing.T) {
 
 	it.Equal("di-tseuqer-x", alog.RequestID())
 }
-
-func Test_Server_loggerNewWithReuse(t *testing.T) {
-	it := assert.New(t)
-	logger := NewAppLogger("nil", "")
-	config, _ := fakeConfig("application.throttle.json")
-
-	server := NewAppServer(config, logger)
-
-	// new with request id
-	alog := server.loggerNew("di-tseuqer-x")
-	if it.NotNil(alog) {
-		it.Implements((*Logger)(nil), alog)
-
-		it.Equal("di-tseuqer-x", alog.RequestID())
-	}
-	server.loggerReuse(alog)
-
-	blog := server.loggerNew("x-request-id")
-	if it.NotNil(blog) {
-		it.Implements((*Logger)(nil), blog)
-
-		it.Equal(fmt.Sprintf("%p", alog), fmt.Sprintf("%p", blog))
-		it.Equal("x-request-id", blog.RequestID())
-	}
-}
