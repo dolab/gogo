@@ -2,11 +2,12 @@ package gogo
 
 import (
 	"net/http"
+	"net/http/httputil"
 
 	"github.com/dolab/httpdispatch"
 )
 
-// Configer represents application configurations
+// A Configer represents config
 type Configer interface {
 	RunMode() RunMode
 	RunName() string
@@ -15,7 +16,36 @@ type Configer interface {
 	UnmarshalJSON(v interface{}) error
 }
 
-// Handler represents server handlers
+// A Grouper represents routers
+type Grouper interface {
+	NewGroup(prefix string, middlewares ...Middleware) Grouper
+	Resource(uri string, resource interface{}) Grouper
+	SetHandler(handler Handler)
+	Use(middlewares ...Middleware)
+	OPTIONS(uri string, action Middleware)
+	HEAD(uri string, action Middleware)
+	POST(uri string, action Middleware)
+	GET(uri string, action Middleware)
+	PUT(uri string, action Middleware)
+	PATCH(uri string, action Middleware)
+	DELETE(uri string, action Middleware)
+	Any(uri string, action Middleware)
+	Static(uri, root string)
+	Proxy(method, uri string, proxy *httputil.ReverseProxy)
+	HandlerFunc(method, uri string, fn http.HandlerFunc)
+	Handler(method, uri string, handler http.Handler)
+	Handle(method, uri string, action Middleware)
+	MockHandle(method, uri string, recorder http.ResponseWriter, action Middleware)
+}
+
+// A Servicer represents application
+type Servicer interface {
+	Init(group Grouper, config Configer)
+	Middlewares()
+	Resources()
+}
+
+// A Handler represents handlers
 type Handler interface {
 	http.Handler
 

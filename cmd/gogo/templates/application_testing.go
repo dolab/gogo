@@ -1,4 +1,7 @@
-package controllers
+package templates
+
+var (
+	applicationTestingTemplate = `package controllers
 
 import (
 	"os"
@@ -18,8 +21,8 @@ func TestMain(m *testing.M) {
 		srcPath = path.Clean("../../")
 	)
 
-	app := New(runMode, srcPath)
-	app.Resources()
+	app := gogo.New(runMode, srcPath)
+	app.NewResources(New())
 
 	gogotesting = httptesting.NewServer(app, false)
 
@@ -29,3 +32,5 @@ func TestMain(m *testing.M) {
 
 	os.Exit(code)
 }
+`
+)

@@ -41,8 +41,12 @@ func (ct ComponentType) Root(pwd string) string {
 
 	pwd = strings.TrimSuffix(pwd, "/")
 	pwd = strings.TrimSuffix(pwd, "/gogo")
+	pwd = strings.TrimSuffix(pwd, "/app/controllers")
+	pwd = strings.TrimSuffix(pwd, "/app/middlewares")
+	pwd = strings.TrimSuffix(pwd, "/app/models")
+	pwd = strings.TrimSuffix(pwd, "/app/protos")
 
-	return path.Clean(path.Join(pwd, "gogo", path.Join(dirs...)))
+	return path.Clean(path.Join(pwd, path.Join(dirs...)))
 }
 
 func (ct ComponentType) String() string {
@@ -176,13 +180,13 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 
 	root, err := os.Getwd()
 	if err != nil {
-		stderr.Error(err.Error())
+		log.Error(err.Error())
 
 		return err
 	}
 
 	comRoot := com.Root(root)
-	if !strings.Contains(comRoot, "/gogo/") {
+	if strings.Count(comRoot, "/app/") != 1 {
 		return ErrInvalidRoot
 	}
 
@@ -195,14 +199,14 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 	// generate xxx.go
 	fd, err := os.OpenFile(path.Join(comRoot, Component.toFilename(comName)), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		stderr.Error(err.Error())
+		log.Error(err.Error())
 
 		return err
 	}
 
 	err = box.Lookup("template_"+com.String()).Execute(fd, comArgs)
 	if err != nil {
-		stderr.Errorf(err.Error())
+		log.Errorf(err.Error())
 
 		return err
 	}
@@ -210,14 +214,14 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 	// generate xxx_test.go
 	fd, err = os.OpenFile(path.Join(comRoot, Component.toFilename(comName+"_test")), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		stderr.Error(err.Error())
+		log.Error(err.Error())
 
 		return err
 	}
 
 	err = box.Lookup("template_"+com.String()+"_test").Execute(fd, comArgs)
 	if err != nil {
-		stderr.Errorf(err.Error())
+		log.Errorf(err.Error())
 
 		return err
 	}

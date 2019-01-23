@@ -64,6 +64,29 @@ func (s *AppServer) Address() string {
 	return s.localAddr
 }
 
+// NewService register all resources of service with middlewares
+func (s *AppServer) NewService(svc Servicer) *AppServer {
+	svc.Init(s.AppGroup, s.config)
+
+	// register middlewares
+	svc.Middlewares()
+
+	// register resources
+	svc.Resources()
+
+	return s
+}
+
+// NewResources register all resources of service without middlewares
+func (s *AppServer) NewResources(svc Servicer) *AppServer {
+	svc.Init(s.AppGroup, s.config)
+
+	// register resources
+	svc.Resources()
+
+	return s
+}
+
 // Run starts the http server with AppGroup as http.Handler
 //
 // NOTE: Run apply throughput and concurrency to http.Server.
@@ -91,9 +114,9 @@ func (s *AppServer) Run() {
 	}
 
 	// concurrency of bucket token
-	if config.Server.Slowdown > 0 {
+	if config.Server.Demotion > 0 {
 		s.RequestReceived.PushBackNamed(
-			hooks.NewServerDemotionHook(config.Server.Slowdown, config.Server.RTimeout),
+			hooks.NewServerDemotionHook(config.Server.Demotion, config.Server.RTimeout),
 		)
 	}
 

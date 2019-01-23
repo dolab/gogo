@@ -261,9 +261,9 @@ func main() {
 	"addr": "localhost",
 	"port": 9090,
 	"throttle": 3000, // RPS, throughput of per-seconds
-	"slowdown": 30000, // TPS, concurrency of server
-	"request_timeout": 30,
-	"response_timeout": 30,
+	"demotion": 6000, // TPS, concurrency of server
+	"request_timeout": 3,
+	"response_timeout": 10,
 	"http2": false, // serve with http2
 	"ssl": false,
 	"ssl_cert": "/path/to/ssl/cert",

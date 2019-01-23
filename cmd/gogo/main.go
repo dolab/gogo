@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/dolab/gogo"
 	"github.com/dolab/gogo/cmd/commands"
+	"github.com/dolab/gogo/cmd/gogo/templates"
 	"github.com/golib/cli"
 )
 
@@ -26,7 +27,7 @@ func init() {
 		"lowercase": strings.ToLower,
 	}).ParseGlob(path.Join(filepath.Dir(filename), "templates", "*"))
 	if err != nil {
-		box = commands.Box()
+		box = templates.Box()
 	}
 }
 

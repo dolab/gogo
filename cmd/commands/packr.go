@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bytes"
-	"log"
 	"text/template"
 
 	"github.com/golib/cli"

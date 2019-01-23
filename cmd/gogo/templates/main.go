@@ -1,4 +1,7 @@
-package main
+package templates
+
+var (
+	mainTemplate = `package main
 
 import (
 	"flag"
@@ -7,17 +10,17 @@ import (
 
 	"github.com/dolab/gogo"
 
-	"github.com/skeleton/app/controllers"
+	"{{.Namespace}}/{{.Application}}/app/controllers"
 )
 
 var (
 	runMode string // app run mode, available values are [development|test|production], default to development
-	srcPath string // app source path, e.g. /home/deploy/websites/helloapp
+	srcPath string // app config path, e.g. /home/deploy/websites/helloapp
 )
 
 func main() {
-	flag.StringVar(&runMode, "runMode", "development", "example -runMode=[development|test|production]")
-	flag.StringVar(&srcPath, "srcPath", "", "example -srcPath=/path/to/[config/application.json]")
+	flag.StringVar(&runMode, "runMode", "development", "{{.Application}} -runMode=[development|test|production]")
+	flag.StringVar(&srcPath, "srcPath", "", "{{.Application}} -srcPath=/path/to/[config/application.json]")
 	flag.Parse()
 
 	// verify run mode
@@ -38,5 +41,7 @@ func main() {
 		srcPath = path.Clean(srcPath)
 	}
 
-	controllers.New(runMode, srcPath).Run()
+	gogo.New(runMode, srcPath).NewService(controllers.New()).Serve()
 }
+`
+)
