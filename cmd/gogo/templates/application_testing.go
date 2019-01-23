@@ -8,6 +8,7 @@ import (
 	"path"
 	"testing"
 
+	"github.com/dolab/gogo"
 	"github.com/dolab/httptesting"
 )
 
