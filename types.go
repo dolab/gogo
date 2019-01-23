@@ -40,7 +40,7 @@ type Grouper interface {
 
 // A Servicer represents application
 type Servicer interface {
-	Init(group Grouper, config Configer)
+	Init(config Configer, group Grouper)
 	Middlewares()
 	Resources()
 }

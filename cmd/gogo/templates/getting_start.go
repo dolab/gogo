@@ -27,15 +27,15 @@ func (_ *_GettingStart) Hello(ctx *gogo.Context) {
 	gettingStartTestTemplate = `package controllers
 
 import (
-	"net/url"
 	"net/http"
+	"net/url"
 	"testing"
 )
 
 func Test_GettingStart_Hello(t *testing.T) {
 	// it should work without greeting
 	request := gogotesting.New(t)
-	request.Get("/@greeting/hello")
+	request.Get("/v1/@greeting/hello")
 
 	request.AssertOK()
 	request.AssertContains(Config.GettingStart.Greeting)
@@ -47,14 +47,14 @@ func Test_GettingStart_Hello(t *testing.T) {
 	params.Add("name", greeting)
 
 	request = gogotesting.New(t)
-	request.Get("/@greeting/hello", params)
+	request.Get("/v1/@greeting/hello", params)
 
 	request.AssertOK()
 	request.AssertContains(greeting)
 
 	// it should return 404 when not found
-	request := gogotesting.New(t)
-	request.Get("/@greeting/world")
+	request = gogotesting.New(t)
+	request.Get("/@greeting/hello")
 
 	request.AssertStatus(http.StatusNotFound)
 }

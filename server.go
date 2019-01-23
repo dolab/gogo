@@ -66,7 +66,7 @@ func (s *AppServer) Address() string {
 
 // NewService register all resources of service with middlewares
 func (s *AppServer) NewService(svc Servicer) *AppServer {
-	svc.Init(s.AppGroup, s.config)
+	svc.Init(s.config, s.AppGroup)
 
 	// register middlewares
 	svc.Middlewares()
@@ -79,7 +79,7 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 
 // NewResources register all resources of service without middlewares
 func (s *AppServer) NewResources(svc Servicer) *AppServer {
-	svc.Init(s.AppGroup, s.config)
+	svc.Init(s.config, s.AppGroup)
 
 	// register resources
 	svc.Resources()
