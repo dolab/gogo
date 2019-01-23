@@ -40,7 +40,7 @@ func NewAppGroup(prefix string, server *AppServer) *AppGroup {
 }
 
 // NewGroup returns a new *AppGroup which has the same prefix path and middlewares
-func (r *AppGroup) NewGroup(prefix string, middlewares ...Middleware) *AppGroup {
+func (r *AppGroup) NewGroup(prefix string, middlewares ...Middleware) Grouper {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
@@ -173,7 +173,7 @@ func (r *AppGroup) Proxy(method string, rpath string, proxy *httputil.ReversePro
 // 		PUT		/article/:article	Article.Update
 // 		DELETE	/article/:article	Article.Destroy
 //
-func (r *AppGroup) Resource(resource string, controller interface{}) *AppGroup {
+func (r *AppGroup) Resource(resource string, controller interface{}) Grouper {
 	resource = strings.TrimSuffix(resource, "/")
 	if resource[0] != '/' {
 		resource = "/" + resource

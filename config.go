@@ -157,7 +157,7 @@ type ServerConfig struct {
 	Healthz bool `json:"healthz"` // enable /-/healthz
 
 	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
-	Slowdown  int    `json:"slowdown"`
+	Demotion  int    `json:"demotion"`
 	RequestID string `json:"request_id"`
 }
 

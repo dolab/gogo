@@ -10,7 +10,7 @@ var (
 
 type _GettingStart struct{}
 
-// @route GET /@getting_start/hello
+// @route GET /@gretting/hello
 func (_ *_GettingStart) Hello(ctx *gogo.Context) {
 	ctx.Logger.Warnf("Visiting domain is: %s", Config.Domain)
 
