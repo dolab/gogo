@@ -23,9 +23,9 @@ $ gogo -h
 # create a new application
 $ gogo new myapp
 
-# fix application import path
+# resolve dependences
 $ cd myapp
-$ source env.sh
+$ make
 
 # generate controller
 # NOTE: you should update application.go and add app.Resource("/user", User) route by hand
@@ -130,6 +130,8 @@ func main() {
 
 - Using group
 
+Group is useful when defining resources with shared middlewares and the same uri prefix.
+
 ```go
 package main
 
@@ -142,7 +144,7 @@ import (
 )
 
 func main() {
-	app := gogo.New("development", "")
+	app := gogo.NewDefaults()
 
 	// avoid server quit by registering recovery func global
 	app.Use(func(ctx *gogo.Context) {

@@ -1,18 +1,29 @@
 package gogo
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/golib/assert"
 )
 
 var (
+	fakePort   = 19090
 	fakeConfig = func(name string) (*AppConfig, error) {
 		root, _ := os.Getwd()
 
-		return NewAppConfig(path.Join(root, "skeleton", "config", name))
+		data, err := ioutil.ReadFile(path.Join(root, "skeleton", "config", name))
+		if err != nil {
+			panic(err)
+		}
+
+		fakePort++
+
+		return NewAppConfigFromString(strings.Replace(string(data), "9090", strconv.Itoa(fakePort), -1))
 	}
 )
 

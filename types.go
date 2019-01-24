@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httpdispatch"
 )
 
-// A Configer represents config
+// A Configer represents config interface
 type Configer interface {
 	RunMode() RunMode
 	RunName() string
@@ -16,12 +17,12 @@ type Configer interface {
 	UnmarshalJSON(v interface{}) error
 }
 
-// A Grouper represents routers
+// A Grouper represents router interface
 type Grouper interface {
 	NewGroup(prefix string, middlewares ...Middleware) Grouper
-	Resource(uri string, resource interface{}) Grouper
 	SetHandler(handler Handler)
 	Use(middlewares ...Middleware)
+	Resource(uri string, resource interface{}) Grouper
 	OPTIONS(uri string, action Middleware)
 	HEAD(uri string, action Middleware)
 	POST(uri string, action Middleware)
@@ -38,14 +39,14 @@ type Grouper interface {
 	MockHandle(method, uri string, recorder http.ResponseWriter, action Middleware)
 }
 
-// A Servicer represents application
+// A Servicer represents application interface
 type Servicer interface {
 	Init(config Configer, group Grouper)
 	Middlewares()
 	Resources()
 }
 
-// A Handler represents handlers
+// A Handler represents handler interface
 type Handler interface {
 	http.Handler
 
@@ -53,12 +54,12 @@ type Handler interface {
 	ServeFiles(string, http.FileSystem)
 }
 
-// Middleware represents request filters and resource handler
+// A Middleware represents request filters or resource handler
 //
 // NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
 type Middleware func(ctx *Context)
 
-// Responser represents HTTP response interface
+// A Responser represents HTTP response interface
 type Responser interface {
 	http.ResponseWriter
 	http.Flusher
@@ -70,13 +71,13 @@ type Responser interface {
 	Hijack(http.ResponseWriter) // hijack response with new http.ResponseWriter
 }
 
-// StatusCoder represents HTTP response status code
+// A StatusCoder represents HTTP response status code interface.
 // it is useful for custom response data with response status code
 type StatusCoder interface {
 	StatusCode() int
 }
 
-// Logger defines interface of application log apis.
+// A Logger represents log interface
 type Logger interface {
 	New(requestID string) Logger
 	Reuse(l Logger)
@@ -98,4 +99,24 @@ type Logger interface {
 	Fatalf(format string, v ...interface{})
 	Panic(v ...interface{})
 	Panicf(format string, v ...interface{})
+}
+
+// A RequestReceivedHooker represents request received hook interface of server
+type RequestReceivedHooker interface {
+	RequestReceivedHooks() []hooks.NamedHook
+}
+
+// A RequestRoutedHooker represents request routed hook interface of server
+type RequestRoutedHooker interface {
+	RequestRoutedHooks() []hooks.NamedHook
+}
+
+// A ResponseReadyHooker represents response ready for sending data hook interface of server
+type ResponseReadyHooker interface {
+	ResponseReadyHooks() []hooks.NamedHook
+}
+
+// A ResponseAlwaysHooker represents response routed success hook interface of server
+type ResponseAlwaysHooker interface {
+	ResponseAlwaysHooks() []hooks.NamedHook
 }

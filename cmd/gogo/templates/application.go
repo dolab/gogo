@@ -5,6 +5,7 @@ var (
 
 import (
 	"github.com/dolab/gogo"
+	"github.com/dolab/gogo/pkgs/hooks"
 
 	"{{.Namespace}}/{{.Application}}/app/middlewares"
 	"{{.Namespace}}/{{.Application}}/app/models"
@@ -52,5 +53,25 @@ func (app *Application) Resources() {
 
 	app.v1.GET("/@greeting/hello", GettingStart.Hello)
 }
+
+// // RequestReceivedHooks allows custom request received hooks of server
+// func (app *Application) RequestReceivedHooks() []hooks.NamedHook {
+// 	return nil
+// }
+
+// // RequestRoutedHooks allows custom request routed hooks of server
+// func (app *Application) RequestRoutedHooks() []hooks.NamedHook {
+// 	return nil
+// }
+
+// // RequestReceivedHooks allows custom response ready hooks of server
+// func (app *Application) ResponseReadyHooks() []hooks.NamedHook {
+// 	return nil
+// }
+
+// // RequestReceivedHooks allows custom response always hooks of server
+// func (app *Application) ResponseAlwaysHooks() []hooks.NamedHook {
+// 	return nil
+// }
 `
 )

@@ -25,9 +25,7 @@ var (
 
 		config, _ := fakeConfig("application.json")
 
-		server := NewAppServer(config, logger)
-
-		return server
+		return NewAppServer(config, logger)
 	}
 
 	fakeTcpServer = func() *AppServer {
@@ -36,9 +34,7 @@ var (
 
 		config, _ := fakeConfig("application.tcp.json")
 
-		server := NewAppServer(config, logger)
-
-		return server
+		return NewAppServer(config, logger)
 	}
 
 	fakeUnixServer = func() *AppServer {
@@ -47,9 +43,7 @@ var (
 
 		config, _ := fakeConfig("application.unix.json")
 
-		server := NewAppServer(config, logger)
-
-		return server
+		return NewAppServer(config, logger)
 	}
 
 	fakeHealthzServer = func() *AppServer {
@@ -58,9 +52,7 @@ var (
 
 		config, _ := fakeConfig("application.healthz.json")
 
-		server := NewAppServer(config, logger)
-
-		return server
+		return NewAppServer(config, logger)
 	}
 )
 

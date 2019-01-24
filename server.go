@@ -67,9 +67,43 @@ func (s *AppServer) Address() string {
 	return s.localAddr
 }
 
+// NewHooks tries to register hooks of all strategy if defined
+func (s *AppServer) NewHooks(svc Servicer) {
+	// register request received hooks
+	if hooker, ok := svc.(RequestReceivedHooker); ok {
+		for _, hook := range hooker.RequestReceivedHooks() {
+			s.RequestReceived.PushBackNamed(hook)
+		}
+	}
+
+	// register request routed hooks
+	if hooker, ok := svc.(RequestRoutedHooker); ok {
+		for _, hook := range hooker.RequestRoutedHooks() {
+			s.RequestRouted.PushBackNamed(hook)
+		}
+	}
+
+	// register response ready hooks
+	if hooker, ok := svc.(ResponseReadyHooker); ok {
+		for _, hook := range hooker.ResponseReadyHooks() {
+			s.ResponseReady.PushBackNamed(hook)
+		}
+	}
+
+	// register response always hooks
+	if hooker, ok := svc.(ResponseAlwaysHooker); ok {
+		for _, hook := range hooker.ResponseAlwaysHooks() {
+			s.ResponseAlways.PushBackNamed(hook)
+		}
+	}
+}
+
 // NewService register all resources of service with middlewares
 func (s *AppServer) NewService(svc Servicer) *AppServer {
 	svc.Init(s.config, s.AppGroup)
+
+	// register hooks
+	s.NewHooks(svc)
 
 	// register middlewares
 	svc.Middlewares()
@@ -83,6 +117,9 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 // NewResources register all resources of service without middlewares
 func (s *AppServer) NewResources(svc Servicer) *AppServer {
 	svc.Init(s.config, s.AppGroup)
+
+	// register hooks
+	s.NewHooks(svc)
 
 	// register resources
 	svc.Resources()
@@ -230,6 +267,7 @@ func (s *AppServer) Serve() {
 	go s.Run()
 
 	<-s.localSig
+	close(s.localSig)
 
 	log := s.loggerNew("GOGO")
 	log.Info("Shutting down server ....")
