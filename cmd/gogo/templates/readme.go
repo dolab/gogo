@@ -35,6 +35,32 @@ $ # run development server
 $ make godev
 </bash>
 
+### Custom Server
+
+You can custom Server by implementing interfaces following:
+
+<golang>
+// A RequestReceivedHooker represents request received hook interface of server
+type RequestReceivedHooker interface {
+	RequestReceivedHooks() []hooks.NamedHook
+}
+
+// A RequestRoutedHooker represents request routed hook interface of server
+type RequestRoutedHooker interface {
+	RequestRoutedHooks() []hooks.NamedHook
+}
+
+// A ResponseReadyHooker represents response ready for sending data hook interface of server
+type ResponseReadyHooker interface {
+	ResponseReadyHooks() []hooks.NamedHook
+}
+
+// A ResponseAlwaysHooker represents response routed success hook interface of server
+type ResponseAlwaysHooker interface {
+	ResponseAlwaysHooks() []hooks.NamedHook
+}
+</golang>
+
 ### APP Struct
 
 <bash>
