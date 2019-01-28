@@ -46,6 +46,15 @@ var (
 		return NewAppServer(config, logger)
 	}
 
+	fakeTimeoutServer = func() *AppServer {
+		logger := NewAppLogger("nil", "")
+		logger.SetSkip(3)
+
+		config, _ := fakeConfig("application.timeout.json")
+
+		return NewAppServer(config, logger)
+	}
+
 	fakeHealthzServer = func() *AppServer {
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
@@ -95,6 +104,30 @@ func Benchmark_Server(b *testing.B) {
 
 	server.ServeHTTP(w, r)
 	it.Equal(http.StatusNoContent, w.Code)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		server.ServeHTTP(w, r)
+	}
+}
+
+func Benchmark_ServerWithReader(b *testing.B) {
+	it := assert.New(b)
+
+	reader := []byte("Hello,world!")
+
+	server := fakeServer()
+	server.GET("/server/benchmark/reader", func(ctx *Context) {
+		ctx.Return(bytes.NewReader(reader))
+	})
+
+	r, _ := http.NewRequest("GET", "/server/benchmark/reader", nil)
+	w := httptest.NewRecorder()
+
+	server.ServeHTTP(w, r)
+	it.Equal(http.StatusOK, w.Code)
+	it.Equal(reader, w.Body.Bytes())
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -156,33 +189,9 @@ func Test_Server_Race(t *testing.T) {
 	}
 }
 
-func Benchmark_ServerWithReader(b *testing.B) {
-	it := assert.New(b)
-
-	reader := []byte("Hello,world!")
-
-	server := fakeServer()
-	server.GET("/server/benchmark", func(ctx *Context) {
-		ctx.Return(bytes.NewReader(reader))
-	})
-
-	r, _ := http.NewRequest("GET", "/server/benchmark", nil)
-	w := httptest.NewRecorder()
-
-	server.ServeHTTP(w, r)
-	it.Equal(http.StatusOK, w.Code)
-	it.Equal(reader, w.Body.Bytes())
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		server.ServeHTTP(w, r)
-	}
-}
-
 func Test_ServerWithReturn(t *testing.T) {
 	server := fakeServer()
-	server.GET("/return", func(ctx *Context) {
+	server.GET("/server/return", func(ctx *Context) {
 		if contentType := ctx.Params.Get("content-type"); contentType != "" {
 			ctx.SetHeader("Content-Type", contentType)
 		}
@@ -207,7 +216,7 @@ func Test_ServerWithReturn(t *testing.T) {
 
 	// default render
 	request := ts.New(t)
-	request.Get("/return", nil)
+	request.Get("/server/return", nil)
 	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/plain; charset=utf-8")
 	request.AssertContains(`{{ Result} gogo 5}`)
@@ -215,7 +224,7 @@ func Test_ServerWithReturn(t *testing.T) {
 	// json render with request header of accept
 	request = ts.New(t)
 	request.WithHeader("Accept", "application/json, text/xml, */*; q=0.01")
-	request.Get("/return", nil)
+	request.Get("/server/return", nil)
 	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "application/json")
 	request.AssertContains(`{"Name":"gogo","Age":5}`)
@@ -225,7 +234,7 @@ func Test_ServerWithReturn(t *testing.T) {
 	params.Add("content-type", "application/json")
 
 	request = ts.New(t)
-	request.Get("/return?"+params.Encode(), nil)
+	request.Get("/server/return?"+params.Encode(), nil)
 	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "application/json")
 	request.AssertContains(`{"Name":"gogo","Age":5}`)
@@ -233,7 +242,7 @@ func Test_ServerWithReturn(t *testing.T) {
 	// xml render with request header of accept
 	request = ts.New(t)
 	request.WithHeader("Accept", "appication/json, text/xml, */*; q=0.01")
-	request.Get("/return", nil)
+	request.Get("/server/return", nil)
 	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/xml")
 	request.AssertContains("<Result><Name>gogo</Name><Age>5</Age></Result>")
@@ -243,7 +252,7 @@ func Test_ServerWithReturn(t *testing.T) {
 	params.Add("content-type", "text/xml")
 
 	request = ts.New(t)
-	request.Get("/return?"+params.Encode(), nil)
+	request.Get("/server/return?"+params.Encode(), nil)
 	request.AssertStatus(http.StatusOK)
 	request.AssertHeader("Content-Type", "text/xml")
 	request.AssertContains(`<Result><Name>gogo</Name><Age>5</Age></Result>`)
@@ -256,10 +265,25 @@ func Test_ServerWithNotFound(t *testing.T) {
 	defer ts.Close()
 
 	request := httptesting.New(ts.URL, false).New(t)
-	request.Get("/not/found", nil)
+	request.Get("/server/not/found", nil)
 	request.AssertNotFound()
-	request.AssertContains("Request(GET /not/found): not found")
+	request.AssertContains("Request(GET /server/not/found): not found")
 }
+
+// func Test_ServerWithMethodNotAllowed(t *testing.T) {
+// 	server := fakeServer()
+// 	server.HEAD("/server/method/not/allowed", func(ctx *Context) {
+// 		ctx.Text("MethodNotAllowed")
+// 	})
+
+// 	ts := httptest.NewServer(server)
+// 	defer ts.Close()
+
+// 	request := httptesting.New(ts.URL, false).New(t)
+// 	request.Get("/server/method/not/allowed", nil)
+// 	request.AssertNotFound()
+// 	request.AssertContains("Request(GET /server/method/not/allowed): method not allowed")
+// }
 
 func Test_ServerWithThroughput(t *testing.T) {
 	it := assert.New(t)
@@ -368,7 +392,6 @@ func Test_ServerWithConcurrency(t *testing.T) {
 	request.Get("/server/concurrency", params)
 	request.AssertStatus(http.StatusNoContent)
 	request.AssertNotContains("Too Many Requests")
-
 }
 
 func Test_Server_loggerNew(t *testing.T) {

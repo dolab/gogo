@@ -14,6 +14,7 @@ default_steps: &default_steps
 
     # specify any bash command here prefixed with `run: `
     - run: go mod tidy
+    - run: go test -v
     - run: go test -v -race
 jobs:
   go1.6:

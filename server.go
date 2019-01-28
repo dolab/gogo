@@ -210,11 +210,12 @@ func (s *AppServer) Run() {
 	log.Infof("Listened on %s://%s", network, addr)
 
 	server := &http.Server{
-		Addr:           s.localAddr,
-		Handler:        s.AppGroup,
-		ReadTimeout:    time.Duration(rtimeout) * time.Second,
-		WriteTimeout:   time.Duration(wtimeout) * time.Second,
-		MaxHeaderBytes: maxHeaderBytes,
+		Addr:              s.localAddr,
+		Handler:           s.AppGroup,
+		ReadHeaderTimeout: time.Duration(rtimeout) * time.Second,
+		ReadTimeout:       time.Duration(rtimeout) * time.Second,
+		WriteTimeout:      time.Duration(wtimeout) * time.Second,
+		MaxHeaderBytes:    maxHeaderBytes,
 	}
 	server.RegisterOnShutdown(listener.Shutdown)
 
