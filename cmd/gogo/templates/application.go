@@ -54,24 +54,72 @@ func (app *Application) Resources() {
 	app.v1.GET("/@greeting/hello", GettingStart.Hello)
 }
 
-// // RequestReceivedHooks allows custom request received hooks of server
-// func (app *Application) RequestReceivedHooks() []hooks.NamedHook {
-// 	return nil
-// }
+// RequestReceivedHooks allows custom request received hooks of server
+func (app *Application) RequestReceivedHooks() []hooks.NamedHook {
+	return []hooks.NamedHook{
+		{
+			Name: "request_received@debugger",
+			Apply: func(w http.ResponseWriter, r *http.Request) bool {
+				if Config.Debug {
+					log := gogo.NewContextLogger(r)
+					log.Debug("RequestReceivedHook")
+				}
 
-// // RequestRoutedHooks allows custom request routed hooks of server
-// func (app *Application) RequestRoutedHooks() []hooks.NamedHook {
-// 	return nil
-// }
+				return true
+			},
+		},
+	}
+}
 
-// // RequestReceivedHooks allows custom response ready hooks of server
-// func (app *Application) ResponseReadyHooks() []hooks.NamedHook {
-// 	return nil
-// }
+// RequestRoutedHooks allows custom request routed hooks of server
+func (app *Application) RequestRoutedHooks() []hooks.NamedHook {
+	return []hooks.NamedHook{
+		{
+			Name: "request_routed@debugger",
+			Apply: func(w http.ResponseWriter, r *http.Request) bool {
+				if Config.Debug {
+					log := gogo.NewContextLogger(r)
+					log.Debug("RequestRoutedHook")
+				}
 
-// // RequestReceivedHooks allows custom response always hooks of server
-// func (app *Application) ResponseAlwaysHooks() []hooks.NamedHook {
-// 	return nil
-// }
+				return true
+			},
+		},
+	}
+}
+
+// ResponseReadyHooks allows custom response ready hooks of server
+func (app *Application) ResponseReadyHooks() []hooks.NamedHook {
+	return []hooks.NamedHook{
+		{
+			Name: "response_ready@debugger",
+			Apply: func(w http.ResponseWriter, r *http.Request) bool {
+				if Config.Debug {
+					log := gogo.NewContextLogger(r)
+					log.Debug("ResponseReadyHook")
+				}
+
+				return true
+			},
+		},
+	}
+}
+
+// ResponseAlwaysHooks allows custom response always hooks of server
+func (app *Application) ResponseAlwaysHooks() []hooks.NamedHook {
+	return []hooks.NamedHook{
+		{
+			Name: "response_always@debugger",
+			Apply: func(w http.ResponseWriter, r *http.Request) bool {
+				if Config.Debug {
+					log := gogo.NewContextLogger(r)
+					log.Debug("ResponseAlwaysHook")
+				}
+
+				return true
+			},
+		},
+	}
+}
 `
 )

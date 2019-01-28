@@ -1,5 +1,5 @@
 {
-    "name": "for unix",
+    "name": "for tcp",
     "mode": "test",
     "sections": {
         "test": {
@@ -7,8 +7,6 @@
                 "addr": "localhost",
                 "port": 9090,
                 "ssl": false,
-                "throttle": 0,
-                "slowdown": 0,
                 "request_id": "X-Request-Id"
             },
             "logger": {

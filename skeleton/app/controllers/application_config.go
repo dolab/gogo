@@ -12,9 +12,10 @@ var (
 
 // Application configuration specs
 type AppConfig struct {
-	Domain       string              `json:"domain"`
 	Model        *models.Config      `json:"model"`
+	Domain       string              `json:"domain"`
 	GettingStart *GettingStartConfig `json:"getting_start"`
+	Debug        bool                `json:"debug"`
 }
 
 // NewAppConfig apply application config from *gogo.AppConfig

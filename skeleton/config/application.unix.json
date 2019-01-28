@@ -7,8 +7,6 @@
                 "addr": "unix:/tmp/gogo.sock",
                 "port": 0,
                 "ssl": false,
-                "throttle": 0,
-                "slowdown": 0,
                 "request_id": "X-Request-Id"
             },
             "logger": {

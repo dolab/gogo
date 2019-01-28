@@ -1,5 +1,5 @@
 {
-    "name": "for unix",
+    "name": "for healthz",
     "mode": "test",
     "sections": {
         "test": {
@@ -8,8 +8,6 @@
                 "port": 9090,
                 "healthz": true,
                 "ssl": false,
-                "throttle": 0,
-                "slowdown": 0,
                 "request_id": "X-Request-Id"
             },
             "logger": {
