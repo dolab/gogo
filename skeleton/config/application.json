@@ -7,10 +7,8 @@
                 "addr": "localhost",
                 "port": 9090,
                 "ssl": false,
-                "ssl_cert": "/path/to/ssl/cert",
-                "ssl_key": "/path/to/ssl/key",
-                "request_timeout": 30,
-                "response_timeout": 30,
+                "request_timeout": 3,
+                "response_timeout": 10,
                 "request_id": "X-Request-Id"
             },
             "logger": {
@@ -24,17 +22,16 @@
             "domain": "https://example.com",
             "getting_start": {
                 "greeting": "Hello, gogo!"
-            }
+            },
+            "debug": true
         },
         "test": {
             "server": {
                 "addr": "localhost",
                 "port": 9090,
                 "ssl": false,
-                "ssl_cert": "/path/to/ssl/cert",
-                "ssl_key": "/path/to/ssl/key",
-                "request_timeout": 30,
-                "response_timeout": 30,
+                "request_timeout": 3,
+                "response_timeout": 10,
                 "request_id": ""
             },
             "logger": {
@@ -48,7 +45,8 @@
             "domain": "https://example.com",
             "getting_start": {
                 "greeting": "Hello, gogo!"
-            }
+            },
+            "debug": false
         },
         "production": {
             "server": {
@@ -57,8 +55,8 @@
                 "ssl": true,
                 "ssl_cert": "/path/to/ssl/cert",
                 "ssl_key": "/path/to/ssl/key",
-                "request_timeout": 30,
-                "response_timeout": 30,
+                "request_timeout": 3,
+                "response_timeout": 10,
                 "request_id": "X-Request-Id"
             },
             "logger": {

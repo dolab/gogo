@@ -18,6 +18,7 @@ type AppConfig struct {
 	Model        *models.Config      ` + "`" + `json:"model"` + "`" + `
 	Domain       string              ` + "`" + `json:"domain"` + "`" + `
 	GettingStart *GettingStartConfig ` + "`" + `json:"getting_start"` + "`" + `
+	Debug        bool                ` + "`" + `json:"debug"` + "`" + `
 }
 
 // NewAppConfig creates Config from gogo.Configer
@@ -67,7 +68,8 @@ func Test_AppConfig(t *testing.T) {
 			"domain": "https://example.com",
 			"getting_start": {
 				"greeting": "Hello, gogo!"
-			}
+			},
+			"debug": true
 		},
 
 		"test": {
@@ -87,7 +89,8 @@ func Test_AppConfig(t *testing.T) {
 			"domain": "https://example.com",
 			"getting_start": {
 				"greeting": "Hello, gogo!"
-			}
+			},
+			"debug": false
 		},
 
 		"production": {
