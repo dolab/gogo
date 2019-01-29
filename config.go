@@ -13,7 +13,7 @@ var (
 	DefaultServerConfig = &ServerConfig{
 		Addr:      "127.0.0.1",
 		Port:      9090,
-		RTimeout:  10, // 10s
+		RTimeout:  5,  // 5s
 		WTimeout:  10, // 10s
 		Ssl:       false,
 		Healthz:   true,

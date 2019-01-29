@@ -33,6 +33,9 @@ func init() {
 	template.Must(box.New("main.go").Parse(
 		format(mainTemplate),
 	))
+	template.Must(box.New("errors.go").Parse(
+		format(errorsTemplate),
+	))
 	// controllers
 	template.Must(box.New("application.go").Parse(
 		format(applicationTemplate),

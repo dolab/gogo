@@ -4,6 +4,8 @@ var (
 	applicationTemplate = `package controllers
 
 import (
+	"net/http"
+
 	"github.com/dolab/gogo"
 	"github.com/dolab/gogo/pkgs/hooks"
 

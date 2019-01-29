@@ -73,8 +73,9 @@ my
 ├── bin                # go build output of make gopackage
 ├── config             # config
 ├── gogo               # auto generated dirs of gogo
-│   └── service        # auto generated services from protobuf
-├── lib                # third-party packages for local
+│   └── errors         # auto generated errors from gogo
+│   └── pbs            # auto generated protobufs
+│   └── services       # auto generated services from protobuf
 ├── log                # default log output
 └── tmp                # tmpdirs
     ├── cache          # file cache

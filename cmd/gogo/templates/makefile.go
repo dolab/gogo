@@ -16,9 +16,10 @@ gorebuild: goclean goreinstall
 
 goclean:
 	go clean ./...
+	go mod tidy
 
 goinstall:
-	go get -v github.com/dolab/gogo@v2.4.0
+	go get -v github.com/dolab/gogo@v2.5.0
 	go get -v github.com/dolab/httpmitm@master
 	go get -v github.com/dolab/httptesting@master
 	go get -v github.com/golib/assert@master

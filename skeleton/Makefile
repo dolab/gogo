@@ -11,6 +11,7 @@ gorebuild: goclean goreinstall
 
 goclean:
 	go clean -r ./...
+	go mod tidy
 
 goinstall:
 	go get github.com/dolab/httptesting

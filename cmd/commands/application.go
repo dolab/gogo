@@ -17,8 +17,9 @@ var (
 		{"app", "models"},
 		{"app", "protos"},
 		{"config"},
-		{"gogo", "service"},
-		{"lib"},
+		{"gogo", "errors"},
+		{"gogo", "pbs"},
+		{"gogo", "services"},
 		{"log"},
 		{"tmp", "cache"},
 		{"tmp", "pids"},
@@ -131,6 +132,9 @@ func (_ *_Application) Action() cli.ActionFunc {
 
 		// generate main.go
 		Application.genMainFile(path.Join(root, "app", "main.go"), name, namespace)
+
+		// generate errors.go
+		Application.genErrorsFile(path.Join(root, "gogo", "errors", "errors.go"), name, namespace)
 
 		// auto install dependences
 		if ctx.Bool("go-install") {
@@ -381,6 +385,22 @@ func (_ *_Application) genMainFile(file, app, namespace string) {
 	}
 
 	err = box.Lookup("main.go").Execute(fd, templateData{
+		Namespace:   namespace,
+		Application: app,
+	})
+	if err != nil {
+		log.Error(err.Error())
+	}
+}
+
+func (_ *_Application) genErrorsFile(file, app, namespace string) {
+	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+
+	err = box.Lookup("errors.go").Execute(fd, templateData{
 		Namespace:   namespace,
 		Application: app,
 	})
