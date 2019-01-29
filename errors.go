@@ -4,6 +4,7 @@ import (
 	"errors"
 )
 
+// errors
 var (
 	ErrConfigSection      = errors.New("Config section does not exist")
 	ErrSettingsKey        = errors.New("Settings key is duplicated")

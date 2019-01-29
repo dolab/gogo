@@ -6,6 +6,7 @@ github.com/dolab/colorize v0.0.0-20180106055552-10753a0b4d68 h1:rGl0gTPB4afy/n7i
 github.com/dolab/colorize v0.0.0-20180106055552-10753a0b4d68/go.mod h1:FEt1QJYXy9g6Ul5/x2Icp8y/qGb1wZbYZe/VzFYLFH0=
 github.com/dolab/gogo v0.0.0-20190122083835-0f0d9fc2581f h1:1XLIRW8mL73hSufZUfhtWpPKat9C2fTDi/A0NXNemIs=
 github.com/dolab/gogo v0.0.0-20190122083835-0f0d9fc2581f/go.mod h1:o4f0ohl9aBeKooLG7uwZB8I96HVpmed4Rf2tYIUWTBs=
+github.com/dolab/gogo v1.1.0 h1:1v9wuMJ+2HLvFzUgtCNYsRHNnIomQkV7t9qwvxGRy1k=
 github.com/dolab/httpdispatch v0.0.0-20181226112803-e1ca81cd1d36 h1:ee63FUqfsMmaII8urIPZaI48nNk2dqKTxWNCyuSA0B4=
 github.com/dolab/httpdispatch v0.0.0-20181226112803-e1ca81cd1d36/go.mod h1:GMdS9MKQBcn3VVw9w7C/swznykZXQX7OmkfKABntJDw=
 github.com/dolab/httpmitm v0.0.0-20181102123249-38079d87cfa7 h1:+shMH20tVogMcXJ0XdRFxkoSn4MUSJ+kcvHMILaO+fU=
