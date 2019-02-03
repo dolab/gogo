@@ -52,6 +52,9 @@ func init() {
 	template.Must(box.New("application_config.json").Parse(
 		format(applicationConfigJSONTemplate),
 	))
+	template.Must(box.New("application_middlewares.go").Parse(
+		format(applicationMiddlewaresTemplate),
+	))
 	template.Must(box.New("getting_start.go").Parse(
 		format(gettingStartTemplate),
 	))
