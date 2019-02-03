@@ -12,23 +12,23 @@ import (
 var (
 	// FindModeConfigFile returns config file for specified run mode.
 	// You could custom your own resolver by overwriting it.
-	FindModeConfigFile = func(runMode, srcPath string) string {
-		if len(srcPath) == 0 {
+	FindModeConfigFile = func(runMode, cfgPath string) string {
+		if len(cfgPath) == 0 {
 			return GogoSchema
 		}
 
-		// adjust srcPath
-		srcPath = path.Clean(srcPath)
+		// adjust cfgPath
+		cfgPath = path.Clean(cfgPath)
 
-		// is srcPath exist?
-		finfo, ferr := os.Stat(srcPath)
+		// is cfgPath exist?
+		finfo, ferr := os.Stat(cfgPath)
 		if ferr != nil {
 			return GogoSchema
 		}
 
-		// is srcPath a regular file?
+		// is cfgPath a regular file?
 		if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
-			return srcPath
+			return cfgPath
 		}
 
 		filename := "application.json"
@@ -46,9 +46,38 @@ var (
 
 		}
 
-		filepath := path.Join(srcPath, "config", filename)
+		filepath := path.Join(cfgPath, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(srcPath, "config", "application.json")
+			filepath = path.Join(cfgPath, "config", "application.json")
+		}
+
+		return filepath
+	}
+
+	// FindMiddlewareConfigFile returns config file for middlewares.
+	FindMiddlewareConfigFile = func(cfgPath string) string {
+		if len(cfgPath) == 0 {
+			return GogoSchema
+		}
+
+		// adjust cfgPath
+		cfgPath = path.Clean(cfgPath)
+
+		// is cfgPath exist?
+		finfo, ferr := os.Stat(cfgPath)
+		if ferr != nil {
+			return GogoSchema
+		}
+
+		// is cfgPath a regular file?
+		if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
+			return cfgPath
+		}
+
+		filename := "middlewares.yaml"
+		filepath := path.Join(cfgPath, "config", filename)
+		if _, err := os.Stat(filepath); os.IsNotExist(err) {
+			filepath = path.Join(cfgPath, "config", "middlewares.json")
 		}
 
 		return filepath
@@ -56,14 +85,14 @@ var (
 )
 
 // New creates application server with config resolved
-// from file <srcPath>/config/application[.<runMode>].json.
+// from file <cfgPath>/config/application[.<runMode>].json.
 //
 // NOTE: You can custom resolver by overwriting FindModeConfigFile.
-func New(runMode, srcPath string) *AppServer {
+func New(runMode, cfgPath string) *AppServer {
 	// resolve config from application.json
-	config, err := NewAppConfig(FindModeConfigFile(runMode, srcPath))
+	config, err := NewAppConfig(FindModeConfigFile(runMode, cfgPath))
 	if err != nil {
-		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, srcPath), err)
+		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, cfgPath), err)
 	}
 
 	return NewWithConfiger(config)
@@ -90,6 +119,12 @@ func NewWithLogger(config Configer, logger Logger) *AppServer {
 	logger.SetColor(!config.RunMode().IsProduction())
 
 	logger.Printf("Initialized %s in %s mode", config.RunName(), config.RunMode())
+
+	// try load config of middlewares
+	// NOTE: ignore returned error is ok!
+	if err := config.LoadMiddlewares(); err != nil {
+		logger.Errorf("LoadMiddlewares(): %v", err)
+	}
 
 	return NewAppServer(config, logger)
 }

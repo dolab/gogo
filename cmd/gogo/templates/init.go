@@ -58,15 +58,15 @@ func init() {
 	template.Must(box.New("getting_start_test.go").Parse(
 		format(gettingStartTestTemplate),
 	))
-	// middlewares
-	template.Must(box.New("middleware_testing.go").Parse(
-		format(middlewareTestingTemplate),
+	// filters
+	template.Must(box.New("filter_testing.go").Parse(
+		format(filterTestingTemplate),
 	))
-	template.Must(box.New("middleware_recovery.go").Parse(
-		format(middlewareRecoveryTemplate),
+	template.Must(box.New("filter_recovery.go").Parse(
+		format(filterRecoveryTemplate),
 	))
-	template.Must(box.New("middleware_recovery_test.go").Parse(
-		format(middlewareRecoveryTestTemplate),
+	template.Must(box.New("filter_recovery_test.go").Parse(
+		format(filterRecoveryTestTemplate),
 	))
 	// models
 	template.Must(box.New("model.go").Parse(
@@ -82,11 +82,11 @@ func init() {
 	template.Must(box.New("template_controller_test").Parse(
 		format(componentControllerTestTemplate),
 	))
-	template.Must(box.New("template_middleware").Parse(
-		format(componentMiddlewareTemplate),
+	template.Must(box.New("template_filter").Parse(
+		format(componentFilterTemplate),
 	))
-	template.Must(box.New("template_middleware_test").Parse(
-		format(componentMiddlewareTestTemplate),
+	template.Must(box.New("template_filter_test").Parse(
+		format(componentFilterTestTemplate),
 	))
 	template.Must(box.New("template_model").Parse(
 		format(componentModelTemplate),

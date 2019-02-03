@@ -15,10 +15,10 @@ var (
 func TestMain(m *testing.M) {
 	var (
 		runMode = "test"
-		srcPath = path.Clean("../../")
+		cfgPath = path.Clean("../../")
 	)
 
-	app := gogo.New(runMode, srcPath)
+	app := gogo.New(runMode, cfgPath)
 	app.NewResources(New())
 
 	gogotesting = httptesting.NewServer(app, false)

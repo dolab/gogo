@@ -19,8 +19,8 @@ type AppGroup struct {
 
 	server  *AppServer
 	prefix  string
+	filters []FilterFunc
 	handler Handler
-	filters []Middleware
 }
 
 // NewAppGroup creates a new router with specified prefix and server
@@ -39,8 +39,8 @@ func NewAppGroup(prefix string, server *AppServer) *AppGroup {
 	}
 }
 
-// NewGroup returns a new *AppGroup which has the same prefix path and middlewares
-func (r *AppGroup) NewGroup(prefix string, middlewares ...Middleware) Grouper {
+// NewGroup returns a new *AppGroup which has the same prefix path and filters
+func (r *AppGroup) NewGroup(prefix string, filters ...FilterFunc) Grouper {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
@@ -48,7 +48,7 @@ func (r *AppGroup) NewGroup(prefix string, middlewares ...Middleware) Grouper {
 		server:  r.server,
 		prefix:  r.buildPrefix(prefix),
 		handler: r.handler,
-		filters: r.buildFilters(middlewares...),
+		filters: r.buildFilters(filters...),
 	}
 }
 
@@ -59,70 +59,70 @@ func (r *AppGroup) SetHandler(handler Handler) {
 	r.mux.Unlock()
 }
 
-// Use registers new middlewares to the route
+// Use appends new filters to the end of group
 //
-// TODO: ignore duplicated middlewares?
-func (r *AppGroup) Use(middlewares ...Middleware) {
+// TODO: ignore duplicated filters?
+func (r *AppGroup) Use(filters ...FilterFunc) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
-	r.filters = append(r.filters, middlewares...)
+	r.filters = append(r.filters, filters...)
 	if len(r.filters) >= math.MaxInt8 {
-		panic(ErrTooManyMiddlewares)
+		panic(ErrTooManyFilters)
 	}
 }
 
-// Middlewares returns registered middlewares of AppGroup
-func (r *AppGroup) Middlewares() []Middleware {
+// Filters returns all filters of AppGroup
+func (r *AppGroup) Filters() []FilterFunc {
 	return r.filters
 }
 
-// CleanMiddlewares removes all registered middlewares of AppGroup
+// CleanFilters removes all registered filters of AppGroup
 //
 // NOTE: It's useful in testing cases.
-func (r *AppGroup) CleanMiddlewares() {
+func (r *AppGroup) CleanFilters() {
 	r.mux.Lock()
-	r.filters = []Middleware{}
+	r.filters = []FilterFunc{}
 	r.mux.Unlock()
 }
 
 // OPTIONS is a shortcut of group.Handle("OPTIONS", path, handler)
-func (r *AppGroup) OPTIONS(rpath string, handler Middleware) {
+func (r *AppGroup) OPTIONS(rpath string, handler FilterFunc) {
 	r.Handle("OPTIONS", rpath, handler)
 }
 
 // HEAD is a shortcut of group.Handle("HEAD", path, handler)
-func (r *AppGroup) HEAD(rpath string, handler Middleware) {
+func (r *AppGroup) HEAD(rpath string, handler FilterFunc) {
 	r.Handle("HEAD", rpath, handler)
 }
 
 // POST is a shortcut of group.Handle("POST", path, handler)
-func (r *AppGroup) POST(rpath string, handler Middleware) {
+func (r *AppGroup) POST(rpath string, handler FilterFunc) {
 	r.Handle("POST", rpath, handler)
 }
 
 // GET is a shortcut of group.Handle("GET", path, handler)
-func (r *AppGroup) GET(rpath string, handler Middleware) {
+func (r *AppGroup) GET(rpath string, handler FilterFunc) {
 	r.Handle("GET", rpath, handler)
 }
 
 // PUT is a shortcut of group.Handle("PUT", path, handler)
-func (r *AppGroup) PUT(rpath string, handler Middleware) {
+func (r *AppGroup) PUT(rpath string, handler FilterFunc) {
 	r.Handle("PUT", rpath, handler)
 }
 
 // PATCH is a shortcut of group.Handle("PATCH", path, handler)
-func (r *AppGroup) PATCH(rpath string, handler Middleware) {
+func (r *AppGroup) PATCH(rpath string, handler FilterFunc) {
 	r.Handle("PATCH", rpath, handler)
 }
 
 // DELETE is a shortcut of group.Handle("DELETE", path, handler)
-func (r *AppGroup) DELETE(rpath string, handler Middleware) {
+func (r *AppGroup) DELETE(rpath string, handler FilterFunc) {
 	r.Handle("DELETE", rpath, handler)
 }
 
 // Any is a shortcut for all request methods
-func (r *AppGroup) Any(rpath string, handler Middleware) {
+func (r *AppGroup) Any(rpath string, handler FilterFunc) {
 	r.Handle("GET", rpath, handler)
 	r.Handle("POST", rpath, handler)
 	r.Handle("PUT", rpath, handler)
@@ -256,32 +256,32 @@ func (r *AppGroup) HandlerFunc(method, uri string, handler http.HandlerFunc) {
 // Handler registers a new resource with http.Handler
 func (r *AppGroup) Handler(method, uri string, handler http.Handler) {
 	uri = r.buildPrefix(uri)
-	middlewares := r.buildFilters()
+	filters := r.buildFilters()
 
 	r.handler.Handle(method, uri, NewContextHandle(
-		handler.ServeHTTP, middlewares,
+		handler.ServeHTTP, filters,
 		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
 	))
 }
 
 // Handle registers a new resource
-func (r *AppGroup) Handle(method string, uri string, handler Middleware) {
+func (r *AppGroup) Handle(method string, uri string, handler FilterFunc) {
 	uri = r.buildPrefix(uri)
-	middlewares := r.buildFilters(handler)
+	filters := r.buildFilters(handler)
 
 	r.handler.Handle(method, uri, NewContextHandle(
-		nil, middlewares,
+		nil, filters,
 		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
 	))
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
-func (r *AppGroup) MockHandle(method string, rpath string, recorder http.ResponseWriter, handler Middleware) {
+func (r *AppGroup) MockHandle(method string, rpath string, recorder http.ResponseWriter, handler FilterFunc) {
 	uri := r.buildPrefix(rpath)
-	middlewares := r.buildFilters(handler)
+	filters := r.buildFilters(handler)
 
 	r.handler.Handle(method, uri, NewFakeHandle(
-		nil, middlewares, recorder,
+		nil, filters, recorder,
 		r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
 	))
 }
@@ -341,10 +341,10 @@ func (r *AppGroup) buildPrefix(suffix string) (prefix string) {
 	return prefix
 }
 
-func (r *AppGroup) buildFilters(middlewares ...Middleware) []Middleware {
-	combined := make([]Middleware, len(r.filters)+len(middlewares))
+func (r *AppGroup) buildFilters(filters ...FilterFunc) []FilterFunc {
+	combined := make([]FilterFunc, len(r.filters)+len(filters))
 	copy(combined[:len(r.filters)], r.filters)
-	copy(combined[len(r.filters):], middlewares)
+	copy(combined[len(r.filters):], filters)
 
 	return combined
 }

@@ -15,6 +15,8 @@ github.com/dolab/httptesting v0.0.0-20181015062713-fea093b8a92e h1:T2NibqO4lELdH
 github.com/dolab/httptesting v0.0.0-20181015062713-fea093b8a92e/go.mod h1:rYxXxNsHzO6vl7Vn35/+upIxpMLte+rpjvkAOMGp8vQ=
 github.com/dolab/logger v0.0.0-20181130034249-dcb994406102 h1:zJl2IEmlEl2HsC2tGvQiM6/K3e0OmMecuGsRIzlyDIs=
 github.com/dolab/logger v0.0.0-20181130034249-dcb994406102/go.mod h1:sL1WWv109z/d0uZkZzEK+iT7pIytixKxAuAMB1Gax6E=
+github.com/golang/protobuf v1.2.0 h1:P3YflyNX/ehuJFLhxviNdFxQPkGK5cDcApsge1SqnvM=
+github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golib/assert v0.0.0-20170825111607-0306abba9bd3 h1:oulReRd2nZaxbc0zJw2fThTS9fw5u8NWZx9HtkvWYkc=
 github.com/golib/assert v0.0.0-20170825111607-0306abba9bd3/go.mod h1:vPapUz+xrnvoZuYjBvR3UnfcP/Gnv/jU3HANuQk2WHI=
 github.com/golib/cli v1.2.1-0.20160801031116-168c95418e66/go.mod h1:cbPTaYYpwmK4s+YKhW6vAUeRyIKKTZcQDDQcAxYq/rk=

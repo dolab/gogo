@@ -2,8 +2,11 @@ package gogo
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/dolab/logger"
 )
@@ -30,15 +33,19 @@ var (
 		Server: DefaultServerConfig,
 		Logger: DefaultLoggerConfig,
 	}
+
+	DefaultMiddlewareConfig = &MiddlewareConfig{}
 )
 
 // AppConfig defines config component of gogo.
 // It implements Configer interface.
 type AppConfig struct {
-	Mode RunMode `json:"mode"`
-	Name string  `json:"name"`
+	Mode        RunMode                      `json:"mode"`
+	Name        string                       `json:"name"`
+	Sections    map[RunMode]*json.RawMessage `json:"sections"`
+	Middlewares *MiddlewareConfig            `json:"middlewares"`
 
-	Sections map[RunMode]*json.RawMessage `json:"sections"`
+	filepath string
 }
 
 // NewAppConfig returns *AppConfig by parsing application.json
@@ -124,6 +131,12 @@ func (config *AppConfig) Section() *SectionConfig {
 	return sconfig
 }
 
+// Middleware parses YAML-encoded data of defined with name and stores the result in the
+// value pointed to by v. It returns error if there is no config data for the name.
+func (config *AppConfig) Middleware() MiddlewareConfiger {
+	return config.Middlewares
+}
+
 // UnmarshalJSON parses JSON-encoded data of section and stores the result in the value pointed to by v.
 // It returns ErrConfigSection error if section of the current mode does not exist.
 func (config *AppConfig) UnmarshalJSON(v interface{}) error {
@@ -133,6 +146,23 @@ func (config *AppConfig) UnmarshalJSON(v interface{}) error {
 	}
 
 	return json.Unmarshal([]byte(*section), &v)
+}
+
+// LoadMiddlewares reads all config of middlewares
+func (config *AppConfig) LoadMiddlewares() error {
+	filename := FindMiddlewareConfigFile(config.filepath)
+
+	if strings.HasPrefix(filename, GogoSchema) {
+		config.Middlewares = DefaultMiddlewareConfig
+		return nil
+	}
+
+	b, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(b, &config.Middlewares)
 }
 
 // SectionConfig defines config spec for internal usage
@@ -159,6 +189,29 @@ type ServerConfig struct {
 	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
 	Demotion  int    `json:"demotion"`
 	RequestID string `json:"request_id"`
+}
+
+// MiddlewareConfig defines config spec of middleware
+type MiddlewareConfig map[string]interface{}
+
+// Unmarshal parses YAML-encoded data of defined with name and stores the result in the
+// value pointed to by v. It returns error if there is no config data for the name.
+func (config MiddlewareConfig) Unmarshal(name string, v interface{}) error {
+	if config == nil {
+		return nil
+	}
+
+	idata, ok := config[name]
+	if !ok {
+		return fmt.Errorf("no config data for middleware %q", name)
+	}
+
+	b, err := yaml.Marshal(idata)
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(b, v)
 }
 
 // LoggerConfig defines config spec of AppLogger

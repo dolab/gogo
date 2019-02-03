@@ -66,14 +66,14 @@ func Test_ContextWithSettings(t *testing.T) {
 	it.Equal(0, len(ctx.frozenSettings))
 
 	// set
-	ctx.Set("middlewareKey", "middlewareValue")
+	ctx.Set("filterKey", "filterValue")
 	it.Equal(1, len(ctx.settings))
 	it.Equal(0, len(ctx.frozenSettings))
 
 	// get
-	value, ok := ctx.Get("middlewareKey")
+	value, ok := ctx.Get("filterKey")
 	if it.True(ok) {
-		it.Equal("middlewareValue", value)
+		it.Equal("filterValue", value)
 	}
 
 	// get with empty
@@ -83,7 +83,7 @@ func Test_ContextWithSettings(t *testing.T) {
 	}
 
 	// MustGet
-	it.Equal("middlewareValue", ctx.MustGet("middlewareKey"))
+	it.Equal("filterValue", ctx.MustGet("filterKey"))
 
 	// MustGet with empty
 	it.Panics(func() {
@@ -99,28 +99,28 @@ func Test_ContextWithFrozenSettings(t *testing.T) {
 	it.Equal(0, len(ctx.frozenSettings))
 
 	// final set
-	err := ctx.SetFinal("middlewareFinalKey", "middlewareFinalValue")
+	err := ctx.SetFinal("filterFinalKey", "filterFinalValue")
 	if it.Nil(err) {
 		it.Equal(0, len(ctx.settings))
 		it.Equal(1, len(ctx.frozenSettings))
 	}
 
 	// final get
-	value, ok := ctx.GetFinal("middlewareFinalKey")
+	value, ok := ctx.GetFinal("filterFinalKey")
 	if it.True(ok) {
-		it.Equal("middlewareFinalValue", value)
+		it.Equal("filterFinalValue", value)
 	}
 
 	// final set with conflict
-	err = ctx.SetFinal("middlewareFinalKey", "newMiddlewareFinalValue")
+	err = ctx.SetFinal("filterFinalKey", "newFilterFuncFinalValue")
 	if it.NotNil(err) {
 		it.EqualError(ErrSettingsKey, err.Error())
 		it.Equal(1, len(ctx.frozenSettings))
 	}
 
-	value, ok = ctx.GetFinal("middlewareFinalKey")
+	value, ok = ctx.GetFinal("filterFinalKey")
 	if it.True(ok) {
-		it.Equal("middlewareFinalValue", value)
+		it.Equal("filterFinalValue", value)
 	}
 
 	// final get with empty
@@ -130,19 +130,19 @@ func Test_ContextWithFrozenSettings(t *testing.T) {
 	}
 
 	// MustSetFinal
-	ctx.MustSetFinal("mustMiddlewareFinalKey", "mustMiddlewareFinalValue")
+	ctx.MustSetFinal("mustFilterFuncFinalKey", "mustFilterFuncFinalValue")
 
 	// MustSetFinal with conflict
 	it.Panics(func() {
-		ctx.MustSetFinal("middlewareFinalKey", "newMiddlewareFinalValue")
+		ctx.MustSetFinal("filterFinalKey", "newFilterFuncFinalValue")
 	})
 
 	// MustGetFinal
-	it.Equal("mustMiddlewareFinalValue", ctx.MustGetFinal("mustMiddlewareFinalKey"))
+	it.Equal("mustFilterFuncFinalValue", ctx.MustGetFinal("mustFilterFuncFinalKey"))
 
 	// MustGetFinal with empty
 	it.Panics(func() {
-		ctx.MustGetFinal("unknownMiddlewareFinalKey")
+		ctx.MustGetFinal("unknownFilterFuncFinalKey")
 	})
 }
 
@@ -298,7 +298,7 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{
+	ctx.run(nil, []FilterFunc{
 		func(ctx *Context) {
 			ctx.Redirect(location)
 
@@ -485,7 +485,7 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{
+	ctx.run(nil, []FilterFunc{
 		func(ctx *Context) {
 			ctx.Render(render.NewDefaultRender(ctx.Response), "render")
 
@@ -504,12 +504,12 @@ func Test_Context_Next(t *testing.T) {
 	it := assert.New(t)
 
 	counter := 0
-	middleware1 := func(ctx *Context) {
+	filter1 := func(ctx *Context) {
 		counter++
 
 		ctx.Next()
 	}
-	middleware2 := func(ctx *Context) {
+	filter2 := func(ctx *Context) {
 		counter++
 
 		ctx.Next()
@@ -519,7 +519,7 @@ func Test_Context_Next(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{middleware1, middleware2}, &hooks.HookList{})
+	ctx.run(nil, []FilterFunc{filter1, filter2}, &hooks.HookList{})
 
 	it.Equal(2, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -529,17 +529,17 @@ func Test_Context_Abort(t *testing.T) {
 	it := assert.New(t)
 
 	counter := 0
-	middleware0 := func(ctx *Context) {
+	filter0 := func(ctx *Context) {
 		ctx.Abort()
 
 		ctx.Next()
 	}
-	middleware1 := func(ctx *Context) {
+	filter1 := func(ctx *Context) {
 		counter++
 
 		ctx.Next()
 	}
-	middleware2 := func(ctx *Context) {
+	filter2 := func(ctx *Context) {
 		counter++
 
 		ctx.Next()
@@ -549,7 +549,7 @@ func Test_Context_Abort(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []Middleware{middleware0, middleware1, middleware2}, &hooks.HookList{})
+	ctx.run(nil, []FilterFunc{filter0, filter1, filter2}, &hooks.HookList{})
 
 	it.Equal(0, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -569,7 +569,7 @@ func Test_contextNew(t *testing.T) {
 	it.Equal(params, ctx.Params)
 	it.Nil(ctx.settings)
 	it.Nil(ctx.frozenSettings)
-	it.Empty(ctx.middlewares)
+	it.Empty(ctx.filters)
 	it.EqualValues(-1, ctx.cursor)
 	it.Equal("package", ctx.pkg)
 	it.Equal("controller", ctx.ctrl)

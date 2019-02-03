@@ -22,8 +22,8 @@ $ # generate controller
 $ # NOTE: you should update application.go and add app.Resource("/user", User) route by hand
 $ gogo g c user
 
-$ # generate middleware
-$ gogo g w session
+$ # generate filter
+$ gogo g f session
 
 $ # generate model
 $ gogo g m user
@@ -40,24 +40,24 @@ $ make godev
 You can custom Server by implementing interfaces following:
 
 <golang>
-// A RequestReceivedHooker represents request received hook interface of server
-type RequestReceivedHooker interface {
-	RequestReceivedHooks() []hooks.NamedHook
+// A RequestReceivedMiddlewarer represents request received hook interface of server
+type RequestReceivedMiddlewarer interface {
+	RequestReceived() []gogo.Middlewarer
 }
 
-// A RequestRoutedHooker represents request routed hook interface of server
-type RequestRoutedHooker interface {
-	RequestRoutedHooks() []hooks.NamedHook
+// A RequestRoutedMiddlewarer represents request routed hook interface of server
+type RequestRoutedMiddlewarer interface {
+	RequestRouted() []gogo.Middlewarer
 }
 
-// A ResponseReadyHooker represents response ready for sending data hook interface of server
-type ResponseReadyHooker interface {
-	ResponseReadyHooks() []hooks.NamedHook
+// A ResponseReadyMiddlewarer represents response ready for sending data hook interface of server
+type ResponseReadyMiddlewarer interface {
+	ResponseReady() []gogo.Middlewarer
 }
 
-// A ResponseAlwaysHooker represents response routed success hook interface of server
-type ResponseAlwaysHooker interface {
-	ResponseAlwaysHooks() []hooks.NamedHook
+// A ResponseAlwaysMiddlewarer represents response routed success hook interface of server
+type ResponseAlwaysMiddlewarer interface {
+	ResponseAlways() []gogo.Middlewarer
 }
 </golang>
 
@@ -67,7 +67,7 @@ type ResponseAlwaysHooker interface {
 my
 ├── app                # workdir
 │   ├── controllers    # biz
-│   ├── middlewares    # custom middlewares of gogo
+│   ├── middlewares    # custom filters of gogo
 │   ├── models         # data driver
 │   └── protos         # protobuf
 ├── bin                # go build output of make gopackage

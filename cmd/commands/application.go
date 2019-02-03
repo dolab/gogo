@@ -121,8 +121,8 @@ func (_ *_Application) Action() cli.ActionFunc {
 		// generate default controller dependences
 		Application.genControllers(path.Join(root, "app", "controllers"), name, namespace)
 
-		// generate default middlewares
-		Application.genMiddlewares(path.Join(root, "app", "middlewares"), name, namespace)
+		// generate default filters
+		Application.genFilters(path.Join(root, "app", "middlewares"), name, namespace)
 
 		// generate default models
 		Application.genModels(path.Join(root, "app", "models"), name, namespace)
@@ -297,7 +297,7 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 	}
 }
 
-func (_ *_Application) genMiddlewares(root, app, namespace string) {
+func (_ *_Application) genFilters(root, app, namespace string) {
 	data := templateData{
 		Namespace:   namespace,
 		Application: app,
@@ -309,7 +309,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("middleware_testing.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("filter_testing.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 
@@ -319,7 +319,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("middleware_recovery.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("filter_recovery.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 
@@ -329,7 +329,7 @@ func (_ *_Application) genMiddlewares(root, app, namespace string) {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("middleware_recovery_test.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("filter_recovery_test.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 }

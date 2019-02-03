@@ -119,22 +119,22 @@ func Test_{{.Name}}_Destroy(t *testing.T) {
 	request.AssertContains(id)
 }
 `
-	componentMiddlewareTemplate = `package middlewares
+	componentFilterTemplate = `package middlewares
 
 import (
 	"github.com/dolab/gogo"
 )
 
-func {{.Name}}() gogo.Middleware {
+func {{.Name}}() gogo.FilterFunc {
 	return func(ctx *gogo.Context) {
 		// TODO: implements custom logic
-		ctx.AddHeader("x-gogo-middleware", "Hello, middleware!")
+		ctx.AddHeader("x-gogo-filter", "Hello, Filter!")
 
 		ctx.Next()
 	}
 }
 `
-	componentMiddlewareTestTemplate = `package middlewares
+	componentFilterTestTemplate = `package middlewares
 
 import (
 	"net/http"
@@ -146,14 +146,14 @@ import (
 func Test_{{.Name}}(t *testing.T) {
 	// register temp resource for testing
 	app := gogoapp.NewGroup("", {{.Name}}())
-	app.GET("/middlewares/{{.Name|lowercase}}", func(ctx *gogo.Context) {
+	app.GET("/filters/{{.Name|lowercase}}", func(ctx *gogo.Context) {
 		ctx.SetStatus(http.StatusNotImplemented)
 	})
 
 	request := gogotesting.New(t)
-	request.Get("/middlewares/{{.Name|lowercase}}", nil)
+	request.Get("/filters/{{.Name|lowercase}}", nil)
 	request.AssertStatus(http.StatusNotImplemented)
-	request.AssertHeader("x-gogo-middleware", "Hello, middleware!")
+	request.AssertHeader("x-gogo-filter", "Hello, Filter!")
 }
 `
 	componentModelTemplate = `package models

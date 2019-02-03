@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httpdispatch"
 )
 
@@ -15,34 +14,38 @@ type Configer interface {
 	SetMode(mode RunMode)
 	Section() *SectionConfig
 	UnmarshalJSON(v interface{}) error
+
+	// for middlewares
+	Middleware() MiddlewareConfiger
+	LoadMiddlewares() error
 }
 
 // A Grouper represents router interface
 type Grouper interface {
-	NewGroup(prefix string, middlewares ...Middleware) Grouper
+	NewGroup(prefix string, filters ...FilterFunc) Grouper
 	SetHandler(handler Handler)
-	Use(middlewares ...Middleware)
+	Use(filters ...FilterFunc)
 	Resource(uri string, resource interface{}) Grouper
-	OPTIONS(uri string, action Middleware)
-	HEAD(uri string, action Middleware)
-	POST(uri string, action Middleware)
-	GET(uri string, action Middleware)
-	PUT(uri string, action Middleware)
-	PATCH(uri string, action Middleware)
-	DELETE(uri string, action Middleware)
-	Any(uri string, action Middleware)
+	OPTIONS(uri string, handler FilterFunc)
+	HEAD(uri string, handler FilterFunc)
+	POST(uri string, handler FilterFunc)
+	GET(uri string, handler FilterFunc)
+	PUT(uri string, handler FilterFunc)
+	PATCH(uri string, handler FilterFunc)
+	DELETE(uri string, handler FilterFunc)
+	Any(uri string, handler FilterFunc)
 	Static(uri, root string)
 	Proxy(method, uri string, proxy *httputil.ReverseProxy)
 	HandlerFunc(method, uri string, fn http.HandlerFunc)
 	Handler(method, uri string, handler http.Handler)
-	Handle(method, uri string, action Middleware)
-	MockHandle(method, uri string, recorder http.ResponseWriter, action Middleware)
+	Handle(method, uri string, handler FilterFunc)
+	MockHandle(method, uri string, recorder http.ResponseWriter, handler FilterFunc)
 }
 
 // A Servicer represents application interface
 type Servicer interface {
 	Init(config Configer, group Grouper)
-	Middlewares()
+	Filters()
 	Resources()
 }
 
@@ -53,11 +56,6 @@ type Handler interface {
 	Handle(string, string, httpdispatch.Handler)
 	ServeFiles(string, http.FileSystem)
 }
-
-// A Middleware represents request filters or resource handler
-//
-// NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
-type Middleware func(ctx *Context)
 
 // A Responser represents HTTP response interface
 type Responser interface {
@@ -101,22 +99,7 @@ type Logger interface {
 	Panicf(format string, v ...interface{})
 }
 
-// A RequestReceivedHooker represents request received hook interface of server
-type RequestReceivedHooker interface {
-	RequestReceivedHooks() []hooks.NamedHook
-}
-
-// A RequestRoutedHooker represents request routed hook interface of server
-type RequestRoutedHooker interface {
-	RequestRoutedHooks() []hooks.NamedHook
-}
-
-// A ResponseReadyHooker represents response ready for sending data hook interface of server
-type ResponseReadyHooker interface {
-	ResponseReadyHooks() []hooks.NamedHook
-}
-
-// A ResponseAlwaysHooker represents response routed success hook interface of server
-type ResponseAlwaysHooker interface {
-	ResponseAlwaysHooks() []hooks.NamedHook
-}
+// A FilterFunc represents request filters or resource handler
+//
+// NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
+type FilterFunc func(ctx *Context)

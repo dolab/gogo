@@ -8,7 +8,7 @@ import (
 	"github.com/dolab/gogo"
 )
 
-func Recovery() gogo.Middleware {
+func Recovery() gogo.FilterFunc {
 	return func(ctx *gogo.Context) {
 		defer func() {
 			if panicErr := recover(); panicErr != nil {

@@ -15,12 +15,12 @@ import (
 
 var (
 	runMode string // app run mode, available values are [development|test|production], default to development
-	srcPath string // app config path, e.g. /home/deploy/websites/helloapp
+	cfgPath string // app config path, e.g. /home/deploy/websites/helloapp
 )
 
 func main() {
 	flag.StringVar(&runMode, "runMode", "development", "{{.Application}} -runMode=[development|test|production]")
-	flag.StringVar(&srcPath, "srcPath", "", "{{.Application}} -srcPath=/path/to/[config/application.json]")
+	flag.StringVar(&cfgPath, "cfgPath", "", "{{.Application}} -cfgPath=/path/to/[config/application.json]")
 	flag.Parse()
 
 	// verify run mode
@@ -30,18 +30,18 @@ func main() {
 	}
 
 	// adjust src path
-	if srcPath == "" {
+	if cfgPath == "" {
 		var err error
 
-		srcPath, err = os.Getwd()
+		cfgPath, err = os.Getwd()
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		srcPath = path.Clean(srcPath)
+		cfgPath = path.Clean(cfgPath)
 	}
 
-	gogo.New(runMode, srcPath).NewService(controllers.New()).Serve()
+	gogo.New(runMode, cfgPath).NewService(controllers.New()).Serve()
 }
 `
 )

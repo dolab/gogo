@@ -1,7 +1,7 @@
 package templates
 
 var (
-	middlewareTestingTemplate = `package middlewares
+	filterTestingTemplate = `package middlewares
 
 import (
 	"os"
@@ -20,10 +20,10 @@ var (
 func TestMain(m *testing.M) {
 	var (
 		runMode = "test"
-		srcPath = path.Clean("../../")
+		cfgPath = path.Clean("../../")
 	)
 
-	gogoapp = gogo.New(runMode, srcPath)
+	gogoapp = gogo.New(runMode, cfgPath)
 	gogotesting = httptesting.NewServer(gogoapp, false)
 
 	code := m.Run()
