@@ -19,19 +19,19 @@ type ContextHandle struct {
 	ctrl           string
 	action         string
 	handler        http.HandlerFunc
-	middlewares    []Middleware
+	filters        []FilterFunc
 	requestRouted  *hooks.HookList
 	responseReady  *hooks.HookList
 	responseAlways *hooks.HookList
 }
 
 // NewContextHandle returns new *ContextHandle with handler and metadata
-func NewContextHandle(handler http.HandlerFunc, middlewares []Middleware,
+func NewContextHandle(handler http.HandlerFunc, filters []FilterFunc,
 	requestRouted, responseReady, responseAlways *hooks.HookList) *ContextHandle {
 	var rval reflect.Value
 
 	if handler == nil {
-		rval = reflect.ValueOf(middlewares[len(middlewares)-1])
+		rval = reflect.ValueOf(filters[len(filters)-1])
 	} else {
 		rval = reflect.ValueOf(handler)
 	}
@@ -67,7 +67,7 @@ func NewContextHandle(handler http.HandlerFunc, middlewares []Middleware,
 		ctrl:           vars[1],
 		action:         vars[2],
 		handler:        handler,
-		middlewares:    middlewares,
+		filters:        filters,
 		requestRouted:  requestRouted,
 		responseReady:  responseReady,
 		responseAlways: responseAlways,
@@ -88,9 +88,9 @@ func (ch *ContextHandle) Handle(w http.ResponseWriter, r *http.Request, ps httpd
 	defer contextReuse(ctx)
 
 	if ch.handler == nil {
-		ctx.run(nil, ch.middlewares, ch.responseReady)
+		ctx.run(nil, ch.filters, ch.responseReady)
 	} else {
-		ctx.run(ch.handler, ch.middlewares, ch.responseReady)
+		ctx.run(ch.handler, ch.filters, ch.responseReady)
 	}
 }
 
@@ -117,7 +117,7 @@ type FakeHandle struct {
 }
 
 // NewFakeHandle returns new handler with stubbed http.ResponseWriter
-func NewFakeHandle(handler http.HandlerFunc, filters []Middleware, recorder http.ResponseWriter,
+func NewFakeHandle(handler http.HandlerFunc, filters []FilterFunc, recorder http.ResponseWriter,
 	requestRouted, responseReady, responseAlways *hooks.HookList) *FakeHandle {
 	ch := &FakeHandle{
 		ContextHandle: NewContextHandle(handler, filters, requestRouted, responseReady, responseAlways),

@@ -6,8 +6,9 @@ import (
 
 // A NamedHook is a struct that contains a name and hook.
 type NamedHook struct {
-	Name  string
-	Apply func(w http.ResponseWriter, r *http.Request) bool
+	Name     string
+	Apply    func(w http.ResponseWriter, r *http.Request) bool
+	Priority int
 }
 
 // A HookList manages zero or more hook(s) in a list.
@@ -23,6 +24,17 @@ type HookList struct {
 	// in the list. This can be used to terminate a list's iteration
 	// based on a condition such as logging like NewServerDebugLogHook.
 	AfterEach func(item HookItem) bool
+}
+
+// Has returns true if named hook exists, otherwise returns false
+func (l *HookList) Has(name string) bool {
+	for i := 0; i < len(l.list); i++ {
+		if l.list[i].Name == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Copy creates a copy of the hook list.
@@ -56,7 +68,7 @@ func (l *HookList) Clear() {
 
 // PushBack pushes hook fn to the back of the hook list.
 func (l *HookList) PushBack(fn func(w http.ResponseWriter, r *http.Request) bool) {
-	l.PushBackNamed(NamedHook{"__anonymous", fn})
+	l.PushBackNamed(NamedHook{"__anonymous", fn, -1})
 }
 
 // PushBackNamed pushes named hook to the back of the hook list.
@@ -70,7 +82,7 @@ func (l *HookList) PushBackNamed(hook NamedHook) {
 
 // PushFront pushes hook fn to the front of the hook list.
 func (l *HookList) PushFront(fn func(w http.ResponseWriter, r *http.Request) bool) {
-	l.PushFrontNamed(NamedHook{"__anonymous", fn})
+	l.PushFrontNamed(NamedHook{"__anonymous", fn, -1})
 }
 
 // PushFrontNamed pushes named hook to the front of the hook list.

@@ -31,8 +31,8 @@ $ make
 # NOTE: you should update application.go and add app.Resource("/user", User) route by hand
 $ gogo g c user
 
-# generate middleware
-$ gogo g w session
+# generate filter
+$ gogo g f session
 
 # generate model
 $ gogo g m user
@@ -90,7 +90,7 @@ func main() {
 }
 ```
 
-- Using middlewares
+- Using filters
 
 Middlewares is the best practice of doing common processing when handling a request.
 
@@ -104,7 +104,7 @@ import (
 func main() {
 	app := gogo.NewDefaults()
 
-	// avoid server quit by registering a recovery middleware
+	// avoid server quit by registering a recovery filter
 	app.Use(func(ctx *gogo.Context) {
 		if panicErr := recover(); panicErr != nil {
 			ctx.Logger.Errorf("[PANICED] %v", panicErr)
@@ -130,7 +130,7 @@ func main() {
 
 - Using group
 
-Group is useful when defining resources with shared middlewares and the same uri prefix.
+Group is useful when defining resources with shared filters and the same uri prefix.
 
 ```go
 package main
@@ -161,8 +161,8 @@ func main() {
 		ctx.Next()
 	})
 
-	// NewGroup creates sub resources with /v1 prefix, and apply basic auth middleware for all sub-resources.
-	// NOTE: it combines recovery middleware from previous.
+	// NewGroup creates sub resources with /v1 prefix, and apply basic auth filter for all sub-resources.
+	// NOTE: it combines recovery filter from previous.
 	v1 := app.NewGroup("/v1", func(ctx *gogo.Context) {
 		auth := ctx.Header("Authorization")
 		if !strings.HasPrefix(auth, "Basic ") {
@@ -184,7 +184,7 @@ func main() {
 			return
 		}
 
-		// settings which can used by following middlewares and handler
+		// settings which can used by following filters and handler
 		ctx.Set("username", tmp[0])
 
 		ctx.Next()

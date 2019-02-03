@@ -9,15 +9,15 @@ import (
 
 func Test_Recovery(t *testing.T) {
 	gogoapp.Use(Recovery())
-	defer gogoapp.CleanModdilewares()
+	defer gogoapp.CleanFilters()
 
 	// register temp resource for testing
-	gogoapp.GET("/middlewares/recovery", func(ctx *gogo.Context) {
+	gogoapp.GET("/filters/recovery", func(ctx *gogo.Context) {
 		panic("Recover testing")
 	})
 
 	request := gogotesting.New(t)
-	request.Get("/middlewares/recovery", nil)
+	request.Get("/filters/recovery", nil)
 	request.AssertStatus(http.StatusInternalServerError)
 	request.AssertNotEmpty()
 }

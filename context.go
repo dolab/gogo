@@ -55,11 +55,11 @@ type Context struct {
 	responseReady  *hooks.HookList
 	cursor         int8
 
-	pkg         string
-	ctrl        string
-	action      string
-	middlewares []Middleware
-	issuedAt    time.Time
+	pkg      string
+	ctrl     string
+	action   string
+	filters  []FilterFunc
+	issuedAt time.Time
 }
 
 // NewContext returns a *Context without initialization
@@ -306,18 +306,23 @@ func (c *Context) Text(data interface{}) error {
 	return c.Render(render.NewTextRender(c.Response), data)
 }
 
-// Json returns response with json codec and Content-Type: application/json header
-func (c *Context) Json(data interface{}) error {
+// String is alias of Text
+func (c *Context) String(data interface{}) error {
+	return c.Render(render.NewTextRender(c.Response), data)
+}
+
+// JSON returns response with json codec and Content-Type: application/json header
+func (c *Context) JSON(data interface{}) error {
 	return c.Render(render.NewJsonRender(c.Response), data)
 }
 
-// JsonP returns response with json codec and Content-Type: application/javascript header
-func (c *Context) JsonP(callback string, data interface{}) error {
+// JSONP returns response with json codec and Content-Type: application/javascript header
+func (c *Context) JSONP(callback string, data interface{}) error {
 	return c.Render(render.NewJsonpRender(c.Response, callback), data)
 }
 
-// Xml returns response with xml codec and Content-Type: text/xml header
-func (c *Context) Xml(data interface{}) error {
+// XML returns response with xml codec and Content-Type: text/xml header
+func (c *Context) XML(data interface{}) error {
 	return c.Render(render.NewXmlRender(c.Response), data)
 }
 
@@ -357,9 +362,9 @@ func (c *Context) Render(rr render.Render, data interface{}) error {
 	return err
 }
 
-// Next executes the remain middlewares in the chain.
+// Next executes the remain filters in the chain.
 //
-// NOTE: It ONLY used in the middlewares!
+// NOTE: It ONLY used in the filters!
 func (c *Context) Next() {
 	// is aborted?
 	if c.cursor >= math.MaxInt8 {
@@ -368,10 +373,8 @@ func (c *Context) Next() {
 
 	c.cursor++
 
-	if c.cursor >= 0 && c.cursor < int8(len(c.middlewares)) {
-		c.middlewares[c.cursor](c)
-	} else {
-		c.Logger.Warn("No more executer in the chain.")
+	if c.cursor >= 0 && c.cursor < int8(len(c.filters)) {
+		c.filters[c.cursor](c)
 	}
 }
 
@@ -381,14 +384,14 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(handler http.Handler, middlewares []Middleware, responseReady *hooks.HookList) {
+func (c *Context) run(handler http.Handler, filters []FilterFunc, responseReady *hooks.HookList) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
 	// reset internal
 	c.settings = nil
 	c.frozenSettings = nil
-	c.middlewares = middlewares
+	c.filters = filters
 	c.responseReady = responseReady
 	c.issuedAt = time.Now()
 	c.cursor = -1

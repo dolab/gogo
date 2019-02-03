@@ -13,4 +13,5 @@ require (
 	golang.org/x/net v0.0.0-20190110200230-915654e7eabc
 	golang.org/x/text v0.3.0 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
+	gopkg.in/yaml.v2 v2.2.2
 )

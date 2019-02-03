@@ -40,9 +40,9 @@ func (app *Application) Init(config gogo.Configer, group gogo.Grouper) {
 	app.v1 = group.NewGroup("/v1")
 }
 
-// Middlerwares implements gogo.Servicer
-func (app *Application) Middlewares() {
-	// apply your middlewares
+// Filters implements gogo.Servicer
+func (app *Application) Filters() {
+	// apply your filters for group
 
 	// panic recovery
 	app.v1.Use(middlewares.Recovery())
@@ -56,8 +56,8 @@ func (app *Application) Resources() {
 	app.v1.GET("/@greeting/hello", GettingStart.Hello)
 }
 
-// RequestReceivedHooks allows custom request received hooks of server
-func (app *Application) RequestReceivedHooks() []hooks.NamedHook {
+// RequestReceived allows custom request received hooks of server
+func (app *Application) RequestReceived() []hooks.NamedHook {
 	return []hooks.NamedHook{
 		{
 			Name: "request_received@debugger",
@@ -73,8 +73,8 @@ func (app *Application) RequestReceivedHooks() []hooks.NamedHook {
 	}
 }
 
-// RequestRoutedHooks allows custom request routed hooks of server
-func (app *Application) RequestRoutedHooks() []hooks.NamedHook {
+// RequestRouted allows custom request routed hooks of server
+func (app *Application) RequestRouted() []hooks.NamedHook {
 	return []hooks.NamedHook{
 		{
 			Name: "request_routed@debugger",
@@ -90,8 +90,8 @@ func (app *Application) RequestRoutedHooks() []hooks.NamedHook {
 	}
 }
 
-// ResponseReadyHooks allows custom response ready hooks of server
-func (app *Application) ResponseReadyHooks() []hooks.NamedHook {
+// ResponseReady allows custom response ready hooks of server
+func (app *Application) ResponseReady() []hooks.NamedHook {
 	return []hooks.NamedHook{
 		{
 			Name: "response_ready@debugger",
@@ -107,8 +107,8 @@ func (app *Application) ResponseReadyHooks() []hooks.NamedHook {
 	}
 }
 
-// ResponseAlwaysHooks allows custom response always hooks of server
-func (app *Application) ResponseAlwaysHooks() []hooks.NamedHook {
+// ResponseAlways allows custom response always hooks of server
+func (app *Application) ResponseAlways() []hooks.NamedHook {
 	return []hooks.NamedHook{
 		{
 			Name: "response_always@debugger",

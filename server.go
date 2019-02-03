@@ -2,6 +2,7 @@ package gogo
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
@@ -67,46 +68,138 @@ func (s *AppServer) Address() string {
 	return s.localAddr
 }
 
-// NewHooks tries to register hooks of all strategy if defined
-func (s *AppServer) NewHooks(svc Servicer) {
-	// register request received hooks
-	if hooker, ok := svc.(RequestReceivedHooker); ok {
-		for _, hook := range hooker.RequestReceivedHooks() {
-			s.RequestReceived.PushBackNamed(hook)
+// RegisterMiddlewares tries to register all middlewares defined
+func (s *AppServer) RegisterMiddlewares(svc Servicer) {
+	if registry, ok := svc.(RequestReceivedMiddlewarer); ok {
+		for _, m := range registry.RequestReceived() {
+			s.RegisterRequestReceived(m)
 		}
 	}
 
-	// register request routed hooks
-	if hooker, ok := svc.(RequestRoutedHooker); ok {
-		for _, hook := range hooker.RequestRoutedHooks() {
-			s.RequestRouted.PushBackNamed(hook)
+	if registry, ok := svc.(RequestRoutedMiddlewarer); ok {
+		for _, m := range registry.RequestRouted() {
+			s.RegisterRequestReceived(m)
 		}
 	}
 
-	// register response ready hooks
-	if hooker, ok := svc.(ResponseReadyHooker); ok {
-		for _, hook := range hooker.ResponseReadyHooks() {
-			s.ResponseReady.PushBackNamed(hook)
+	if registry, ok := svc.(ResponseReadyMiddlewarer); ok {
+		for _, m := range registry.ResponseReady() {
+			s.RegisterRequestReceived(m)
 		}
 	}
 
-	// register response always hooks
-	if hooker, ok := svc.(ResponseAlwaysHooker); ok {
-		for _, hook := range hooker.ResponseAlwaysHooks() {
-			s.ResponseAlways.PushBackNamed(hook)
+	if registry, ok := svc.(ResponseAlwaysMiddlewarer); ok {
+		for _, m := range registry.ResponseAlways() {
+			s.RegisterRequestReceived(m)
 		}
 	}
 }
 
+// RegisterRequestReceived registers middleware at request received strategy
+func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	name := m.Name()
+	if s.RequestReceived.Has(name) {
+		return fmt.Errorf("Middleware conflict, %q has registered for request received strategy", name)
+	}
+
+	applier, err := m.Register(s.config.Middleware())
+	if err != nil {
+		return err
+	}
+
+	s.RequestReceived.PushBackNamed(hooks.NamedHook{
+		Name:     name,
+		Apply:    applier,
+		Priority: m.Priority(),
+	})
+
+	return nil
+}
+
+// RegisterRequestRouted registers middleware at request routed strategy
+func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	name := m.Name()
+	if s.RequestRouted.Has(name) {
+		return fmt.Errorf("Middleware conflict, %q has registered for request routed strategy", name)
+	}
+
+	applier, err := m.Register(s.config.Middleware())
+	if err != nil {
+		return err
+	}
+
+	s.RequestRouted.PushBackNamed(hooks.NamedHook{
+		Name:     name,
+		Apply:    applier,
+		Priority: m.Priority(),
+	})
+
+	return nil
+}
+
+// RegisterResponseReady registers middleware at response ready strategy
+func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	name := m.Name()
+	if s.ResponseReady.Has(name) {
+		return fmt.Errorf("Middleware conflict, %q has registered for response ready strategy", name)
+	}
+
+	applier, err := m.Register(s.config.Middleware())
+	if err != nil {
+		return err
+	}
+
+	s.ResponseReady.PushBackNamed(hooks.NamedHook{
+		Name:     name,
+		Apply:    applier,
+		Priority: m.Priority(),
+	})
+
+	return nil
+}
+
+// RegisterResponseAlways registers middleware at response always strategy
+func (s *AppServer) RegisterResponseAlways(m Middlewarer) error {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	name := m.Name()
+	if s.ResponseAlways.Has(name) {
+		return fmt.Errorf("Middleware conflict, %q has registered for response always strategy", name)
+	}
+
+	applier, err := m.Register(s.config.Middleware())
+	if err != nil {
+		return err
+	}
+
+	s.ResponseAlways.PushBackNamed(hooks.NamedHook{
+		Name:     name,
+		Apply:    applier,
+		Priority: m.Priority(),
+	})
+
+	return nil
+}
+
 // NewService register all resources of service with middlewares
 func (s *AppServer) NewService(svc Servicer) *AppServer {
+	// try to register all middlewares
+	s.RegisterMiddlewares(svc)
+
 	svc.Init(s.config, s.AppGroup)
 
-	// register hooks
-	s.NewHooks(svc)
-
-	// register middlewares
-	svc.Middlewares()
+	// register filters
+	svc.Filters()
 
 	// register resources
 	svc.Resources()
@@ -116,10 +209,10 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 
 // NewResources register all resources of service without middlewares
 func (s *AppServer) NewResources(svc Servicer) *AppServer {
-	svc.Init(s.config, s.AppGroup)
+	// try to register all middlewares
+	s.RegisterMiddlewares(svc)
 
-	// register hooks
-	s.NewHooks(svc)
+	svc.Init(s.config, s.AppGroup)
 
 	// register resources
 	svc.Resources()

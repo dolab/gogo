@@ -9,61 +9,15 @@ import (
 	"github.com/golib/cli"
 )
 
-const (
-	_comType ComponentType = iota
-	ComTypeController
-	ComTypeMiddleware
-	ComTypeModel
-	comType_
-)
-
 var (
 	Component *_Component
 
 	comDirs = map[ComponentType][]string{
 		ComTypeController: {"app", "controllers"},
-		ComTypeMiddleware: {"app", "middlewares"},
+		ComTypeFilter: {"app", "middlewares"},
 		ComTypeModel:      {"app", "models"},
 	}
 )
-
-type ComponentType int
-
-func (ct ComponentType) Valid() bool {
-	return ct > _comType && ct < comType_
-}
-
-func (ct ComponentType) Root(pwd string) string {
-	dirs, ok := comDirs[ct]
-	if !ok {
-		return pwd
-	}
-
-	pwd = strings.TrimSuffix(pwd, "/")
-	pwd = strings.TrimSuffix(pwd, "/gogo")
-	pwd = strings.TrimSuffix(pwd, "/app/controllers")
-	pwd = strings.TrimSuffix(pwd, "/app/middlewares")
-	pwd = strings.TrimSuffix(pwd, "/app/models")
-	pwd = strings.TrimSuffix(pwd, "/app/protos")
-
-	return path.Clean(path.Join(pwd, path.Join(dirs...)))
-}
-
-func (ct ComponentType) String() string {
-	switch ct {
-	case ComTypeController:
-		return "controller"
-
-	case ComTypeMiddleware:
-		return "middleware"
-
-	case ComTypeModel:
-		return "model"
-
-	}
-
-	return ""
-}
 
 type ComTemplateModel struct {
 	Name string
@@ -94,9 +48,9 @@ func (_ *_Component) Command() cli.Command {
 				Action: Component.NewController(),
 			},
 			{
-				Name:    "middleware",
-				Aliases: []string{"w"},
-				Usage:   "generate middleware component.",
+				Name:    "filter",
+				Aliases: []string{"f"},
+				Usage:   "generate filter func component.",
 				Flags:   []cli.Flag{},
 				Action:  Component.NewMiddleware(),
 			},
@@ -161,7 +115,7 @@ func (_ *_Component) NewMiddleware() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
-		return Component.newComponent(ComTypeMiddleware, name)
+		return Component.newComponent(ComTypeFilter, name)
 	}
 }
 

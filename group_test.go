@@ -77,7 +77,7 @@ func Test_Group_Handle(t *testing.T) {
 
 	testCases := map[string]struct {
 		path    string
-		handler Middleware
+		handler FilterFunc
 	}{
 		"PUT": {
 			"/put",
