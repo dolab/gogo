@@ -95,14 +95,14 @@ func (s *AppServer) RegisterMiddlewares(svc Servicer) {
 	}
 }
 
-// RegisterRequestReceived registers middleware at request received strategy
+// RegisterRequestReceived registers middleware at request received phase
 func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
 	name := m.Name()
 	if s.RequestReceived.Has(name) {
-		return fmt.Errorf("Middleware conflict, %q has registered for request received strategy", name)
+		return fmt.Errorf("Middleware conflict, %q has registered for request received phase", name)
 	}
 
 	applier, err := m.Register(s.config.Middleware())
@@ -119,14 +119,14 @@ func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
 	return nil
 }
 
-// RegisterRequestRouted registers middleware at request routed strategy
+// RegisterRequestRouted registers middleware at request routed phase
 func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
 	name := m.Name()
 	if s.RequestRouted.Has(name) {
-		return fmt.Errorf("Middleware conflict, %q has registered for request routed strategy", name)
+		return fmt.Errorf("Middleware conflict, %q has registered for request routed phase", name)
 	}
 
 	applier, err := m.Register(s.config.Middleware())
@@ -143,14 +143,14 @@ func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
 	return nil
 }
 
-// RegisterResponseReady registers middleware at response ready strategy
+// RegisterResponseReady registers middleware at response ready phase
 func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
 	name := m.Name()
 	if s.ResponseReady.Has(name) {
-		return fmt.Errorf("Middleware conflict, %q has registered for response ready strategy", name)
+		return fmt.Errorf("Middleware conflict, %q has registered for response ready phase", name)
 	}
 
 	applier, err := m.Register(s.config.Middleware())
@@ -167,14 +167,14 @@ func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
 	return nil
 }
 
-// RegisterResponseAlways registers middleware at response always strategy
+// RegisterResponseAlways registers middleware at response always phase
 func (s *AppServer) RegisterResponseAlways(m Middlewarer) error {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 
 	name := m.Name()
 	if s.ResponseAlways.Has(name) {
-		return fmt.Errorf("Middleware conflict, %q has registered for response always strategy", name)
+		return fmt.Errorf("Middleware conflict, %q has registered for response always phase", name)
 	}
 
 	applier, err := m.Register(s.config.Middleware())

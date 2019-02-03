@@ -241,6 +241,17 @@ func (_ *_Application) genControllers(root, app, namespace string) {
 		return
 	}
 
+	// application_middlewares.go
+	fd, err = os.OpenFile(path.Join(root, "application_middlewares.go"), os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+	if err := box.Lookup("application_middlewares.go").Execute(fd, data); err != nil {
+		log.Error(err.Error())
+		return
+	}
+
 	// testing_test.go
 	fd, err = os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {

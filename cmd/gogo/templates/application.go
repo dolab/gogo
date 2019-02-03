@@ -4,10 +4,7 @@ var (
 	applicationTemplate = `package controllers
 
 import (
-	"net/http"
-
 	"github.com/dolab/gogo"
-	"github.com/dolab/gogo/pkgs/hooks"
 
 	"{{.Namespace}}/{{.Application}}/app/middlewares"
 	"{{.Namespace}}/{{.Application}}/app/models"
@@ -54,74 +51,6 @@ func (app *Application) Resources() {
 	// app.v1.GET("/", handler)
 
 	app.v1.GET("/@greeting/hello", GettingStart.Hello)
-}
-
-// RequestReceived allows custom request received hooks of server
-func (app *Application) RequestReceived() []hooks.NamedHook {
-	return []hooks.NamedHook{
-		{
-			Name: "request_received@debugger",
-			Apply: func(w http.ResponseWriter, r *http.Request) bool {
-				if Config.Debug {
-					log := gogo.NewContextLogger(r)
-					log.Debug("RequestReceivedHook")
-				}
-
-				return true
-			},
-		},
-	}
-}
-
-// RequestRouted allows custom request routed hooks of server
-func (app *Application) RequestRouted() []hooks.NamedHook {
-	return []hooks.NamedHook{
-		{
-			Name: "request_routed@debugger",
-			Apply: func(w http.ResponseWriter, r *http.Request) bool {
-				if Config.Debug {
-					log := gogo.NewContextLogger(r)
-					log.Debug("RequestRoutedHook")
-				}
-
-				return true
-			},
-		},
-	}
-}
-
-// ResponseReady allows custom response ready hooks of server
-func (app *Application) ResponseReady() []hooks.NamedHook {
-	return []hooks.NamedHook{
-		{
-			Name: "response_ready@debugger",
-			Apply: func(w http.ResponseWriter, r *http.Request) bool {
-				if Config.Debug {
-					log := gogo.NewContextLogger(r)
-					log.Debug("ResponseReadyHook")
-				}
-
-				return true
-			},
-		},
-	}
-}
-
-// ResponseAlways allows custom response always hooks of server
-func (app *Application) ResponseAlways() []hooks.NamedHook {
-	return []hooks.NamedHook{
-		{
-			Name: "response_always@debugger",
-			Apply: func(w http.ResponseWriter, r *http.Request) bool {
-				if Config.Debug {
-					log := gogo.NewContextLogger(r)
-					log.Debug("ResponseAlwaysHook")
-				}
-
-				return true
-			},
-		},
-	}
 }
 `
 )

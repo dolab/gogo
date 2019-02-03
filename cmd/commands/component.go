@@ -14,7 +14,7 @@ var (
 
 	comDirs = map[ComponentType][]string{
 		ComTypeController: {"app", "controllers"},
-		ComTypeFilter: {"app", "middlewares"},
+		ComTypeFilter:     {"app", "middlewares"},
 		ComTypeModel:      {"app", "models"},
 	}
 )
