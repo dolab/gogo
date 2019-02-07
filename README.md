@@ -2,11 +2,13 @@
 
 [![CircleCI](https://circleci.com/gh/dolab/gogo/tree/master.svg?style=svg)](https://circleci.com/gh/dolab/gogo/tree/master) [![Coverage](http://gocover.io/_badge/github.com/dolab/gogo?0)](http://gocover.io/github.com/dolab/gogo) [![GoDoc](https://godoc.org/github.com/dolab/gogo?status.svg)](http://godoc.org/github.com/dolab/gogo)
 
-`gogo` is an open source, high performance RESTful api framework for the [Golang](https://golang.org) programming language.
+`gogo` is an open source, high performance RESTful api framework for the [Golang](https://golang.org) programming language. It also support RPC api, which is similar to [gRPC](https://grpc.io), defined by [protobuf](https://developers.google.com/protocol-buffers/).
 
-It's heavily inspired from [rails](http://rubyonrails.org/) and [neko](https://github.com/rocwong/neko).
+It's heavily inspired from [rails](http://rubyonrails.org/) for best practice.
 
-> NOTE: The master branch is new *VERSION 2*, which requires `go1.10+` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
+> NOTE: From *VERSION 2*, gogo requires `go1.10+` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
+
+> NOTE: The *VERSION 3* introduces a big broken!!! And the API is frozen from now. We **Strongly** advice you to start from it for your product.
 
 ## Install
 
@@ -283,8 +285,8 @@ func main() {
 - [x] server config context
 - [x] support http.Request context
 - [x] scoffold && generator
-- [ ] mountable third-part app
-- [ ] gRPC support
+- [x] mountable third-part app
+- [x] gRPC support
 
 ## Thanks
 

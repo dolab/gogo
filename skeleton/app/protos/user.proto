@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+import "address.proto";
+
+package skeleton.ping;
+
+option go_package = "pbs";
+
+service User {
+    // Register a new user with name and addresses
+    rpc Register(RegisterInput) returns (RegisterOutput);
+}
+
+message RegisterInput {
+    string name = 1;
+
+    Addresses addresses = 2;
+}
+
+message RegisterOutput {
+    bool ok = 1;
+}

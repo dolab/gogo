@@ -1,6 +1,11 @@
 package templates
 
 var (
+	mainConfigTemplate = `---
+application: {{.Application}}
+namespace: {{.Namespace}}
+`
+
 	mainTemplate = `package main
 
 import (

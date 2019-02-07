@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	_ "github.com/dolab/gogo"
-	"github.com/dolab/gogo/cmd/commands"
+	"github.com/dolab/gogo/cmd/gogo/commands"
 	"github.com/dolab/gogo/cmd/gogo/templates"
 	"github.com/golib/cli"
 )
@@ -48,6 +48,7 @@ func main() {
 		commands.Packr.Command(box),
 		commands.Application.Command(),
 		commands.Component.Command(),
+		commands.Proto.Command(),
 	}
 
 	app.Run(os.Args)

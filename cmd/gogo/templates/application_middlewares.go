@@ -46,7 +46,7 @@ func (app *Application) RequestReceived() []gogo.Middlewarer {
 			name: "request_received@debugger",
 			fn: func(w http.ResponseWriter, r *http.Request) bool {
 				if Config.Debug {
-					log := gogo.NewContextLogger(r)
+					log := gogo.NewRequestLogger(r)
 					log.Debug("RequestReceivedHook")
 				}
 
@@ -63,7 +63,7 @@ func (app *Application) RequestRouted() []gogo.Middlewarer {
 			name: "request_routed@debugger",
 			fn: func(w http.ResponseWriter, r *http.Request) bool {
 				if Config.Debug {
-					log := gogo.NewContextLogger(r)
+					log := gogo.NewRequestLogger(r)
 					log.Debug("RequestRoutedHook")
 				}
 
@@ -80,7 +80,7 @@ func (app *Application) ResponseReady() []gogo.Middlewarer {
 			name: "response_ready@debugger",
 			fn: func(w http.ResponseWriter, r *http.Request) bool {
 				if Config.Debug {
-					log := gogo.NewContextLogger(r)
+					log := gogo.NewRequestLogger(r)
 					log.Debug("ResponseReadyHook")
 				}
 
@@ -97,7 +97,7 @@ func (app *Application) ResponseAlways() []gogo.Middlewarer {
 			name: "response_always@debugger",
 			fn: func(w http.ResponseWriter, r *http.Request) bool {
 				if Config.Debug {
-					log := gogo.NewContextLogger(r)
+					log := gogo.NewRequestLogger(r)
 					log.Debug("ResponseAlwaysHook")
 				}
 

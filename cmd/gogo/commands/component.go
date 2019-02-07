@@ -3,12 +3,12 @@ package commands
 import (
 	"os"
 	"path"
-	"strings"
 
 	"github.com/dolab/gogo/pkgs/named"
 	"github.com/golib/cli"
 )
 
+// Generate components of gogo
 var (
 	Component *_Component
 
@@ -26,7 +26,7 @@ type ComTemplateModel struct {
 
 type _Component struct{}
 
-func (_ *_Component) Command() cli.Command {
+func (*_Component) Command() cli.Command {
 	return cli.Command{
 		Name:    "generate",
 		Aliases: []string{"g"},
@@ -65,7 +65,7 @@ func (_ *_Component) Command() cli.Command {
 	}
 }
 
-func (_ *_Component) Flags() []cli.Flag {
+func (*_Component) Flags() []cli.Flag {
 	return []cli.Flag{
 		cli.BoolFlag{
 			Name:   "skip-testing",
@@ -78,7 +78,7 @@ func (_ *_Component) Flags() []cli.Flag {
 	}
 }
 
-func (_ *_Component) Action() cli.ActionFunc {
+func (*_Component) Action() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
@@ -98,7 +98,7 @@ func (_ *_Component) Action() cli.ActionFunc {
 	}
 }
 
-func (_ *_Component) NewController() cli.ActionFunc {
+func (*_Component) NewController() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
@@ -111,7 +111,7 @@ func (_ *_Component) NewController() cli.ActionFunc {
 	}
 }
 
-func (_ *_Component) NewMiddleware() cli.ActionFunc {
+func (*_Component) NewMiddleware() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
@@ -119,7 +119,7 @@ func (_ *_Component) NewMiddleware() cli.ActionFunc {
 	}
 }
 
-func (_ *_Component) NewModel() cli.ActionFunc {
+func (*_Component) NewModel() cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := path.Clean(ctx.Args().First())
 
@@ -127,7 +127,7 @@ func (_ *_Component) NewModel() cli.ActionFunc {
 	}
 }
 
-func (_ *_Component) newComponent(com ComponentType, name string, args ...string) error {
+func (*_Component) newComponent(com ComponentType, name string, args ...string) error {
 	if !com.Valid() {
 		return ErrComponentType
 	}
@@ -140,18 +140,15 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 	}
 
 	comRoot := com.Root(root)
-	if strings.Count(comRoot, "/app/") != 1 {
-		return ErrInvalidRoot
-	}
 
 	comName := name
 	comArgs := &ComTemplateModel{
-		Name: Component.toCamelCase(comName),
+		Name: named.ToCamelCase(comName),
 		Args: args,
 	}
 
 	// generate xxx.go
-	fd, err := os.OpenFile(path.Join(comRoot, Component.toFilename(comName)), os.O_CREATE|os.O_WRONLY, 0644)
+	fd, err := os.OpenFile(path.Join(comRoot, named.ToFilename(comName, ".go")), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 
@@ -166,7 +163,7 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 	}
 
 	// generate xxx_test.go
-	fd, err = os.OpenFile(path.Join(comRoot, Component.toFilename(comName+"_test")), os.O_CREATE|os.O_WRONLY, 0644)
+	fd, err = os.OpenFile(path.Join(comRoot, named.ToFilename(comName+"_test", ".go")), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 
@@ -181,33 +178,4 @@ func (_ *_Component) newComponent(com ComponentType, name string, args ...string
 	}
 
 	return nil
-}
-
-func (_ *_Component) toCamelCase(name string) (capitalName string) {
-	names := named.ToCamelCase(name)
-	for i, tmpname := range names {
-		tmpnames := strings.Split(tmpname, "_")
-		for j := 0; j < len(tmpnames); j++ {
-			tmpnames[j] = strings.Title(tmpnames[j])
-		}
-
-		names[i] = strings.Join(tmpnames, "")
-	}
-
-	return strings.Join(names, "")
-}
-
-func (_ *_Component) toFilename(name string) (filename string) {
-	filenames := []string{}
-
-	names := named.ToCamelCase(name)
-	for i := 0; i < len(names); i++ {
-		if names[i] == "_" {
-			continue
-		}
-
-		filenames = append(filenames, strings.ToLower(names[i]))
-	}
-
-	return strings.Join(filenames, "_") + ".go"
 }

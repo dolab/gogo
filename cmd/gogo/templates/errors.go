@@ -1,7 +1,7 @@
 package templates
 
 var (
-	errorsTemplate = `package defaults
+	errorsTemplate = `package errors
 
 import (
 	"net/http"
