@@ -39,6 +39,7 @@ type Grouper interface {
 	HandlerFunc(method, uri string, fn http.HandlerFunc)
 	Handler(method, uri string, handler http.Handler)
 	Handle(method, uri string, handler FilterFunc)
+	MountRPC(method string, rpc RPCServicer)
 	MockHandle(method, uri string, recorder http.ResponseWriter, handler FilterFunc)
 }
 
@@ -47,6 +48,30 @@ type Servicer interface {
 	Init(config Configer, group Grouper)
 	Filters()
 	Resources()
+}
+
+// RPCServicer is the interface for rpc serve. It wraps HTTP handlers with
+// additional methods for accessing metadata about the service.
+type RPCServicer interface {
+	// ProtocGenGogoVersion is the semantic version string of the version of
+	// protoc-gen-gogo used to generate service.
+	ProtocGenGogoVersion() string
+
+	// ServiceRegistry returns a rpc method name to handlers map.
+	ServiceRegistry(prefix string) map[string]FilterFunc
+
+	// ServiceNames returns all rpc services registered.
+	ServiceNames() []string
+
+	// ServiceDescriptor returns gzipped bytes describing the .proto file that
+	// this service was generated from. Once unzipped, the bytes can be
+	// unmarshalled as a
+	// github.com/golang/protobuf/protoc-gen-go/descriptor.FileDescriptorProto.
+	//
+	// The returned integer is the index of this particular service within that
+	// FileDescriptorProto's 'Service' slice of ServiceDescriptorProtos. This is a
+	// low-level field, expected to be used for reflection.
+	ServiceDescriptor() ([]byte, int)
 }
 
 // A Handler represents handler interface

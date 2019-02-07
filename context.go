@@ -28,7 +28,7 @@ var (
 		ctx.Response.Hijack(w)
 		ctx.Request = r
 		ctx.Params = ps
-		ctx.Logger = NewContextLogger(r)
+		ctx.Logger = NewRequestLogger(r)
 		ctx.pkg = pkg
 		ctx.ctrl = ctrl
 		ctx.action = action
@@ -83,6 +83,18 @@ func (c *Context) Controller() string {
 // Action returns action name of routed request.
 func (c *Context) Action() string {
 	return c.action
+}
+
+// ContentType returns first value of request Content-Type header separated by semicolon
+func (c *Context) ContentType() string {
+	s := c.Header("Content-Type")
+
+	i := strings.Index(s, ";")
+	if i == -1 {
+		i = len(s)
+	}
+
+	return strings.TrimSpace(strings.ToLower(s[:i]))
 }
 
 // Set binds a new value with key for the context

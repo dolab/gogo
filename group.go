@@ -275,6 +275,21 @@ func (r *AppGroup) Handle(method string, uri string, handler FilterFunc) {
 	))
 }
 
+// MountRPC registers all rpc services
+func (r *AppGroup) MountRPC(method string, svc RPCServicer) {
+	prefix := r.buildPrefix("")
+
+	// registry
+	for uri, handler := range svc.ServiceRegistry(prefix) {
+		filters := r.buildFilters(handler)
+
+		r.handler.Handle(method, uri, NewContextHandle(
+			nil, filters,
+			r.server.RequestRouted, r.server.ResponseReady, r.server.ResponseAlways,
+		))
+	}
+}
+
 // MockHandle mocks a new resource with specified response and handler, useful for testing
 func (r *AppGroup) MockHandle(method string, rpath string, recorder http.ResponseWriter, handler FilterFunc) {
 	uri := r.buildPrefix(rpath)
