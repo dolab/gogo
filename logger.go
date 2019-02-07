@@ -1,6 +1,7 @@
 package gogo
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"path"
@@ -8,18 +9,6 @@ import (
 
 	"github.com/dolab/logger"
 )
-
-// NewContextLogger returns a Logger related with *http.Request.
-//
-// NOTE: It returns a dummy *AppLogger when no available Logger for the request.
-func NewContextLogger(r *http.Request) Logger {
-	alog, ok := r.Context().Value(ctxLoggerKey).(Logger)
-	if !ok {
-		alog = NewAppLogger("stderr", "")
-	}
-
-	return alog
-}
 
 // AppLogger defines log component of gogo, it implements Logger interface
 // with pool support
@@ -56,6 +45,23 @@ func NewAppLogger(output, filename string) *AppLogger {
 		return &AppLogger{
 			Logger: lg.New(),
 		}
+	}
+
+	return alog
+}
+
+// NewRequestLogger returns a Logger related with *http.Request.
+//
+// NOTE: It returns a dummy *AppLogger when no available Logger for the request.
+func NewRequestLogger(r *http.Request) Logger {
+	return NewContextLogger(r.Context())
+}
+
+// NewContextLogger returns a Logger related with ctxLoggerKey.
+func NewContextLogger(ctx context.Context) Logger {
+	alog, ok := ctx.Value(ctxLoggerKey).(Logger)
+	if !ok {
+		alog = NewAppLogger("stderr", "")
 	}
 
 	return alog

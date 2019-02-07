@@ -1,4 +1,4 @@
-module github.com/myapp
+module github.com/skeleton
 
 require (
 	github.com/dolab/gogo v0.0.0-20190122083835-0f0d9fc2581f
