@@ -12,10 +12,10 @@ $ # show gogo helps
 $ gogo -h
 
 $ # create a new application
-$ gogo new myapp
+$ gogo new {{.Application}}
 
 $ # resolve dependences
-$ cd myapp/gogo
+$ cd {{.Application}}/gogo
 $ make
 
 $ # generate controller

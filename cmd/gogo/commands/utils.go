@@ -29,8 +29,8 @@ func ensureAppRoot(root string) string {
 
 	// is this a gogo app project?
 	appRoot := path.Join(root, "app", "main.yml")
-	if stat, err := os.Stat(appRoot); err != nil || !stat.IsDir() {
-		panic("It seems there is no app/main.yml file of gogo project within " + root)
+	if stat, err := os.Stat(appRoot); err != nil || stat.Mode()&os.ModeType != 0 {
+		panic("Cannot resolve main.yml file of gogo project with localtion " + appRoot)
 	}
 
 	gogoRoot := path.Join(root, "gogo")

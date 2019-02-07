@@ -7,13 +7,14 @@ import (
 	"github.com/golib/cli"
 )
 
+// Packr wraps all templates of gogo cmd
 var (
 	Packr *_Packr
 )
 
 type _Packr struct{}
 
-func (_ *_Packr) Command(box *template.Template) cli.Command {
+func (*_Packr) Command(box *template.Template) cli.Command {
 	return cli.Command{
 		Name:    "packr",
 		Usage:   "print `file` content of named template.",
@@ -22,7 +23,7 @@ func (_ *_Packr) Command(box *template.Template) cli.Command {
 	}
 }
 
-func (_ *_Packr) Action(box *template.Template) cli.ActionFunc {
+func (*_Packr) Action(box *template.Template) cli.ActionFunc {
 	return func(ctx *cli.Context) error {
 		name := ctx.Args().First()
 		if name == "" {
