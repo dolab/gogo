@@ -17,24 +17,24 @@ var (
 type _{{.Name}} struct{}
 
 // // custom resource id name, default to {{.Name|lowercase}}
-// func (_ *_{{.Name}}) ID() string {
+// func (*_{{.Name}}) ID() string {
 // 	return "id"
 // }
 
 // @route GET /{{.Name|lowercase}}
-func (_ *_{{.Name}}) Index(ctx *gogo.Context) {
+func (*_{{.Name}}) Index(ctx *gogo.Context) {
 	ctx.SetStatus(http.StatusNotImplemented)
 	ctx.Return()
 }
 
 // @route POST /{{.Name|lowercase}}
-func (_ *_{{.Name}}) Create(ctx *gogo.Context) {
+func (*_{{.Name}}) Create(ctx *gogo.Context) {
 	ctx.SetStatus(http.StatusNotImplemented)
 	ctx.Return()
 }
 
 // @route GET /{{.Name|lowercase}}/:{{.Name|lowercase}}
-func (_ *_{{.Name}}) Show(ctx *gogo.Context) {
+func (*_{{.Name}}) Show(ctx *gogo.Context) {
 	// retrieve resource name of path params
 	id := ctx.Params.Get("{{.Name|lowercase}}")
 
@@ -48,7 +48,7 @@ func (_ *_{{.Name}}) Show(ctx *gogo.Context) {
 }
 
 // @route PUT /{{.Name|lowercase}}/:{{.Name|lowercase}}
-func (_ *_{{.Name}}) Update(ctx *gogo.Context) {
+func (*_{{.Name}}) Update(ctx *gogo.Context) {
 	// retrieve resource name of path params
 	id := ctx.Params.Get("{{.Name|lowercase}}")
 
@@ -57,7 +57,7 @@ func (_ *_{{.Name}}) Update(ctx *gogo.Context) {
 }
 
 // @route DELETE /{{.Name|lowercase}}/:{{.Name|lowercase}}
-func (_ *_{{.Name}}) Destroy(ctx *gogo.Context) {
+func (*_{{.Name}}) Destroy(ctx *gogo.Context) {
 	// retrieve resource name of path params
 	id := ctx.Params.Get("{{.Name|lowercase}}")
 
@@ -177,7 +177,7 @@ func New{{.Name}}Model() *{{.Name}}Model {
 // helpers
 type _{{.Name}} struct{}
 
-func (_ *_{{.Name}}) Find(id string) (m *{{.Name}}Model, err error) {
+func (*_{{.Name}}) Find(id string) (m *{{.Name}}Model, err error) {
 	err = errors.New("Not Found")
 
 	return

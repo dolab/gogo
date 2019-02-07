@@ -1,14 +1,10 @@
-package commands
+package gen
 
 import (
-	"text/template"
-
-	"github.com/dolab/gogo/cmd/gogo/templates"
 	"github.com/dolab/logger"
 )
 
 var (
-	box *template.Template
 	log *logger.Logger
 )
 
@@ -22,12 +18,14 @@ func init() {
 	}
 
 	log.SetLevelByName("info")
-	// log.SetFlag(log.Lshortfile)
+	log.SetFlag(1 | 2)
 
-	box = templates.Box()
 }
 
-type templateData struct {
-	Namespace   string
-	Application string
+func Errorf(format string, v ...interface{}) {
+	log.Errorf(format, v...)
+}
+
+func Failf(format string, v ...interface{}) {
+	log.Fatalf(format, v...)
 }

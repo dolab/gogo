@@ -5,7 +5,7 @@ import (
 	"unicode/utf8"
 )
 
-// ToCamelCase splits the camelcase word and returns a list of words. It also
+// parse splits the word and returns a list of words. It also
 // supports digits. Both lower camel case and upper camel case are supported.
 // For more info please check: http://en.wikipedia.org/wiki/CamelCase
 //
@@ -13,6 +13,7 @@ import (
 //
 //   "" =>                     [""]
 //   "lowercase" =>            ["lowercase"]
+//   "snake_case" =>           ["snake", "_", "case"]
 //   "Class" =>                ["Class"]
 //   "MyClass" =>              ["My", "Class"]
 //   "MyC" =>                  ["My", "C"]
@@ -42,38 +43,42 @@ import (
 //       if subsequent string is lower case:
 //         move last character of upper case string to beginning of
 //         lower case string
-func ToCamelCase(s string) (entries []string) {
+func parse(s string) (names []string) {
 	// don't split invalid utf8
-	if !utf8.ValidString(s) {
+	if len(s) == 0 || !utf8.ValidString(s) {
 		return []string{s}
 	}
 
-	entries = []string{}
-	var runes [][]rune
-	lastClass := 0
-	class := 0
-	// split into fields based on class of unicode character
+	var (
+		kase     = 0
+		lastKase = 0
+
+		runes [][]rune
+	)
+	// split into fields based on kase of unicode character
 	for _, r := range s {
 		switch true {
 		case unicode.IsLower(r):
-			class = 1
+			kase = 1
 		case unicode.IsUpper(r):
-			class = 2
+			kase = 2
 		case unicode.IsDigit(r):
-			class = 3
+			kase = 3
 		default:
-			class = 4
+			kase = 4
 		}
-		if class == lastClass {
+
+		if kase == lastKase {
 			runes[len(runes)-1] = append(runes[len(runes)-1], r)
 		} else {
 			runes = append(runes, []rune{r})
 		}
-		lastClass = class
+
+		lastKase = kase
 	}
 
 	// handle upper case -> lower case sequences, e.g.
-	// "PDFL", "oader" -> "PDF", "Loader"
+	// 	"PDFL", "oader" -> "PDF", "Loader"
 	for i := 0; i < len(runes)-1; i++ {
 		if unicode.IsUpper(runes[i][0]) && unicode.IsLower(runes[i+1][0]) {
 			runes[i+1] = append([]rune{runes[i][len(runes[i])-1]}, runes[i+1]...)
@@ -84,7 +89,7 @@ func ToCamelCase(s string) (entries []string) {
 	// construct []string from results
 	for _, s := range runes {
 		if len(s) > 0 {
-			entries = append(entries, string(s))
+			names = append(names, string(s))
 		}
 	}
 

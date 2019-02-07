@@ -30,6 +30,9 @@ func init() {
 	template.Must(box.New("makefile").Parse(
 		format(makefileTemplate),
 	))
+	template.Must(box.New("main.yml").Parse(
+		format(mainConfigTemplate),
+	))
 	template.Must(box.New("main.go").Parse(
 		format(mainTemplate),
 	))

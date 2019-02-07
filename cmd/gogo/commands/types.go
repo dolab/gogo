@@ -52,6 +52,7 @@ const (
 	ProtoTypeProtobuf
 	ProtoTypeService
 	ProtoTypeClient
+	ProtoTypeAPI
 	protoType_
 )
 
@@ -75,12 +76,16 @@ func (pt ProtoType) Root(pwd string) string {
 
 func (pt ProtoType) String() string {
 	switch pt {
+	case ProtoTypeProto:
+		return "proto"
 	case ProtoTypeProtobuf:
 		return "protobuf"
 	case ProtoTypeService:
 		return "gogo rpc service"
 	case ProtoTypeClient:
 		return "gogo rpc client"
+	case ProtoTypeAPI:
+		return "gogo rpc api"
 	}
 
 	return "Unknown proto"
