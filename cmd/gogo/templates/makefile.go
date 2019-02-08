@@ -19,7 +19,7 @@ goclean:
 	go mod tidy
 
 goinstall:
-	go get -v github.com/dolab/gogo@v3.2.0
+	go get -v github.com/dolab/gogo@v3.3.0
 	go get -v github.com/dolab/httpmitm@master
 	go get -v github.com/dolab/httptesting@master
 	go get -v github.com/golib/assert@master
