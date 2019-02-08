@@ -15,5 +15,6 @@ require (
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
 	golang.org/x/text v0.3.0 // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
+	golang.org/x/tools v0.0.0-20190206221403-44bcb96178d3
 	gopkg.in/yaml.v2 v2.2.2
 )
