@@ -30,7 +30,9 @@ _testmain.go
 *.prof
 
 # development & test config files
+*.development.yml
 *.development.json
+*.test.yml
 *.test.json
 `
 )

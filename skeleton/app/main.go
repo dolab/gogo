@@ -17,7 +17,7 @@ var (
 
 func main() {
 	flag.StringVar(&runMode, "runMode", "development", "example -runMode=[development|test|production]")
-	flag.StringVar(&cfgPath, "cfgPath", "", "example -cfgPath=/path/to/[config/application.json]")
+	flag.StringVar(&cfgPath, "cfgPath", "", "example -cfgPath=/path/to/[config/application.yml]")
 	flag.Parse()
 
 	// verify run mode

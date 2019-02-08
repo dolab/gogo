@@ -31,15 +31,15 @@ var (
 			return cfgPath
 		}
 
-		filename := "application.json"
+		filename := "application.yml"
 		switch RunMode(runMode) {
 		case Development:
-			// try application.development.json
-			filename = "application.development.json"
+			// try application.development.yml
+			filename = "application.development.yml"
 
 		case Test:
-			// try application.test.json
-			filename = "application.test.json"
+			// try application.test.yml
+			filename = "application.test.yml"
 
 		case Production:
 			// skip
@@ -48,7 +48,7 @@ var (
 
 		filepath := path.Join(cfgPath, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(cfgPath, "config", "application.json")
+			filepath = path.Join(cfgPath, "config", "application.yml")
 		}
 
 		return filepath
@@ -77,7 +77,7 @@ var (
 		filename := "middlewares.yaml"
 		filepath := path.Join(cfgPath, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(cfgPath, "config", "middlewares.json")
+			filepath = path.Join(cfgPath, "config", "middlewares.yml")
 		}
 
 		return filepath
@@ -85,11 +85,11 @@ var (
 )
 
 // New creates application server with config resolved
-// from file <cfgPath>/config/application[.<runMode>].json.
+// from file <cfgPath>/config/application[.<runMode>].yml.
 //
 // NOTE: You can custom resolver by overwriting FindModeConfigFile.
 func New(runMode, cfgPath string) *AppServer {
-	// resolve config from application.json
+	// resolve config from application.yml
 	config, err := NewAppConfig(FindModeConfigFile(runMode, cfgPath))
 	if err != nil {
 		log.Fatalf("[GOGO] NewAppConfig(%s): %v", FindModeConfigFile(runMode, cfgPath), err)

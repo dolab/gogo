@@ -14,12 +14,17 @@ default_steps: &default_steps
 
     # specify any bash command here prefixed with `run: `
     - run: go mod tidy
-    - run: go test -v -race github.com/dolab/gogo/pkgs/errors
-    - run: go test -v -race github.com/dolab/gogo/pkgs/gid
-    - run: go test -v -race github.com/dolab/gogo/internal/params
-    - run: go test -v -race github.com/dolab/gogo/internal/render
-    - run: go test -v
-    - run: go test -v -race
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/errors
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/gid
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/named
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/protocol/json
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/protocol/jsonpb
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/pkgs/protocol/protobuf
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/internal/params
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/internal/protoc-gen/message
+    - run: go test -v -timeout 30s -race github.com/dolab/gogo/internal/render
+    - run: go test -v -timeout 30s
+    - run: go test -v -timeout 30s -race
 jobs:
   go1.6:
     <<: *defaults
