@@ -48,14 +48,14 @@ func Test_NewWithModeConfig(t *testing.T) {
 	it := assert.New(t)
 
 	app := fakeApp("development")
-	it.Equal("for development", app.config.RunName())
+	it.Equal("gogo for development", app.config.RunName())
 }
 
 func Test_NewWithFilename(t *testing.T) {
 	it := assert.New(t)
 
 	root, _ := os.Getwd()
-	filename := path.Join(root, "skeleton", "config", "application.json")
+	filename := path.Join(root, "skeleton", "config", "application.yml")
 
 	app := New("development", filename)
 	it.Equal("gogo", app.config.RunName())

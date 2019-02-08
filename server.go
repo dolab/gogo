@@ -65,6 +65,9 @@ func (s *AppServer) Config() Configer {
 
 // Address returns app listen address
 func (s *AppServer) Address() string {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
 	return s.localAddr
 }
 
@@ -105,7 +108,7 @@ func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for request received phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middleware())
+	applier, err := m.Register(s.config.Middlewares())
 	if err != nil {
 		return err
 	}
@@ -129,7 +132,7 @@ func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for request routed phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middleware())
+	applier, err := m.Register(s.config.Middlewares())
 	if err != nil {
 		return err
 	}
@@ -153,7 +156,7 @@ func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for response ready phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middleware())
+	applier, err := m.Register(s.config.Middlewares())
 	if err != nil {
 		return err
 	}
@@ -177,7 +180,7 @@ func (s *AppServer) RegisterResponseAlways(m Middlewarer) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for response always phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middleware())
+	applier, err := m.Register(s.config.Middlewares())
 	if err != nil {
 		return err
 	}
@@ -303,7 +306,7 @@ func (s *AppServer) Run() {
 	log.Infof("Listened on %s://%s", network, addr)
 
 	server := &http.Server{
-		Addr:              s.localAddr,
+		Addr:              addr,
 		Handler:           s.AppGroup,
 		ReadHeaderTimeout: time.Duration(rtimeout) * time.Second,
 		ReadTimeout:       time.Duration(rtimeout) * time.Second,
@@ -313,8 +316,10 @@ func (s *AppServer) Run() {
 	server.RegisterOnShutdown(listener.Shutdown)
 
 	// register locals
+	s.mux.Lock()
 	s.localAddr = addr
 	s.localServ = server
+	s.mux.Unlock()
 
 	if config.Server.Ssl {
 		msg := "ServeTLS(%s:%s): %v"

@@ -16,7 +16,7 @@ type Configer interface {
 	UnmarshalJSON(v interface{}) error
 
 	// for middlewares
-	Middleware() MiddlewareConfiger
+	Middlewares() MiddlewareConfiger
 	LoadMiddlewares() error
 }
 

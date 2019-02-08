@@ -6,14 +6,15 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/golib/assert"
 )
 
 var (
-	fakePort   = 19090
-	fakeConfig = func(name string) (*AppConfig, error) {
+	fakePort   uint64 = 9090
+	fakeConfig        = func(name string) (*AppConfig, error) {
 		root, _ := os.Getwd()
 
 		data, err := ioutil.ReadFile(path.Join(root, "skeleton", "config", name))
@@ -21,16 +22,16 @@ var (
 			panic(err)
 		}
 
-		fakePort++
+		port := atomic.AddUint64(&fakePort, 1)
 
-		return NewAppConfigFromString(strings.Replace(string(data), "9090", strconv.Itoa(fakePort), -1))
+		return NewAppConfigFromString(strings.Replace(string(data), "9090", strconv.FormatUint(port, 10), -1))
 	}
 )
 
 func Test_NewConfig(t *testing.T) {
 	it := assert.New(t)
 
-	config, err := fakeConfig("application.json")
+	config, err := fakeConfig("application.yml")
 	if it.Nil(err) {
 		it.Implements((*Configer)(nil), config)
 
@@ -61,7 +62,7 @@ func Test_NewConfigWithoutName(t *testing.T) {
 func Test_ConfigSetMode(t *testing.T) {
 	it := assert.New(t)
 
-	config, err := fakeConfig("application.json")
+	config, err := fakeConfig("application.yml")
 	if it.Nil(err) {
 		it.Equal(Test, config.Mode)
 
@@ -73,7 +74,7 @@ func Test_ConfigSetMode(t *testing.T) {
 func Test_ConfigSection(t *testing.T) {
 	it := assert.New(t)
 
-	config, err := fakeConfig("application.json")
+	config, err := fakeConfig("application.yml")
 	if it.Nil(err) {
 		section := config.Section()
 		it.NotNil(section.Server)
@@ -81,20 +82,20 @@ func Test_ConfigSection(t *testing.T) {
 	}
 }
 
-func Test_ConfigUnmarshalJSON(t *testing.T) {
+func Test_ConfigUnmarshalYAML(t *testing.T) {
 	it := assert.New(t)
 
 	var testConfig struct {
 		GettingStart struct {
-			Greeting string `json:"greeting"`
-		} `json:"getting_start"`
+			Greeting string `yaml:"greeting"`
+		} `yaml:"getting_start"`
 	}
 
-	config, err := fakeConfig("application.json")
+	config, err := fakeConfig("application.yml")
 	if it.Nil(err) {
 		config.SetMode(Development)
 
-		err := config.UnmarshalJSON(&testConfig)
+		err := config.UnmarshalYAML(&testConfig)
 		if it.Nil(err) {
 			it.Equal("Hello, gogo!", testConfig.GettingStart.Greeting)
 		}

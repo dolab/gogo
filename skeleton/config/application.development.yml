@@ -1,0 +1,31 @@
+---
+mode: test
+name: gogo for development
+
+default_server: &default_server
+  addr: localhost
+  port: 9090
+  ssl: false
+  request_timeout: 3
+  response_timeout: 10
+  request_id: X-Request-Id
+
+default_logger: &default_logger
+  output: nil
+  level: debug
+  filter_params:
+    - password
+    - password_confirmation
+
+sections:
+  test:
+    server:
+      <<: *default_server
+      healthz: true
+      request_id: ''
+    logger:
+      <<: *default_logger
+    domain: https://example.com
+    getting_start:
+      greeting: Hello, gogo!
+    debug: true

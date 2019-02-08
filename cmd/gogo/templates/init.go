@@ -52,8 +52,8 @@ func init() {
 	template.Must(box.New("application_config_test.go").Parse(
 		format(applicationConfigTestTemplate),
 	))
-	template.Must(box.New("application_config.json").Parse(
-		format(applicationConfigJSONTemplate),
+	template.Must(box.New("application_config.yml").Parse(
+		formatYAML(applicationConfigYAMLTemplate),
 	))
 	template.Must(box.New("application_middlewares.go").Parse(
 		format(applicationMiddlewaresTemplate),
@@ -105,6 +105,7 @@ func init() {
 var (
 	langOpenTag  = regexp.MustCompile(`<(\w+)>`)
 	langCloseTag = regexp.MustCompile(`</(\w+)>`)
+	langTab      = regexp.MustCompile(`(?m)^(\t{1,})`)
 )
 
 func format(tpl string) string {
@@ -113,6 +114,16 @@ func format(tpl string) string {
 	})
 	tpl = langCloseTag.ReplaceAllStringFunc(tpl, func(tag string) string {
 		return "```"
+	})
+
+	return tpl
+}
+
+func formatYAML(tpl string) string {
+	tpl = format(tpl)
+
+	tpl = langTab.ReplaceAllStringFunc(tpl, func(tabs string) string {
+		return strings.Repeat("    ", len(tabs))
 	})
 
 	return tpl

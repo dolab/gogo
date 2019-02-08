@@ -61,11 +61,11 @@ import (
 )
 
 func main() {
-	// load config from config/application.json
-	// app := gogo.New("development", "/path/to/[config/application.json]")
+	// load config from config/application.yml
+	// app := gogo.New("development", "/path/to/[config/application.yml]")
 
 	// load config from filename
-	// app := gogo.New("development", "/path/to/config.json")
+	// app := gogo.New("development", "/path/to/config.yml")
 
 	// use default config
 	app := gogo.NewDefaults()
@@ -260,20 +260,37 @@ func main() {
 
 - Server
 
-```json
-{
-	"addr": "localhost",
-	"port": 9090,
-	"throttle": 3000, // RPS, throughput of per-seconds
-	"demotion": 6000, // TPS, concurrency of server
-	"request_timeout": 3,
-	"response_timeout": 10,
-	"http2": false, // serve with http2
-	"ssl": false,
-	"ssl_cert": "/path/to/ssl/cert",
-	"ssl_key": "/path/to/ssl/key",
-	"request_id": "X-Request-Id"
-}
+```yaml
+---
+mode: test
+name: gogo
+
+default_server: &default_server
+  addr: localhost
+  port: 9090
+  ssl: false
+  request_timeout: 3
+  response_timeout: 10
+  request_id: X-Request-Id
+
+default_logger: &default_logger
+  output: nil
+  level: debug
+  filter_params:
+    - password
+    - password_confirmation
+
+sections:
+  test:
+    server:
+      <<: *default_server
+      request_id: ''
+    logger:
+      <<: *default_logger
+    domain: https://example.com
+    getting_start:
+      greeting: Hello, gogo!
+    debug: false
 ```
 
 ## Benchmarks

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 )
@@ -23,7 +23,7 @@ var (
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.json")
+		config, _ := fakeConfig("application.yml")
 
 		return NewAppServer(config, logger)
 	}
@@ -32,7 +32,7 @@ var (
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.tcp.json")
+		config, _ := fakeConfig("application.tcp.yml")
 
 		return NewAppServer(config, logger)
 	}
@@ -41,7 +41,7 @@ var (
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.unix.json")
+		config, _ := fakeConfig("application.unix.yml")
 
 		return NewAppServer(config, logger)
 	}
@@ -50,7 +50,7 @@ var (
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.timeout.json")
+		config, _ := fakeConfig("application.timeout.yml")
 
 		return NewAppServer(config, logger)
 	}
@@ -59,7 +59,7 @@ var (
 		logger := NewAppLogger("nil", "")
 		logger.SetSkip(3)
 
-		config, _ := fakeConfig("application.healthz.json")
+		config, _ := fakeConfig("application.healthz.yml")
 
 		return NewAppServer(config, logger)
 	}
@@ -139,7 +139,7 @@ func Benchmark_ServerWithReader(b *testing.B) {
 func Test_Server_Race(t *testing.T) {
 	it := assert.New(t)
 	logger := NewAppLogger("nil", "")
-	config, _ := fakeConfig("application.json")
+	config, _ := fakeConfig("application.yml")
 
 	server := NewAppServer(config, logger)
 	server.RequestReceived.PushFront(func(w http.ResponseWriter, r *http.Request) bool {
@@ -198,8 +198,8 @@ func Test_ServerWithReturn(t *testing.T) {
 
 		data := struct {
 			XMLName xml.Name `json:"-"`
-			Name    string   `xml:"Name"`
-			Age     int      `xml:"Age"`
+			Name    string   `json:"Name"`
+			Age     int      `json:"Age"`
 		}{
 			XMLName: xml.Name{
 				Local: "Result",
@@ -270,6 +270,65 @@ func Test_ServerWithNotFound(t *testing.T) {
 	request.AssertContains("Request(GET /server/not/found): not found")
 }
 
+func Test_Server_Shutdown(t *testing.T) {
+	it := assert.New(t)
+
+	server := fakeTimeoutServer()
+	server.GET("/server/shutdown", func(ctx *Context) {
+		ctx.Text("SHUTDOWN")
+	})
+
+	go server.Serve()
+	for {
+		if len(server.Address()) > 0 {
+			break
+		}
+	}
+
+	// it should not work any more
+	server.Shutdown()
+
+	endpoint := "http://" + server.Address() + "/server/shutdown"
+
+	response, err := http.Get(endpoint)
+	if it.NotNil(err) {
+		it.Nil(response)
+
+		it.Contains(err.Error(), "connect: connection refused")
+	}
+}
+
+func Test_Server_ShutdownWithGhost(t *testing.T) {
+	it := assert.New(t)
+
+	server := fakeTimeoutServer()
+	server.GET("/server/shutdown/ghost", func(ctx *Context) {
+		ctx.Text("SHUTDOWN")
+	})
+
+	go server.Run()
+	for {
+		if len(server.Address()) > 0 {
+			break
+		}
+	}
+
+	// it should not work any more
+	server.Shutdown()
+
+	endpoint := "http://" + server.Address() + "/server/shutdown/ghost"
+
+	response, err := http.Get(endpoint)
+	if it.Nil(err) {
+		defer response.Body.Close()
+
+		data, err := ioutil.ReadAll(response.Body)
+		if it.Nil(err) {
+			it.Equal("SHUTDOWN", string(data))
+		}
+	}
+}
+
 // func Test_ServerWithMethodNotAllowed(t *testing.T) {
 // 	server := fakeServer()
 // 	server.HEAD("/server/method/not/allowed", func(ctx *Context) {
@@ -285,119 +344,10 @@ func Test_ServerWithNotFound(t *testing.T) {
 // 	request.AssertContains("Request(GET /server/method/not/allowed): method not allowed")
 // }
 
-func Test_ServerWithThroughput(t *testing.T) {
-	it := assert.New(t)
-	logger := NewAppLogger("nil", "")
-	config, _ := fakeConfig("application.throttle.json")
-
-	server := NewAppServer(config, logger)
-	server.RequestReceived.PushFrontNamed(hooks.NewServerThrottleHook(1))
-
-	server.GET("/server/throughput", func(ctx *Context) {
-		ctx.SetStatus(http.StatusNoContent)
-	})
-
-	ts := httptesting.NewServer(server, false)
-	defer ts.Close()
-
-	var (
-		wg sync.WaitGroup
-
-		routines = 3
-	)
-
-	bufc := make(chan []byte, routines)
-
-	wg.Add(routines)
-	for i := 0; i < routines; i++ {
-		go func() {
-			defer wg.Done()
-
-			request := ts.New(t)
-			request.Get("/server/throughput", nil)
-
-			bufc <- request.ResponseBody
-		}()
-	}
-	wg.Wait()
-
-	close(bufc)
-
-	s := ""
-	for buf := range bufc {
-		s += string(buf)
-	}
-	it.Contains(s, "I'm a teapot")
-
-	// it should work for now
-	request := ts.New(t)
-	request.Get("/server/throughput", nil)
-	request.AssertStatus(http.StatusNoContent)
-	request.AssertEmpty()
-}
-
-func Test_ServerWithConcurrency(t *testing.T) {
-	it := assert.New(t)
-	logger := NewAppLogger("nil", "")
-	config, _ := fakeConfig("application.throttle.json")
-
-	server := NewAppServer(config, logger)
-	server.RequestReceived.PushFrontNamed(hooks.NewServerDemotionHook(1, 1))
-
-	server.GET("/server/concurrency", func(ctx *Context) {
-		if !ctx.Params.HasQuery("fast") {
-			time.Sleep(time.Second)
-		}
-
-		ctx.SetStatus(http.StatusNoContent)
-	})
-
-	ts := httptesting.NewServer(server, false)
-	defer ts.Close()
-
-	var (
-		wg sync.WaitGroup
-
-		routines = 3
-	)
-
-	bufc := make(chan string, routines)
-
-	wg.Add(routines)
-	for i := 0; i < routines; i++ {
-		go func(routine int) {
-			defer wg.Done()
-
-			request := ts.New(t)
-			request.Get("/server/concurrency", nil)
-
-			bufc <- fmt.Sprintf("[routine@#%d] %s", routine, string(request.ResponseBody))
-		}(i)
-	}
-	wg.Wait()
-
-	close(bufc)
-
-	s := ""
-	for buf := range bufc {
-		s += string(buf)
-	}
-	it.Contains(s, "Too Many Requests")
-
-	// it should work now
-	params := url.Values{}
-	params.Add("fast", "")
-
-	request := ts.New(t)
-	request.Get("/server/concurrency", params)
-	request.AssertStatus(http.StatusNoContent)
-	request.AssertNotContains("Too Many Requests")
-}
-
 func Test_Server_loggerNew(t *testing.T) {
 	it := assert.New(t)
 	logger := NewAppLogger("nil", "")
-	config, _ := fakeConfig("application.throttle.json")
+	config, _ := fakeConfig("application.throttle.yml")
 
 	server := NewAppServer(config, logger)
 

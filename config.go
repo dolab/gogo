@@ -1,7 +1,6 @@
 package gogo
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -39,15 +38,15 @@ var (
 // AppConfig defines config component of gogo.
 // It implements Configer interface.
 type AppConfig struct {
-	Mode        RunMode                      `json:"mode"`
-	Name        string                       `json:"name"`
-	Sections    map[RunMode]*json.RawMessage `json:"sections"`
-	Middlewares *MiddlewareConfig            `json:"middlewares"`
+	Mode     RunMode                 `yaml:"mode"`
+	Name     string                  `yaml:"name"`
+	Sections map[RunMode]interface{} `yaml:"sections"`
 
-	filepath string
+	middlewares *MiddlewareConfig
+	filepath    string
 }
 
-// NewAppConfig returns *AppConfig by parsing application.json
+// NewAppConfig returns *AppConfig by parsing application.yml
 func NewAppConfig(filename string) (*AppConfig, error) {
 	if strings.HasPrefix(filename, GogoSchema) {
 		return NewAppConfigFromDefault()
@@ -61,11 +60,11 @@ func NewAppConfig(filename string) (*AppConfig, error) {
 	return NewAppConfigFromString(string(b))
 }
 
-// NewAppConfigFromString returns *AppConfig by parsing json string
+// NewAppConfigFromString returns *AppConfig by parsing.yml string
 func NewAppConfigFromString(s string) (*AppConfig, error) {
 	var config *AppConfig
 
-	err := json.Unmarshal([]byte(s), &config)
+	err := yaml.Unmarshal([]byte(s), &config)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func NewAppConfigFromString(s string) (*AppConfig, error) {
 
 // NewAppConfigFromDefault returns *AppConfig of defaults
 func NewAppConfigFromDefault() (*AppConfig, error) {
-	data, _ := json.Marshal(map[string]interface{}{
+	data, _ := yaml.Marshal(map[string]interface{}{
 		"mode": Development,
 		"name": "gogo",
 		"sections": map[RunMode]interface{}{
@@ -117,34 +116,44 @@ func (config *AppConfig) SetMode(mode RunMode) {
 	config.Mode = mode
 }
 
-// Section is shortcut of retreving app server and logger configurations at once.
+// Section is shortcut of retreving app config by section at once.
 // It returns SectionConfig if exists, otherwise returns DefaultSectionConfig instead.
 func (config *AppConfig) Section() *SectionConfig {
-	var sconfig *SectionConfig
+	var section *SectionConfig
 
-	err := config.UnmarshalJSON(&sconfig)
+	err := config.UnmarshalYAML(&section)
 	if err != nil {
 		return DefaultSectionConfig
 	}
 
-	return sconfig
-}
-
-// Middleware parses YAML-encoded data of defined with name and stores the result in the
-// value pointed to by v. It returns error if there is no config data for the name.
-func (config *AppConfig) Middleware() MiddlewareConfiger {
-	return config.Middlewares
+	return section
 }
 
 // UnmarshalJSON parses JSON-encoded data of section and stores the result in the value pointed to by v.
 // It returns ErrConfigSection error if section of the current mode does not exist.
 func (config *AppConfig) UnmarshalJSON(v interface{}) error {
+	return fmt.Errorf("DEPRECATED!!! Please use yaml format")
+}
+
+// UnmarshalYAML parses YAML-encoded data of section and stores the result in the value pointed to by v.
+// It returns ErrConfigSection error if section of the current mode does not exist.
+func (config *AppConfig) UnmarshalYAML(v interface{}) error {
 	section, ok := config.Sections[config.Mode]
 	if !ok {
 		return ErrConfigSection
 	}
 
-	return json.Unmarshal([]byte(*section), &v)
+	data, err := yaml.Marshal(section)
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(data, v)
+}
+
+// Middlewares returns a MiddlewareConfiger wrapped with parsed YAML-encoded data of all middlewares.
+func (config *AppConfig) Middlewares() MiddlewareConfiger {
+	return config.middlewares
 }
 
 // LoadMiddlewares reads all config of middlewares
@@ -152,7 +161,7 @@ func (config *AppConfig) LoadMiddlewares() error {
 	filename := FindMiddlewareConfigFile(config.filepath)
 
 	if strings.HasPrefix(filename, GogoSchema) {
-		config.Middlewares = DefaultMiddlewareConfig
+		config.middlewares = DefaultMiddlewareConfig
 		return nil
 	}
 
@@ -161,33 +170,33 @@ func (config *AppConfig) LoadMiddlewares() error {
 		return err
 	}
 
-	return yaml.Unmarshal(b, &config.Middlewares)
+	return yaml.Unmarshal(b, &config.middlewares)
 }
 
 // SectionConfig defines config spec for internal usage
 type SectionConfig struct {
-	Server *ServerConfig `json:"server"`
-	Logger *LoggerConfig `json:"logger"`
+	Server *ServerConfig `yaml:"server"`
+	Logger *LoggerConfig `yaml:"logger"`
 }
 
 // ServerConfig defines config spec of AppServer
 type ServerConfig struct {
-	Addr           string `json:"addr"`             // listen address
-	Port           int    `json:"port"`             // listen port
-	RTimeout       int    `json:"request_timeout"`  // unit in second
-	WTimeout       int    `json:"response_timeout"` // unit in second
-	MaxHeaderBytes int    `json:"max_header_bytes"` // unit in byte
+	Addr           string `yaml:"addr"`             // listen address
+	Port           int    `yaml:"port"`             // listen port
+	RTimeout       int    `yaml:"request_timeout"`  // unit in second
+	WTimeout       int    `yaml:"response_timeout"` // unit in second
+	MaxHeaderBytes int    `yaml:"max_header_bytes"` // unit in byte
+	RequestID      string `yaml:"request_id"`
 
-	Ssl     bool   `json:"ssl"`
-	SslCert string `json:"ssl_cert"`
-	SslKey  string `json:"ssl_key"`
+	// ssl support
+	Ssl     bool   `yaml:"ssl"`
+	SslCert string `yaml:"ssl_cert"`
+	SslKey  string `yaml:"ssl_key"`
 
-	HTTP2   bool `json:"http2"`   // enable http2
-	Healthz bool `json:"healthz"` // enable /-/healthz
-
-	Throttle  int    `json:"throttle"` // in time.Second/throttle ms
-	Demotion  int    `json:"demotion"`
-	RequestID string `json:"request_id"`
+	HTTP2    bool `yaml:"http2"`    // enable http2
+	Healthz  bool `yaml:"healthz"`  // enable /-/healthz
+	Throttle int  `yaml:"throttle"` // in time.Second/throttle ms
+	Demotion int  `yaml:"demotion"`
 }
 
 // MiddlewareConfig defines config spec of middleware
@@ -215,10 +224,9 @@ func (config MiddlewareConfig) Unmarshal(name string, v interface{}) error {
 
 // LoggerConfig defines config spec of AppLogger
 type LoggerConfig struct {
-	Output    string `json:"output"` // valid values [stdout|stderr|null|path/to/file]
-	LevelName string `json:"level"`  // valid values [debug|info|warn|error]
-
-	FilterFields []string `json:"filter_fields"` // sensitive fields which should filter out when logging
+	Output       string   `yaml:"output"`        // valid values [stdout|stderr|null|nil|path/to/file]
+	LevelName    string   `yaml:"level"`         // valid values [debug|info|warn|error]
+	FilterFields []string `yaml:"filter_fields"` // sensitive fields which should be filtered out when logging
 }
 
 // Level returns logger.Level by its name

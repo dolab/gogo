@@ -129,8 +129,8 @@ func (*_Application) Action() cli.ActionFunc {
 		// generate default models
 		Application.genModels(path.Join(root, "app", "models"), name, namespace)
 
-		// generate default application.json
-		Application.genConfigFile(path.Join(root, "config", "application.json"), name, namespace)
+		// generate default application.yml
+		Application.genConfigFile(path.Join(root, "config", "application.yml"), name, namespace)
 
 		// generate main.go
 		Application.genMainFile(path.Join(root, "app"), name, namespace)
@@ -381,7 +381,7 @@ func (*_Application) genConfigFile(file, app, namespace string) {
 		return
 	}
 
-	err = box.Lookup("application_config.json").Execute(fd, AppData{
+	err = box.Lookup("application_config.yml").Execute(fd, AppData{
 		Namespace:   namespace,
 		Application: app,
 	})
