@@ -14,6 +14,7 @@ type Configer interface {
 	SetMode(mode RunMode)
 	Section() *SectionConfig
 	UnmarshalJSON(v interface{}) error
+	UnmarshalYAML(v interface{}) error
 
 	// for middlewares
 	Middlewares() MiddlewareConfiger
