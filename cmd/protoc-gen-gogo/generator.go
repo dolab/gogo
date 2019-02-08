@@ -6,9 +6,11 @@ import (
 	"compress/gzip"
 	"crypto/md5"
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io/ioutil"
 	"path"
 	"strconv"
 	"strings"
@@ -19,6 +21,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	plugin "github.com/golang/protobuf/protoc-gen-go/plugin"
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 const (
@@ -30,6 +33,7 @@ type generator struct {
 
 	// Package naming:
 	packageName       string // Name of the package that we're generating
+	packagePath       string // Path of the package that we're outputing
 	fileToPackageName map[*descriptor.FileDescriptorProto]string
 
 	// List of files that were inputs to the generator. We need to hold this in
@@ -78,7 +82,7 @@ func (g *generator) Generate(in *plugin.CodeGeneratorRequest) *plugin.CodeGenera
 
 	g.importPrefix = opts.importPrefix
 	g.importMap = opts.importMap
-	g.sourceRelativePaths = opts.relativePaths
+	g.sourceRelativePaths = opts.relativePath
 	g.sourceOnlyService = opts.onlyService
 	g.sourceOnlyClient = opts.onlyClient
 	g.sourceOnlyAPI = opts.onlyAPI
@@ -113,6 +117,9 @@ func (g *generator) Generate(in *plugin.CodeGeneratorRequest) *plugin.CodeGenera
 	} else {
 		g.packageName = packageName
 	}
+
+	// required by generateAPI
+	g.packagePath = opts.packagePath
 
 	// Next, we need to pick names for all the files that are dependencies.
 	for _, file := range in.ProtoFile {
@@ -207,30 +214,50 @@ func (g *generator) generateAPI(file *descriptor.FileDescriptorProto) []*plugin.
 	}
 
 	// gen xxx.api.go
-	g.genAPIFileHeader(file)
-	g.genAPIImport(file)
+	codes, err := ioutil.ReadFile(path.Join(g.packagePath, g.goFilename(file, ".api.go")))
+	if err != nil {
+		g.genAPIFileHeader(file)
+		g.genAPIImport(file)
 
-	// for each service, generate api stubs
-	for i, service := range file.Service {
-		g.genAPI(file, service, i)
+		// for each service, generate api stubs
+		for i, service := range file.Service {
+			g.genAPI(file, service, i)
+		}
+	} else {
+		g.P(string(codes))
+
+		// for each service, generate api stubs
+		for _, service := range file.Service {
+			g.genAPIImplement(file, service)
+		}
 	}
 
 	apiFile := new(plugin.CodeGeneratorResponse_File)
 	apiFile.Name = proto.String(g.goFilename(file, ".api.go"))
-	apiFile.Content = proto.String(g.goFormat())
+	apiFile.Content = proto.String(g.goFormat(true))
 
 	// gen xxx.api_test.go
-	g.genAPIFileHeader(file)
-	g.genAPITestingImport(file)
+	codes, err = ioutil.ReadFile(path.Join(g.packagePath, g.goFilename(file, ".api_test.go")))
+	if err != nil {
+		g.genAPIFileHeader(file)
+		g.genAPITestingImport(file)
 
-	// for each service, gnerate api testing stubs
-	for i, service := range file.Service {
-		g.genAPITesting(file, service, i)
+		// for each service, gnerate api testing stubs
+		for i, service := range file.Service {
+			g.genAPITesting(file, service, i)
+		}
+	} else {
+		g.P(string(codes))
+
+		// for each service, gnerate api testing stubs
+		for _, service := range file.Service {
+			g.genAPITestingImplement(file, service)
+		}
 	}
 
 	testingFile := new(plugin.CodeGeneratorResponse_File)
 	testingFile.Name = proto.String(g.goFilename(file, ".api_test.go"))
-	testingFile.Content = proto.String(g.goFormat())
+	testingFile.Content = proto.String(g.goFormat(true))
 
 	g.filesHandled++
 	return []*plugin.CodeGeneratorResponse_File{apiFile, testingFile}
@@ -826,13 +853,6 @@ func (g *generator) genAPI(
 	file *descriptor.FileDescriptorProto,
 	service *descriptor.ServiceDescriptorProto,
 	index int) {
-	// API Implements
-	g.genAPIImplement(file, service)
-}
-
-func (g *generator) genAPIImplement(
-	file *descriptor.FileDescriptorProto,
-	service *descriptor.ServiceDescriptorProto) {
 	svcName := toServiceName(service)
 	apiStruct := toAPIStruct(service)
 
@@ -844,6 +864,13 @@ func (g *generator) genAPIImplement(
 	g.P(`type `, apiStruct, ` struct{}`)
 	g.P()
 
+	// API Implements
+	g.genAPIImplement(file, service)
+}
+
+func (g *generator) genAPIImplement(
+	file *descriptor.FileDescriptorProto,
+	service *descriptor.ServiceDescriptorProto) {
 	// APIs
 	for _, method := range service.Method {
 		g.genAPIImplementMethod(file, service, method)
@@ -1032,14 +1059,14 @@ func (g *generator) goTypeName(protoName string) string {
 	return prefix + toTypeName(name)
 }
 
-func (g *generator) goFormat() string {
+func (g *generator) goFormat(dupFilters ...bool) string {
 	defer g.buf.Reset()
 
 	// Reformat generated code.
 	fset := token.NewFileSet()
 	raw := g.buf.Bytes()
 
-	ast, err := parser.ParseFile(fset, "", raw, parser.ParseComments)
+	fast, err := parser.ParseFile(fset, "", raw, parser.ParseComments)
 	if err != nil {
 		// Print out the bad code with line numbers.
 		// This should never happen in practice, but it can while changing generated code,
@@ -1053,11 +1080,35 @@ func (g *generator) goFormat() string {
 		gen.Failf("invalid source code was generated: %v\n%s\n", err, src.String())
 	}
 
+	// trim duplicated methods
+	if len(dupFilters) > 0 && dupFilters[0] {
+		commentMap := ast.NewCommentMap(fset, fast, fast.Comments)
+
+		methods := map[string]bool{}
+		astutil.Apply(fast, func(cur *astutil.Cursor) bool {
+			if decl, ok := cur.Node().(*ast.FuncDecl); ok {
+				if methods[decl.Name.Name] {
+					cur.Delete()
+
+					return false
+				}
+
+				methods[decl.Name.Name] = true
+			}
+
+			return true
+		}, func(cur *astutil.Cursor) bool {
+			return true
+		})
+
+		fast.Comments = commentMap.Filter(fast).Comments()
+	}
+
 	out := bytes.NewBuffer(nil)
 	err = (&printer.Config{
 		Mode:     printer.TabIndent | printer.UseSpaces,
 		Tabwidth: 8,
-	}).Fprint(out, fset, ast)
+	}).Fprint(out, fset, fast)
 	if err != nil {
 		gen.Failf("cannot reformat source code: %v", err)
 	}

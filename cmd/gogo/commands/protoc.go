@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -221,7 +222,14 @@ func (*_Proto) newProto(proto ProtoType, name string, args ...string) error {
 		protoSvcRoot := ProtoTypeService.Root(root)
 
 		protoArgs = append(protoArgs, "--gogo_out")
-		protoArgs = append(protoArgs, "package_name=services,import_prefix="+protoApp.ImportPrefix()+",service=source_only:"+protoSvcRoot)
+		protoArgs = append(protoArgs, fmt.Sprintf(
+			"package_name=%s,package_path=%s,import_prefix=%s,service=%s:%s",
+			"services",
+			protoSvcRoot,
+			protoApp.ImportPrefix(),
+			"source_only",
+			protoSvcRoot,
+		))
 
 	case ProtoTypeClient:
 		// protoc --gogo_out=?
@@ -229,7 +237,14 @@ func (*_Proto) newProto(proto ProtoType, name string, args ...string) error {
 		protoClientRoot := ProtoTypeClient.Root(root)
 
 		protoArgs = append(protoArgs, "--gogo_out")
-		protoArgs = append(protoArgs, "package_name=clients,import_prefix="+protoApp.ImportPrefix()+",client=source_only:"+protoClientRoot)
+		protoArgs = append(protoArgs, fmt.Sprintf(
+			"package_name=%s,package_path=%s,import_prefix=%s,client=%s:%s",
+			"clients",
+			protoClientRoot,
+			protoApp.ImportPrefix(),
+			"source_only",
+			protoClientRoot,
+		))
 
 	case ProtoTypeAPI:
 		// protoc --gogo_out=?
@@ -237,7 +252,14 @@ func (*_Proto) newProto(proto ProtoType, name string, args ...string) error {
 		protoAPIRoot := ProtoTypeAPI.Root(root)
 
 		protoArgs = append(protoArgs, "--gogo_out")
-		protoArgs = append(protoArgs, "package_name=controllers,import_prefix="+protoApp.ImportPrefix()+",api=source_only:"+protoAPIRoot)
+		protoArgs = append(protoArgs, fmt.Sprintf(
+			"package_name=%s,package_path=%s,import_prefix=%s,api=%s:%s",
+			"controllers",
+			protoAPIRoot,
+			protoApp.ImportPrefix(),
+			"source_only",
+			protoAPIRoot,
+		))
 	}
 
 	// all protos

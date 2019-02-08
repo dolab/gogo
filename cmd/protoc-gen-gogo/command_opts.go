@@ -7,9 +7,10 @@ import (
 
 type commandOpts struct {
 	packageName    string            // Generate package name
+	packagePath    string            // Generate package output path value
 	importPrefix   string            // String to prefix to imported package file names.
 	importMap      map[string]string // Mapping from .proto file name to import path.
-	relativePaths  bool              // Paths value, used to control file output directory
+	relativePath   bool              // Paths value, used to control file output directory
 	onlyService    bool              // Generate service only and output to xxx.service.go
 	onlyClient     bool              // Generate client only and output to xxx.client.go
 	onlyAPI        bool              // Generate api only and output to xxx.api.go
@@ -50,6 +51,11 @@ func parseCommandOpts(parameter string) (*commandOpts, error) {
 				return nil, fmt.Errorf("package name does not support %q", v)
 			}
 			args.packageName = v
+		case k == "package_path":
+			if v == "" {
+				return nil, fmt.Errorf("package path does not support %q", v)
+			}
+			args.packagePath = v
 		case k == "import_prefix":
 			args.importPrefix = v
 		// Support import map 'M' prefix per https://github.com/golang/protobuf/blob/6fb5325/protoc-gen-go/generator/generator.go#L497.
@@ -61,7 +67,7 @@ func parseCommandOpts(parameter string) (*commandOpts, error) {
 			if v != "source_relative" {
 				return nil, fmt.Errorf("paths does not support %q", v)
 			}
-			args.relativePaths = true
+			args.relativePath = true
 		case k == "service":
 			if v != "source_only" {
 				return nil, fmt.Errorf("service does not support %q", v)
