@@ -6,6 +6,15 @@ import (
 	"github.com/golib/assert"
 )
 
+var (
+	fakeLogger = func() *AppLogger {
+		logger := NewAppLogger("nil", "")
+		logger.SetSkip(3)
+
+		return logger
+	}
+)
+
 func Test_NewAppLogger(t *testing.T) {
 	it := assert.New(t)
 

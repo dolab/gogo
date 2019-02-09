@@ -17,7 +17,7 @@ var (
 	fakeConfig        = func(name string) (*AppConfig, error) {
 		root, _ := os.Getwd()
 
-		data, err := ioutil.ReadFile(path.Join(root, "skeleton", "config", name))
+		data, err := ioutil.ReadFile(path.Join(root, "testdata", "config", name))
 		if err != nil {
 			panic(err)
 		}

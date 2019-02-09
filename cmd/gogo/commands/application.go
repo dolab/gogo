@@ -103,40 +103,44 @@ func (*_Application) Action() cli.ActionFunc {
 			}
 		}
 
-		namespace := ctx.String("namespace")
+		data := &AppData{
+			Version:     ctx.App.Version,
+			Namespace:   ctx.String("namespace"),
+			Application: name,
+		}
 
 		// generate .gitignore
-		Application.genGitIgnore(path.Join(root, ".gitignore"), name, namespace)
+		Application.genGitIgnore(path.Join(root, ".gitignore"), data)
 
 		// // generate env.sh
-		// Application.genEnvfile(path.Join(root, "env.sh"), name, namespace)
+		// Application.genEnvfile(path.Join(root, "env.sh"), data)
 
 		// generate readme.md
-		Application.genReadme(path.Join(root, "README.md"), name, namespace)
+		Application.genReadme(path.Join(root, "README.md"), data)
 
 		// generate Makefile
-		Application.genMakefile(path.Join(root, "Makefile"), name, namespace)
+		Application.genMakefile(path.Join(root, "Makefile"), data)
 
 		// generate go.mod
-		Application.genModfile(path.Join(root, "go.mod"), name, namespace)
+		Application.genModfile(path.Join(root, "go.mod"), data)
 
 		// generate default controller dependences
-		Application.genControllers(path.Join(root, "app", "controllers"), name, namespace)
+		Application.genControllers(path.Join(root, "app", "controllers"), data)
 
 		// generate default filters
-		Application.genFilters(path.Join(root, "app", "middlewares"), name, namespace)
+		Application.genFilters(path.Join(root, "app", "middlewares"), data)
 
 		// generate default models
-		Application.genModels(path.Join(root, "app", "models"), name, namespace)
+		Application.genModels(path.Join(root, "app", "models"), data)
 
 		// generate default application.yml
-		Application.genConfigFile(path.Join(root, "config", "application.yml"), name, namespace)
+		Application.genConfigFile(path.Join(root, "config", "application.yml"), data)
 
 		// generate main.go
-		Application.genMainFile(path.Join(root, "app"), name, namespace)
+		Application.genMainFile(path.Join(root, "app"), data)
 
 		// generate errors.go
-		Application.genErrorsFile(path.Join(root, "gogo", "errors", "errors.go"), name, namespace)
+		Application.genErrorsFile(path.Join(root, "gogo", "errors", "errors.go"), data)
 
 		// auto install dependences
 		if ctx.Bool("go-install") {
@@ -146,92 +150,72 @@ func (*_Application) Action() cli.ActionFunc {
 	}
 }
 
-func (*_Application) genGitIgnore(file, app, namespace string) {
+func (*_Application) genGitIgnore(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("gitignore").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("gitignore").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genReadme(file, app, namespace string) {
+func (*_Application) genReadme(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("readme").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("readme").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genMakefile(file, app, namespace string) {
+func (*_Application) genMakefile(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("makefile").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("makefile").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genEnvfile(file, app, namespace string) {
+func (*_Application) genEnvfile(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("env.sh").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("env.sh").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genModfile(file, app, namespace string) {
+func (*_Application) genModfile(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("go.mod").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("go.mod").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genControllers(root, app, namespace string) {
-	data := AppData{
-		Namespace:   namespace,
-		Application: app,
-	}
-
+func (*_Application) genControllers(root string, data *AppData) {
 	// application.go
 	fd, err := os.OpenFile(path.Join(root, "application.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -310,12 +294,7 @@ func (*_Application) genControllers(root, app, namespace string) {
 	}
 }
 
-func (*_Application) genFilters(root, app, namespace string) {
-	data := AppData{
-		Namespace:   namespace,
-		Application: app,
-	}
-
+func (*_Application) genFilters(root string, data *AppData) {
 	// testing_test.go
 	fd, err := os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -347,12 +326,7 @@ func (*_Application) genFilters(root, app, namespace string) {
 	}
 }
 
-func (*_Application) genModels(root, app, namespace string) {
-	data := AppData{
-		Namespace:   namespace,
-		Application: app,
-	}
-
+func (*_Application) genModels(root string, data *AppData) {
 	// model.go
 	fd, err := os.OpenFile(path.Join(root, "model.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -374,23 +348,20 @@ func (*_Application) genModels(root, app, namespace string) {
 	}
 }
 
-func (*_Application) genConfigFile(file, app, namespace string) {
+func (*_Application) genConfigFile(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("application_config.yml").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("application_config.yml").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genMainFile(root, app, namespace string) {
+func (*_Application) genMainFile(root string, data *AppData) {
 	// gen main.yml
 	fd, err := os.OpenFile(path.Join(root, "main.yml"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -398,10 +369,7 @@ func (*_Application) genMainFile(root, app, namespace string) {
 		return
 	}
 
-	err = box.Lookup("main.yml").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("main.yml").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
@@ -413,26 +381,20 @@ func (*_Application) genMainFile(root, app, namespace string) {
 		return
 	}
 
-	err = box.Lookup("main.go").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("main.go").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func (*_Application) genErrorsFile(file, app, namespace string) {
+func (*_Application) genErrorsFile(file string, data *AppData) {
 	fd, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
 
-	err = box.Lookup("errors.go").Execute(fd, AppData{
-		Namespace:   namespace,
-		Application: app,
-	})
+	err = box.Lookup("errors.go").Execute(fd, data)
 	if err != nil {
 		log.Error(err.Error())
 	}

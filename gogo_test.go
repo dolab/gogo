@@ -15,7 +15,7 @@ var (
 	fakeApp = func(mode string) *AppServer {
 		root, _ := os.Getwd()
 
-		return New(mode, path.Join(root, "skeleton"))
+		return New(mode, path.Join(root, "testdata"))
 	}
 )
 
@@ -55,7 +55,7 @@ func Test_NewWithFilename(t *testing.T) {
 	it := assert.New(t)
 
 	root, _ := os.Getwd()
-	filename := path.Join(root, "skeleton", "config", "application.yml")
+	filename := path.Join(root, "testdata", "config", "application.yml")
 
 	app := New("development", filename)
 	it.Equal("gogo", app.config.RunName())

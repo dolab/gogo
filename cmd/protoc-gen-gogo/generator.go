@@ -809,15 +809,16 @@ func (g *generator) genClientImplement(
 	g.P()
 
 	// Methods
-	for _, method := range service.Method {
-		g.genClientImplementMethod(file, service, method)
+	for i, method := range service.Method {
+		g.genClientImplementMethod(file, service, method, i)
 	}
 }
 
 func (g *generator) genClientImplementMethod(
 	file *descriptor.FileDescriptorProto,
 	service *descriptor.ServiceDescriptorProto,
-	method *descriptor.MethodDescriptorProto) {
+	method *descriptor.MethodDescriptorProto,
+	index int) {
 	pkgName := toPackageName(file)
 	svcName := toServiceName(service)
 	clientStruct := toClientStruct(service)
@@ -840,7 +841,7 @@ func (g *generator) genClientImplementMethod(
 	g.P()
 	g.P(`	out = new(`, g.aliases["pbs"], `.`, output, `)`)
 	g.P()
-	g.P(`	err = c.proto.NewRequest(c.client).Do(ctx, c.routes[0], in, out)`)
+	g.P(`	err = c.proto.NewRequest(c.client).Do(ctx, c.routes[`, strconv.Itoa(index), `], in, out)`)
 	g.P(`	if err != nil {`)
 	g.P(`		out = nil`)
 	g.P(`	}`)

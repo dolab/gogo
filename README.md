@@ -295,7 +295,7 @@ sections:
 
 ## Benchmarks
 
-![benchmarks](./skeleton/gogo-benchmarks.png)
+![benchmarks](./testdata/gogo-benchmarks.png)
 
 ## TODOs
 
