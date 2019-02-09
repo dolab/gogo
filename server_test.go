@@ -20,45 +20,35 @@ import (
 
 var (
 	fakeServer = func() *AppServer {
-		logger := NewAppLogger("nil", "")
-		logger.SetSkip(3)
-
+		logger := fakeLogger()
 		config, _ := fakeConfig("application.yml")
 
 		return NewAppServer(config, logger)
 	}
 
 	fakeTcpServer = func() *AppServer {
-		logger := NewAppLogger("nil", "")
-		logger.SetSkip(3)
-
+		logger := fakeLogger()
 		config, _ := fakeConfig("application.tcp.yml")
 
 		return NewAppServer(config, logger)
 	}
 
 	fakeUnixServer = func() *AppServer {
-		logger := NewAppLogger("nil", "")
-		logger.SetSkip(3)
-
+		logger := fakeLogger()
 		config, _ := fakeConfig("application.unix.yml")
 
 		return NewAppServer(config, logger)
 	}
 
 	fakeTimeoutServer = func() *AppServer {
-		logger := NewAppLogger("nil", "")
-		logger.SetSkip(3)
-
+		logger := fakeLogger()
 		config, _ := fakeConfig("application.timeout.yml")
 
 		return NewAppServer(config, logger)
 	}
 
 	fakeHealthzServer = func() *AppServer {
-		logger := NewAppLogger("nil", "")
-		logger.SetSkip(3)
-
+		logger := fakeLogger()
 		config, _ := fakeConfig("application.healthz.yml")
 
 		return NewAppServer(config, logger)

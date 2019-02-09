@@ -32,8 +32,9 @@ func init() {
 
 // An AppData is useful for template rendering
 type AppData struct {
-	Application string `yaml:"application"`
+	Version     string `yaml:"version"`
 	Namespace   string `yaml:"namespace"`
+	Application string `yaml:"application"`
 }
 
 // LoadAppData reads main.yml created with generation and parses metadata of app
@@ -49,6 +50,7 @@ func LoadAppData(root string) (app *AppData, err error) {
 	return
 }
 
+// ImportPrefix returns import path of generated application
 func (app *AppData) ImportPrefix() string {
 	return app.Namespace + "/" + app.Application
 }
