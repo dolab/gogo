@@ -12,27 +12,27 @@ import (
 var (
 	// FindModeConfigFile returns config file for specified run mode.
 	// You could custom your own resolver by overwriting it.
-	FindModeConfigFile = func(runMode, cfgPath string) string {
-		if len(cfgPath) == 0 {
+	FindModeConfigFile = func(mode, cfgfile string) string {
+		// adjust cfgfile
+		cfgfile = path.Clean(cfgfile)
+
+		if len(cfgfile) == 0 || cfgfile == "." || cfgfile == ".." {
 			return GogoSchema
 		}
 
-		// adjust cfgPath
-		cfgPath = path.Clean(cfgPath)
-
-		// is cfgPath exist?
-		finfo, ferr := os.Stat(cfgPath)
+		// is cfgfile exist?
+		finfo, ferr := os.Stat(cfgfile)
 		if ferr != nil {
 			return GogoSchema
 		}
 
-		// is cfgPath a regular file?
-		if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
-			return cfgPath
+		// is cfgfile a regular file?
+		if finfo.Mode()&os.ModeType == 0 {
+			return cfgfile
 		}
 
 		filename := "application.yml"
-		switch RunMode(runMode) {
+		switch RunMode(mode) {
 		case Development:
 			// try application.development.yml
 			filename = "application.development.yml"
@@ -46,38 +46,51 @@ var (
 
 		}
 
-		filepath := path.Join(cfgPath, "config", filename)
+		filepath := path.Join(cfgfile, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(cfgPath, "config", "application.yml")
+			filepath = path.Join(cfgfile, "config", "application.yml")
 		}
 
 		return filepath
 	}
 
 	// FindMiddlewareConfigFile returns config file for middlewares.
-	FindMiddlewareConfigFile = func(cfgPath string) string {
-		if len(cfgPath) == 0 {
+	FindMiddlewareConfigFile = func(mode, cfgfile string) string {
+		// adjust cfgfile
+		cfgfile = path.Clean(cfgfile)
+
+		if len(cfgfile) == 0 || cfgfile == "." || cfgfile == ".." {
 			return GogoSchema
 		}
 
-		// adjust cfgPath
-		cfgPath = path.Clean(cfgPath)
-
-		// is cfgPath exist?
-		finfo, ferr := os.Stat(cfgPath)
+		// is cfgfile exist?
+		finfo, ferr := os.Stat(cfgfile)
 		if ferr != nil {
 			return GogoSchema
 		}
 
-		// is cfgPath a regular file?
-		if !finfo.IsDir() && (finfo.Mode()&os.ModeSymlink == 0) {
-			return cfgPath
+		// is cfgfile a regular file?
+		if finfo.Mode()&os.ModeType == 0 {
+			return cfgfile
 		}
 
-		filename := "middlewares.yaml"
-		filepath := path.Join(cfgPath, "config", filename)
+		// resolve cfgfile with run mode
+		filename := "middlewares.yml"
+		switch RunMode(mode) {
+		case Development:
+			filename = "middlewares.development.yml"
+
+		case Test:
+			filename = "middlewares.test.yml"
+
+		case Production:
+			// skip
+
+		}
+
+		filepath := path.Join(cfgfile, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(cfgPath, "config", "middlewares.yml")
+			filepath = path.Join(cfgfile, "config", "middlewares.yml")
 		}
 
 		return filepath

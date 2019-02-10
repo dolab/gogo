@@ -39,13 +39,6 @@ func NewServerHooks() *ServerHooks {
 	}
 }
 
-// NewServerDebugLogHook returns a func for server debugging with log.
-func NewServerDebugLogHook() func(HookItem) bool {
-	return func(item HookItem) bool {
-		return true
-	}
-}
-
 // NewServerThrottleHook creates NamedHook with max throughput / per second.
 // NOTE: burst value is 20% of throttle
 func NewServerThrottleHook(max int) NamedHook {

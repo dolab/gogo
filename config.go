@@ -3,8 +3,10 @@ package gogo
 import (
 	"fmt"
 	"io/ioutil"
+	"path"
 	"strings"
 
+	"github.com/dolab/gogo/pkgs/middleware"
 	"github.com/dolab/logger"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -32,7 +34,7 @@ var (
 		Logger: DefaultLoggerConfig,
 	}
 
-	DefaultMiddlewareConfig = &MiddlewareConfig{}
+	DefaultMiddlewareConfig = new(MiddlewareConfig)
 )
 
 // AppConfig defines config component of gogo.
@@ -42,8 +44,8 @@ type AppConfig struct {
 	Name     string                  `yaml:"name"`
 	Sections map[RunMode]interface{} `yaml:"sections"`
 
+	filename    string
 	middlewares *MiddlewareConfig
-	filepath    string
 }
 
 // NewAppConfig returns *AppConfig by parsing application.yml
@@ -57,10 +59,15 @@ func NewAppConfig(filename string) (*AppConfig, error) {
 		return nil, err
 	}
 
-	return NewAppConfigFromString(string(b))
+	config, err := NewAppConfigFromString(string(b))
+	if err == nil {
+		config.filename = filename
+	}
+
+	return config, nil
 }
 
-// NewAppConfigFromString returns *AppConfig by parsing.yml string
+// NewAppConfigFromString returns *AppConfig by unmarshaling yaml string passed
 func NewAppConfigFromString(s string) (*AppConfig, error) {
 	var config *AppConfig
 
@@ -105,6 +112,11 @@ func (config *AppConfig) RunMode() RunMode {
 // RunName returns the application name
 func (config *AppConfig) RunName() string {
 	return config.Name
+}
+
+// Filename returns the /path/to/application.yml
+func (config *AppConfig) Filename() string {
+	return config.filename
 }
 
 // SetMode changes config mode
@@ -152,14 +164,17 @@ func (config *AppConfig) UnmarshalYAML(v interface{}) error {
 }
 
 // Middlewares returns a MiddlewareConfiger wrapped with parsed YAML-encoded data of all middlewares.
-func (config *AppConfig) Middlewares() MiddlewareConfiger {
+func (config *AppConfig) Middlewares() middleware.Configer {
 	return config.middlewares
 }
 
 // LoadMiddlewares reads all config of middlewares
 func (config *AppConfig) LoadMiddlewares() error {
-	filename := FindMiddlewareConfigFile(config.filepath)
+	mode := config.RunMode().String()
+	cfgfile := path.Dir(config.Filename())
+	cfgfile = strings.TrimSuffix(cfgfile, "/config")
 
+	filename := FindMiddlewareConfigFile(mode, cfgfile)
 	if strings.HasPrefix(filename, GogoSchema) {
 		config.middlewares = DefaultMiddlewareConfig
 		return nil
@@ -170,7 +185,12 @@ func (config *AppConfig) LoadMiddlewares() error {
 		return err
 	}
 
-	return yaml.Unmarshal(b, &config.middlewares)
+	err = yaml.Unmarshal(b, &config.middlewares)
+	if err != nil {
+		config.middlewares = DefaultMiddlewareConfig
+	}
+
+	return err
 }
 
 // SectionConfig defines config spec for internal usage
@@ -196,7 +216,7 @@ type ServerConfig struct {
 	HTTP2    bool `yaml:"http2"`    // enable http2
 	Healthz  bool `yaml:"healthz"`  // enable /-/healthz
 	Throttle int  `yaml:"throttle"` // in time.Second/throttle ms
-	Demotion int  `yaml:"demotion"`
+	Demotion int  `yaml:"demotion"` // concurrency
 }
 
 // MiddlewareConfig defines config spec of middleware
@@ -204,12 +224,12 @@ type MiddlewareConfig map[string]interface{}
 
 // Unmarshal parses YAML-encoded data of defined with name and stores the result in the
 // value pointed to by v. It returns error if there is no config data for the name.
-func (config MiddlewareConfig) Unmarshal(name string, v interface{}) error {
+func (config *MiddlewareConfig) Unmarshal(name string, v interface{}) error {
 	if config == nil {
 		return nil
 	}
 
-	idata, ok := config[name]
+	idata, ok := (*config)[name]
 	if !ok {
 		return fmt.Errorf("no config data for middleware %q", name)
 	}

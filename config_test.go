@@ -14,17 +14,25 @@ import (
 
 var (
 	fakePort   uint64 = 9090
-	fakeConfig        = func(name string) (*AppConfig, error) {
+	fakeConfig        = func(name string) (config *AppConfig, err error) {
 		root, _ := os.Getwd()
+		filename := path.Join(root, "testdata", "config", name)
 
-		data, err := ioutil.ReadFile(path.Join(root, "testdata", "config", name))
+		data, err := ioutil.ReadFile(filename)
 		if err != nil {
 			panic(err)
 		}
 
 		port := atomic.AddUint64(&fakePort, 1)
 
-		return NewAppConfigFromString(strings.Replace(string(data), "9090", strconv.FormatUint(port, 10), -1))
+		config, err = NewAppConfigFromString(strings.Replace(string(data), "9090", strconv.FormatUint(port, 10), -1))
+		if err == nil {
+			config.filename = filename
+
+			// try to load config of middlewares
+			config.LoadMiddlewares()
+		}
+		return
 	}
 )
 

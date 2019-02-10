@@ -15,7 +15,7 @@ import (
 
 // AppGroup defines a grouped server of gogo.
 type AppGroup struct {
-	mux sync.Mutex
+	mux sync.RWMutex
 
 	server  *AppServer
 	prefix  string

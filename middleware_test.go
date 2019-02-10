@@ -7,13 +7,14 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/dolab/gogo/pkgs/middleware"
 	"github.com/dolab/httptesting"
 	"github.com/golib/assert"
 )
 
 type testMiddleware struct {
 	name  string
-	apply func(w http.ResponseWriter, r *http.Request) bool
+	apply middleware.Interceptor
 }
 
 func (m *testMiddleware) Name() string {
@@ -28,11 +29,11 @@ func (m *testMiddleware) Priority() int {
 	return 0
 }
 
-func (m *testMiddleware) Register(config MiddlewareConfiger) (func(w http.ResponseWriter, r *http.Request) bool, error) {
+func (m *testMiddleware) Register(config middleware.Configer) (middleware.Interceptor, error) {
 	return m.apply, nil
 }
 
-func (m *testMiddleware) Reload(config MiddlewareConfiger) error {
+func (m *testMiddleware) Reload(config middleware.Configer) error {
 	return nil
 }
 
@@ -67,8 +68,8 @@ func (svc *testService) Resources() {
 	})
 }
 
-func (svc *testService) RequestReceived() []Middlewarer {
-	return []Middlewarer{
+func (svc *testService) RequestReceived() []middleware.Interface {
+	return []middleware.Interface{
 		&testMiddleware{
 			name: "request_receved@testing",
 			apply: func(w http.ResponseWriter, r *http.Request) bool {
@@ -81,8 +82,8 @@ func (svc *testService) RequestReceived() []Middlewarer {
 	}
 }
 
-func (svc *testService) RequestRouted() []Middlewarer {
-	return []Middlewarer{
+func (svc *testService) RequestRouted() []middleware.Interface {
+	return []middleware.Interface{
 		&testMiddleware{
 			name: "request_routed@testing",
 			apply: func(w http.ResponseWriter, r *http.Request) bool {
@@ -95,8 +96,8 @@ func (svc *testService) RequestRouted() []Middlewarer {
 	}
 }
 
-func (svc *testService) ResponseReady() []Middlewarer {
-	return []Middlewarer{
+func (svc *testService) ResponseReady() []middleware.Interface {
+	return []middleware.Interface{
 		&testMiddleware{
 			name: "response_ready@testing",
 			apply: func(w http.ResponseWriter, r *http.Request) bool {
@@ -109,8 +110,8 @@ func (svc *testService) ResponseReady() []Middlewarer {
 	}
 }
 
-func (svc *testService) ResponseAlways() []Middlewarer {
-	return []Middlewarer{
+func (svc *testService) ResponseAlways() []middleware.Interface {
+	return []middleware.Interface{
 		&testMiddleware{
 			name: "response_always@testing",
 			apply: func(w http.ResponseWriter, r *http.Request) bool {
