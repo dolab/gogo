@@ -1,0 +1,4 @@
+---
+debugger:
+  debug_request: false
+  debug_request_body: false

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 
+	"github.com/dolab/gogo/pkgs/middleware"
 	"github.com/dolab/httpdispatch"
 )
 
@@ -11,13 +12,14 @@ import (
 type Configer interface {
 	RunMode() RunMode
 	RunName() string
+	Filename() string
 	SetMode(mode RunMode)
 	Section() *SectionConfig
 	UnmarshalJSON(v interface{}) error
 	UnmarshalYAML(v interface{}) error
 
 	// for middlewares
-	Middlewares() MiddlewareConfiger
+	Middlewares() middleware.Configer
 	LoadMiddlewares() error
 }
 

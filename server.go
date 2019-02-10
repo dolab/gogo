@@ -10,10 +10,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dolab/gogo/internal/listeners"
 	"github.com/dolab/gogo/pkgs/hooks"
+	"github.com/dolab/gogo/pkgs/middleware"
 	"golang.org/x/net/http2"
 )
 
@@ -31,17 +33,20 @@ type AppServer struct {
 	requestID    string   // request id header name
 	filterFields []string // filter out params when logging
 
-	localSig  chan os.Signal
-	localAddr string
-	localServ *http.Server
+	localMux    sync.RWMutex
+	localSig    chan os.Signal
+	localAddr   string
+	localIfaces []interface{}
+	localServ   *http.Server
 }
 
 // NewAppServer returns *AppServer inited with args
 func NewAppServer(config Configer, logger Logger) *AppServer {
 	server := &AppServer{
-		config:    config,
-		logger:    logger,
-		requestID: DefaultRequestIDKey,
+		config:      config,
+		logger:      logger,
+		requestID:   DefaultRequestIDKey,
+		localIfaces: []interface{}{},
 	}
 
 	// init AppGroup for server
@@ -65,33 +70,33 @@ func (s *AppServer) Config() Configer {
 
 // Address returns app listen address
 func (s *AppServer) Address() string {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+	s.localMux.RLock()
+	defer s.localMux.RUnlock()
 
 	return s.localAddr
 }
 
-// RegisterMiddlewares tries to register all middlewares defined
-func (s *AppServer) RegisterMiddlewares(svc Servicer) {
-	if registry, ok := svc.(RequestReceivedMiddlewarer); ok {
+// RegisterMiddlewares tries to register all middlewares defined by iface
+func (s *AppServer) RegisterMiddlewares(iface interface{}) {
+	if registry, ok := iface.(RequestReceivedMiddlewarer); ok {
 		for _, m := range registry.RequestReceived() {
 			s.RegisterRequestReceived(m)
 		}
 	}
 
-	if registry, ok := svc.(RequestRoutedMiddlewarer); ok {
+	if registry, ok := iface.(RequestRoutedMiddlewarer); ok {
 		for _, m := range registry.RequestRouted() {
 			s.RegisterRequestReceived(m)
 		}
 	}
 
-	if registry, ok := svc.(ResponseReadyMiddlewarer); ok {
+	if registry, ok := iface.(ResponseReadyMiddlewarer); ok {
 		for _, m := range registry.ResponseReady() {
 			s.RegisterRequestReceived(m)
 		}
 	}
 
-	if registry, ok := svc.(ResponseAlwaysMiddlewarer); ok {
+	if registry, ok := iface.(ResponseAlwaysMiddlewarer); ok {
 		for _, m := range registry.ResponseAlways() {
 			s.RegisterRequestReceived(m)
 		}
@@ -99,9 +104,9 @@ func (s *AppServer) RegisterMiddlewares(svc Servicer) {
 }
 
 // RegisterRequestReceived registers middleware at request received phase
-func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+func (s *AppServer) RegisterRequestReceived(m middleware.Interface) error {
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	name := m.Name()
 	if s.RequestReceived.Has(name) {
@@ -123,9 +128,9 @@ func (s *AppServer) RegisterRequestReceived(m Middlewarer) error {
 }
 
 // RegisterRequestRouted registers middleware at request routed phase
-func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+func (s *AppServer) RegisterRequestRouted(m middleware.Interface) error {
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	name := m.Name()
 	if s.RequestRouted.Has(name) {
@@ -147,9 +152,9 @@ func (s *AppServer) RegisterRequestRouted(m Middlewarer) error {
 }
 
 // RegisterResponseReady registers middleware at response ready phase
-func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+func (s *AppServer) RegisterResponseReady(m middleware.Interface) error {
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	name := m.Name()
 	if s.ResponseReady.Has(name) {
@@ -171,9 +176,9 @@ func (s *AppServer) RegisterResponseReady(m Middlewarer) error {
 }
 
 // RegisterResponseAlways registers middleware at response always phase
-func (s *AppServer) RegisterResponseAlways(m Middlewarer) error {
-	s.mux.Lock()
-	defer s.mux.Unlock()
+func (s *AppServer) RegisterResponseAlways(m middleware.Interface) error {
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	name := m.Name()
 	if s.ResponseAlways.Has(name) {
@@ -196,8 +201,12 @@ func (s *AppServer) RegisterResponseAlways(m Middlewarer) error {
 
 // NewService register all resources of service with middlewares
 func (s *AppServer) NewService(svc Servicer) *AppServer {
-	// try to register all middlewares
+	// first, try to register all middlewares defined by service
 	s.RegisterMiddlewares(svc)
+
+	// second, try to register all resources with filters
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	svc.Init(s.config, s.AppGroup)
 
@@ -210,10 +219,15 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 	return s
 }
 
-// NewResources register all resources of service without middlewares
+// NewResources register all resources of service without filters. It's useful
+// for testing cases.
 func (s *AppServer) NewResources(svc Servicer) *AppServer {
-	// try to register all middlewares
+	// first, try to register all middlewares defined by service
 	s.RegisterMiddlewares(svc)
+
+	// second, try to register all resources with filters
+	s.localMux.Lock()
+	defer s.localMux.Unlock()
 
 	svc.Init(s.config, s.AppGroup)
 
@@ -223,7 +237,7 @@ func (s *AppServer) NewResources(svc Servicer) *AppServer {
 	return s
 }
 
-// Run starts the http server with AppGroup as http.Handler
+// Run starts the http server with AppGroup as http.Handler.
 //
 // NOTE: Run apply throughput and concurrency to http.Server.
 func (s *AppServer) Run() {
@@ -236,6 +250,11 @@ func (s *AppServer) Run() {
 		wtimeout       = DefaultResponseTimeout
 		maxHeaderBytes = 0
 	)
+
+	// register all middlewares of internal
+	for _, iface := range s.localIfaces {
+		s.RegisterMiddlewares(iface)
+	}
 
 	// register healthz
 	if config.Server.Healthz {
@@ -316,10 +335,10 @@ func (s *AppServer) Run() {
 	server.RegisterOnShutdown(listener.Shutdown)
 
 	// register locals
-	s.mux.Lock()
+	s.localMux.Lock()
 	s.localAddr = addr
 	s.localServ = server
-	s.mux.Unlock()
+	s.localMux.Unlock()
 
 	if config.Server.Ssl {
 		msg := "ServeTLS(%s:%s): %v"
