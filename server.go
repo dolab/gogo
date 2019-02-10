@@ -16,6 +16,7 @@ import (
 	"github.com/dolab/gogo/internal/listeners"
 	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/gogo/pkgs/middleware"
+	"github.com/dolab/gogo/pkgs/middleware/debugger"
 	"golang.org/x/net/http2"
 )
 
@@ -43,10 +44,12 @@ type AppServer struct {
 // NewAppServer returns *AppServer inited with args
 func NewAppServer(config Configer, logger Logger) *AppServer {
 	server := &AppServer{
-		config:      config,
-		logger:      logger,
-		requestID:   DefaultRequestIDKey,
-		localIfaces: []interface{}{},
+		config:    config,
+		logger:    logger,
+		requestID: DefaultRequestIDKey,
+		localIfaces: []interface{}{
+			debugger.NewRegistry(),
+		},
 	}
 
 	// init AppGroup for server
