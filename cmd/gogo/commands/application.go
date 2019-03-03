@@ -128,7 +128,7 @@ func (*_Application) Action() cli.ActionFunc {
 		Application.genControllers(path.Join(root, "app", "controllers"), data)
 
 		// generate default filters
-		Application.genFilters(path.Join(root, "app", "middlewares"), data)
+		Application.genMiddlewares(path.Join(root, "app", "middlewares"), data)
 
 		// generate default models
 		Application.genModels(path.Join(root, "app", "models"), data)
@@ -227,17 +227,6 @@ func (*_Application) genControllers(root string, data *AppData) {
 		return
 	}
 
-	// application_middlewares.go
-	fd, err = os.OpenFile(path.Join(root, "application_middlewares.go"), os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Error(err.Error())
-		return
-	}
-	if err := box.Lookup("application_middlewares.go").Execute(fd, data); err != nil {
-		log.Error(err.Error())
-		return
-	}
-
 	// testing_test.go
 	fd, err = os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -294,14 +283,14 @@ func (*_Application) genControllers(root string, data *AppData) {
 	}
 }
 
-func (*_Application) genFilters(root string, data *AppData) {
+func (*_Application) genMiddlewares(root string, data *AppData) {
 	// testing_test.go
 	fd, err := os.OpenFile(path.Join(root, "testing_test.go"), os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("filter_testing.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("middleware_testing.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 
@@ -311,7 +300,7 @@ func (*_Application) genFilters(root string, data *AppData) {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("filter_recovery.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("middleware_recovery.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 
@@ -321,7 +310,7 @@ func (*_Application) genFilters(root string, data *AppData) {
 		log.Error(err.Error())
 		return
 	}
-	if err := box.Lookup("filter_recovery_test.go").Execute(fd, data); err != nil {
+	if err := box.Lookup("middleware_recovery_test.go").Execute(fd, data); err != nil {
 		log.Error(err.Error())
 	}
 }

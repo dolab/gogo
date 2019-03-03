@@ -37,8 +37,8 @@ func (app *Application) Init(config gogo.Configer, group gogo.Grouper) {
 	app.v1 = group.NewGroup("/v1")
 }
 
-// Filters implements gogo.Servicer
-func (app *Application) Filters() {
+// Middlewares implements gogo.Servicer
+func (app *Application) Middlewares() {
 	// apply your filters for group
 
 	// panic recovery

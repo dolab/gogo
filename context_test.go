@@ -10,10 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dolab/gogo/pkgs/hooks"
-
 	"github.com/dolab/gogo/internal/params"
 	"github.com/dolab/gogo/internal/render"
+	"github.com/dolab/gogo/pkgs/hooks"
 	"github.com/dolab/httpdispatch"
 	"github.com/golib/assert"
 )
@@ -112,7 +111,7 @@ func Test_ContextWithFrozenSettings(t *testing.T) {
 	}
 
 	// final set with conflict
-	err = ctx.SetFinal("filterFinalKey", "newFilterFuncFinalValue")
+	err = ctx.SetFinal("filterFinalKey", "newMiddlewareFinalValue")
 	if it.NotNil(err) {
 		it.EqualError(ErrSettingsKey, err.Error())
 		it.Equal(1, len(ctx.frozenSettings))
@@ -130,19 +129,19 @@ func Test_ContextWithFrozenSettings(t *testing.T) {
 	}
 
 	// MustSetFinal
-	ctx.MustSetFinal("mustFilterFuncFinalKey", "mustFilterFuncFinalValue")
+	ctx.MustSetFinal("mustMiddlewareFinalKey", "mustMiddlewareFinalValue")
 
 	// MustSetFinal with conflict
 	it.Panics(func() {
-		ctx.MustSetFinal("filterFinalKey", "newFilterFuncFinalValue")
+		ctx.MustSetFinal("filterFinalKey", "newMiddlewareFinalValue")
 	})
 
 	// MustGetFinal
-	it.Equal("mustFilterFuncFinalValue", ctx.MustGetFinal("mustFilterFuncFinalKey"))
+	it.Equal("mustMiddlewareFinalValue", ctx.MustGetFinal("mustMiddlewareFinalKey"))
 
 	// MustGetFinal with empty
 	it.Panics(func() {
-		ctx.MustGetFinal("unknownFilterFuncFinalKey")
+		ctx.MustGetFinal("unknownMiddlewareFinalKey")
 	})
 }
 
@@ -200,9 +199,9 @@ func Test_ContextWithHeader(t *testing.T) {
 	it.False(ctx.HasHeader("X-Normal-Key"))
 
 	// RawHeader
-	it.Equal("Canonical-Value", ctx.RawHeader("X-Canonical-Key"))
+	it.Equal([]string{"Canonical-Value"}, ctx.RawHeader("X-Canonical-Key"))
 	it.Empty(ctx.RawHeader("x-canonical-key"))
-	it.Equal("normal value", ctx.RawHeader("x-normal-key"))
+	it.Equal([]string{"normal value"}, ctx.RawHeader("x-normal-key"))
 	it.Empty(ctx.RawHeader("X-Normal-Key"))
 
 	// Header
@@ -298,7 +297,7 @@ func Test_Context_RedirectWithAbort(t *testing.T) {
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []FilterFunc{
+	ctx.run(nil, []Middleware{
 		func(ctx *Context) {
 			ctx.Redirect(location)
 
@@ -485,7 +484,7 @@ func Test_Context_RenderWithAbort(t *testing.T) {
 	ctx.Request = request
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []FilterFunc{
+	ctx.run(nil, []Middleware{
 		func(ctx *Context) {
 			ctx.Render(render.NewDefaultRender(ctx.Response), "render")
 
@@ -519,7 +518,7 @@ func Test_Context_Next(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []FilterFunc{filter1, filter2}, &hooks.HookList{})
+	ctx.run(nil, []Middleware{filter1, filter2}, &hooks.HookList{})
 
 	it.Equal(2, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)
@@ -549,7 +548,7 @@ func Test_Context_Abort(t *testing.T) {
 	ctx.Response.Hijack(httptest.NewRecorder())
 	ctx.Logger = NewAppLogger("nil", "")
 
-	ctx.run(nil, []FilterFunc{filter0, filter1, filter2}, &hooks.HookList{})
+	ctx.run(nil, []Middleware{filter0, filter1, filter2}, &hooks.HookList{})
 
 	it.Equal(0, counter)
 	it.EqualValues(math.MaxInt8, ctx.cursor)

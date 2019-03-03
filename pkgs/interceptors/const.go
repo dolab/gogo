@@ -1,6 +1,6 @@
-package middleware
+package interceptors
 
-// All phases of middleware
+// All phases of interceptors
 const (
 	_phase Phase = iota
 	RequestReceived

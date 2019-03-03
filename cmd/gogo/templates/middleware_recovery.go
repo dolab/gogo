@@ -1,7 +1,7 @@
 package templates
 
 var (
-	filterRecoveryTemplate = `package middlewares
+	middlewareRecoveryTemplate = `package middlewares
 
 import (
 	"net/http"
@@ -11,7 +11,7 @@ import (
 	"github.com/dolab/gogo"
 )
 
-func Recovery() gogo.FilterFunc {
+func Recovery() gogo.Middleware {
 	return func(ctx *gogo.Context) {
 		defer func() {
 			if panicErr := recover(); panicErr != nil {
@@ -57,7 +57,7 @@ func Recovery() gogo.FilterFunc {
 	}
 }
 `
-	filterRecoveryTestTemplate = `package middlewares
+	middlewareRecoveryTestTemplate = `package middlewares
 
 import (
 	"net/http"
@@ -69,13 +69,13 @@ import (
 func Test_Recovery(t *testing.T) {
 	// register temp resource for testing
 	app := gogoapp.NewGroup("", Recovery())
-	app.GET("/filters/recovery", func(ctx *gogo.Context) {
+	app.GET("/middleware/recovery", func(ctx *gogo.Context) {
 		panic("Recover testing")
 	})
 
 	// it should work
 	request := gogotesting.New(t)
-	request.Get("/filters/recovery")
+	request.Get("/middleware/recovery")
 
 	request.AssertStatus(http.StatusInternalServerError)
 	request.AssertNotEmpty()

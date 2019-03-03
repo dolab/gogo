@@ -48,8 +48,8 @@ func Test_AppConfig(t *testing.T) {
 }
 `
 	applicationConfigYAMLTemplate = `---
-mode: test
 name: {{.Application}}
+mode: test
 
 default_server: &default_server
 	addr: localhost

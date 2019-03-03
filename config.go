@@ -6,7 +6,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/dolab/gogo/pkgs/middleware"
+	"github.com/dolab/gogo/pkgs/interceptors"
 	"github.com/dolab/logger"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -34,7 +34,7 @@ var (
 		Logger: DefaultLoggerConfig,
 	}
 
-	DefaultMiddlewareConfig = new(MiddlewareConfig)
+	DefaultInterceptorConfig = new(InterceptorConfig)
 )
 
 // AppConfig defines config component of gogo.
@@ -44,8 +44,8 @@ type AppConfig struct {
 	Name     string                  `yaml:"name"`
 	Sections map[RunMode]interface{} `yaml:"sections"`
 
-	filename    string
-	middlewares *MiddlewareConfig
+	interceptors *InterceptorConfig
+	filename     string
 }
 
 // NewAppConfig returns *AppConfig by parsing application.yml
@@ -163,20 +163,20 @@ func (config *AppConfig) UnmarshalYAML(v interface{}) error {
 	return yaml.Unmarshal(data, v)
 }
 
-// Middlewares returns a MiddlewareConfiger wrapped with parsed YAML-encoded data of all middlewares.
-func (config *AppConfig) Middlewares() middleware.Configer {
-	return config.middlewares
+// Interceptors returns a InterceptorConfiger wrapped with parsed YAML-encoded data of all middlewares.
+func (config *AppConfig) Interceptors() interceptors.Configer {
+	return config.interceptors
 }
 
-// LoadMiddlewares reads all config of middlewares
-func (config *AppConfig) LoadMiddlewares() error {
+// LoadInterceptors reads all config of interceptors
+func (config *AppConfig) LoadInterceptors() error {
 	mode := config.RunMode().String()
 	cfgfile := path.Dir(config.Filename())
 	cfgfile = strings.TrimSuffix(cfgfile, "/config")
 
-	filename := FindMiddlewareConfigFile(mode, cfgfile)
+	filename := FindInterceptorConfigFile(mode, cfgfile)
 	if strings.HasPrefix(filename, GogoSchema) {
-		config.middlewares = DefaultMiddlewareConfig
+		config.interceptors = DefaultInterceptorConfig
 		return nil
 	}
 
@@ -185,9 +185,9 @@ func (config *AppConfig) LoadMiddlewares() error {
 		return err
 	}
 
-	err = yaml.Unmarshal(b, &config.middlewares)
+	err = yaml.Unmarshal(b, &config.interceptors)
 	if err != nil {
-		config.middlewares = DefaultMiddlewareConfig
+		config.interceptors = DefaultInterceptorConfig
 	}
 
 	return err
@@ -219,12 +219,12 @@ type ServerConfig struct {
 	Demotion int  `yaml:"demotion"` // concurrency
 }
 
-// MiddlewareConfig defines config spec of middleware
-type MiddlewareConfig map[string]interface{}
+// InterceptorConfig defines config spec of middleware
+type InterceptorConfig map[string]interface{}
 
 // Unmarshal parses YAML-encoded data of defined with name and stores the result in the
 // value pointed to by v. It returns error if there is no config data for the name.
-func (config *MiddlewareConfig) Unmarshal(name string, v interface{}) error {
+func (config *InterceptorConfig) Unmarshal(name string, v interface{}) error {
 	if config == nil {
 		return nil
 	}

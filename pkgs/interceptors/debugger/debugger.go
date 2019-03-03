@@ -8,23 +8,23 @@ import (
 	"net/http/httputil"
 	"sync"
 
-	"github.com/dolab/gogo/pkgs/middleware"
+	"github.com/dolab/gogo/pkgs/interceptors"
 	yaml "gopkg.in/yaml.v2"
 )
 
-// A Debugger implements middleware.Interface
+// A Debugger implements interceptors.Interface
 type Debugger struct {
 	name  string
-	phase middleware.Phase
+	phase interceptors.Phase
 
 	mux    sync.RWMutex
 	config *Config
 }
 
 // New creates *Debugger with name
-func New(phase middleware.Phase) *Debugger {
+func New(phase interceptors.Phase) *Debugger {
 	if !phase.IsValid() {
-		panic(middleware.ErrInvalidPhase)
+		panic(interceptors.ErrInvalidPhase)
 	}
 
 	return &Debugger{
@@ -51,7 +51,7 @@ func (d *Debugger) Priority() int {
 }
 
 // Register unmarshals config of debbuger and return
-func (d *Debugger) Register(unmarshaler middleware.Configer) (callee middleware.Interceptor, err error) {
+func (d *Debugger) Register(unmarshaler interceptors.Configer) (callee interceptors.Interceptor, err error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -76,7 +76,7 @@ func (d *Debugger) Register(unmarshaler middleware.Configer) (callee middleware.
 }
 
 // Reload tries to update settings of debugger at fly
-func (d *Debugger) Reload(unmarshaler middleware.Configer) (err error) {
+func (d *Debugger) Reload(unmarshaler interceptors.Configer) (err error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -102,7 +102,7 @@ var (
 
 func (d *Debugger) interceptor(w http.ResponseWriter, r *http.Request) bool {
 	switch d.phase {
-	case middleware.RequestReceived:
+	case interceptors.RequestReceived:
 		if d.config.DebugRequest {
 			data, err := httputil.DumpRequest(r, d.config.DebugRequestBody)
 			if err != nil {
@@ -112,7 +112,7 @@ func (d *Debugger) interceptor(w http.ResponseWriter, r *http.Request) bool {
 			}
 		}
 
-	case middleware.ResponseReady:
+	case interceptors.ResponseReady:
 		// TODO: implements debugger for response?
 	}
 

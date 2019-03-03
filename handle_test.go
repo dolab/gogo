@@ -105,19 +105,19 @@ func Test_ContextHandleWithAction(t *testing.T) {
 	h := &hooks.HookList{}
 
 	// global
-	ch := NewContextHandle(nil, []FilterFunc{fakeGlobalAction}, h, h, h)
+	ch := NewContextHandle(nil, []Middleware{fakeGlobalAction}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("<http.HandlerFunc>", ch.action)
 
 	// package
-	ch = NewContextHandle(nil, []FilterFunc{fakePackageAction}, h, h, h)
+	ch = NewContextHandle(nil, []Middleware{fakePackageAction}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("gogo", ch.ctrl)
 	it.Equal("fakePackageAction", ch.action)
 
 	// controller
-	ch = NewContextHandle(nil, []FilterFunc{fakeController.Action}, h, h, h)
+	ch = NewContextHandle(nil, []Middleware{fakeController.Action}, h, h, h)
 	it.Equal("gogo", ch.pkg)
 	it.Equal("*_fakeController", ch.ctrl)
 	it.Equal("Action", ch.action)

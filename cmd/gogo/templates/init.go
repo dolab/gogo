@@ -55,24 +55,21 @@ func init() {
 	template.Must(box.New("application_config.yml").Parse(
 		formatYAML(applicationConfigYAMLTemplate),
 	))
-	template.Must(box.New("application_middlewares.go").Parse(
-		format(applicationMiddlewaresTemplate),
-	))
 	template.Must(box.New("getting_start.go").Parse(
 		format(gettingStartTemplate),
 	))
 	template.Must(box.New("getting_start_test.go").Parse(
 		format(gettingStartTestTemplate),
 	))
-	// filters
-	template.Must(box.New("filter_testing.go").Parse(
-		format(filterTestingTemplate),
+	// middlewares
+	template.Must(box.New("middleware_testing.go").Parse(
+		format(middlewareTestingTemplate),
 	))
-	template.Must(box.New("filter_recovery.go").Parse(
-		format(filterRecoveryTemplate),
+	template.Must(box.New("middleware_recovery.go").Parse(
+		format(middlewareRecoveryTemplate),
 	))
-	template.Must(box.New("filter_recovery_test.go").Parse(
-		format(filterRecoveryTestTemplate),
+	template.Must(box.New("middleware_recovery_test.go").Parse(
+		format(middlewareRecoveryTestTemplate),
 	))
 	// models
 	template.Must(box.New("model.go").Parse(
