@@ -15,8 +15,8 @@ import (
 
 	"github.com/dolab/gogo/internal/listeners"
 	"github.com/dolab/gogo/pkgs/hooks"
-	"github.com/dolab/gogo/pkgs/middleware"
-	"github.com/dolab/gogo/pkgs/middleware/debugger"
+	"github.com/dolab/gogo/pkgs/interceptors"
+	"github.com/dolab/gogo/pkgs/interceptors/debugger"
 	"golang.org/x/net/http2"
 )
 
@@ -79,35 +79,35 @@ func (s *AppServer) Address() string {
 	return s.localAddr
 }
 
-// RegisterMiddlewares tries to register all middlewares defined by iface
-func (s *AppServer) RegisterMiddlewares(iface interface{}) {
-	if registry, ok := iface.(RequestReceivedMiddlewarer); ok {
+// WithInterceptors tries to register all interceptors defined by iface
+func (s *AppServer) WithInterceptors(iface interface{}) {
+	if registry, ok := iface.(interceptors.RequestReceivedInterceptor); ok {
 		for _, m := range registry.RequestReceived() {
-			s.RegisterRequestReceived(m)
+			s.WithRequestReceived(m)
 		}
 	}
 
-	if registry, ok := iface.(RequestRoutedMiddlewarer); ok {
+	if registry, ok := iface.(interceptors.RequestRoutedInterceptor); ok {
 		for _, m := range registry.RequestRouted() {
-			s.RegisterRequestReceived(m)
+			s.WithRequestRouted(m)
 		}
 	}
 
-	if registry, ok := iface.(ResponseReadyMiddlewarer); ok {
+	if registry, ok := iface.(interceptors.ResponseReadyInterceptor); ok {
 		for _, m := range registry.ResponseReady() {
-			s.RegisterRequestReceived(m)
+			s.WithResponseReady(m)
 		}
 	}
 
-	if registry, ok := iface.(ResponseAlwaysMiddlewarer); ok {
+	if registry, ok := iface.(interceptors.ResponseAlwaysInterceptor); ok {
 		for _, m := range registry.ResponseAlways() {
-			s.RegisterRequestReceived(m)
+			s.WithResponseAlways(m)
 		}
 	}
 }
 
-// RegisterRequestReceived registers middleware at request received phase
-func (s *AppServer) RegisterRequestReceived(m middleware.Interface) error {
+// WithRequestReceived registers interceptors at request received phase
+func (s *AppServer) WithRequestReceived(m interceptors.Interface) error {
 	s.localMux.Lock()
 	defer s.localMux.Unlock()
 
@@ -116,7 +116,7 @@ func (s *AppServer) RegisterRequestReceived(m middleware.Interface) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for request received phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middlewares())
+	applier, err := m.Register(s.config.Interceptors())
 	if err != nil {
 		return err
 	}
@@ -130,8 +130,8 @@ func (s *AppServer) RegisterRequestReceived(m middleware.Interface) error {
 	return nil
 }
 
-// RegisterRequestRouted registers middleware at request routed phase
-func (s *AppServer) RegisterRequestRouted(m middleware.Interface) error {
+// WithRequestRouted registers interceptors at request routed phase
+func (s *AppServer) WithRequestRouted(m interceptors.Interface) error {
 	s.localMux.Lock()
 	defer s.localMux.Unlock()
 
@@ -140,7 +140,7 @@ func (s *AppServer) RegisterRequestRouted(m middleware.Interface) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for request routed phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middlewares())
+	applier, err := m.Register(s.config.Interceptors())
 	if err != nil {
 		return err
 	}
@@ -154,8 +154,8 @@ func (s *AppServer) RegisterRequestRouted(m middleware.Interface) error {
 	return nil
 }
 
-// RegisterResponseReady registers middleware at response ready phase
-func (s *AppServer) RegisterResponseReady(m middleware.Interface) error {
+// WithResponseReady registers interceptors at response ready phase
+func (s *AppServer) WithResponseReady(m interceptors.Interface) error {
 	s.localMux.Lock()
 	defer s.localMux.Unlock()
 
@@ -164,7 +164,7 @@ func (s *AppServer) RegisterResponseReady(m middleware.Interface) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for response ready phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middlewares())
+	applier, err := m.Register(s.config.Interceptors())
 	if err != nil {
 		return err
 	}
@@ -178,8 +178,8 @@ func (s *AppServer) RegisterResponseReady(m middleware.Interface) error {
 	return nil
 }
 
-// RegisterResponseAlways registers middleware at response always phase
-func (s *AppServer) RegisterResponseAlways(m middleware.Interface) error {
+// WithResponseAlways registers interceptors at response always phase
+func (s *AppServer) WithResponseAlways(m interceptors.Interface) error {
 	s.localMux.Lock()
 	defer s.localMux.Unlock()
 
@@ -188,7 +188,7 @@ func (s *AppServer) RegisterResponseAlways(m middleware.Interface) error {
 		return fmt.Errorf("Middleware conflict, %q has registered for response always phase", name)
 	}
 
-	applier, err := m.Register(s.config.Middlewares())
+	applier, err := m.Register(s.config.Interceptors())
 	if err != nil {
 		return err
 	}
@@ -202,10 +202,10 @@ func (s *AppServer) RegisterResponseAlways(m middleware.Interface) error {
 	return nil
 }
 
-// NewService register all resources of service with middlewares
+// NewService register all resources of service with interceptorss
 func (s *AppServer) NewService(svc Servicer) *AppServer {
-	// first, try to register all middlewares defined by service
-	s.RegisterMiddlewares(svc)
+	// first, try to register all interceptorss defined by service
+	s.WithInterceptors(svc)
 
 	// second, try to register all resources with filters
 	s.localMux.Lock()
@@ -214,7 +214,7 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 	svc.Init(s.config, s.AppGroup)
 
 	// register filters
-	svc.Filters()
+	svc.Middlewares()
 
 	// register resources
 	svc.Resources()
@@ -226,7 +226,7 @@ func (s *AppServer) NewService(svc Servicer) *AppServer {
 // for testing cases.
 func (s *AppServer) NewResources(svc Servicer) *AppServer {
 	// first, try to register all middlewares defined by service
-	s.RegisterMiddlewares(svc)
+	s.WithInterceptors(svc)
 
 	// second, try to register all resources with filters
 	s.localMux.Lock()
@@ -256,7 +256,7 @@ func (s *AppServer) Run() {
 
 	// register all middlewares of internal
 	for _, iface := range s.localIfaces {
-		s.RegisterMiddlewares(iface)
+		s.WithInterceptors(iface)
 	}
 
 	// register healthz

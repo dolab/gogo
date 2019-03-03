@@ -40,24 +40,24 @@ $ make godev
 You can custom Server by implementing interfaces following:
 
 <golang>
-// A RequestReceivedMiddlewarer represents request received hook interface of server
-type RequestReceivedMiddlewarer interface {
-	RequestReceived() []gogo.Middlewarer
+// A RequestReceivedInterceptor represents request received hook interface of server
+type RequestReceivedInterceptor interface {
+	RequestReceived() []interceptors.Interceptor
 }
 
-// A RequestRoutedMiddlewarer represents request routed hook interface of server
-type RequestRoutedMiddlewarer interface {
-	RequestRouted() []gogo.Middlewarer
+// A RequestRoutedInterceptor represents request routed hook interface of server
+type RequestRoutedInterceptor interface {
+	RequestRouted() []interceptors.Interceptor
 }
 
-// A ResponseReadyMiddlewarer represents response ready for sending data hook interface of server
-type ResponseReadyMiddlewarer interface {
-	ResponseReady() []gogo.Middlewarer
+// A ResponseReadyInterceptor represents response ready for sending data hook interface of server
+type ResponseReadyInterceptor interface {
+	ResponseReady() []interceptors.Interceptor
 }
 
-// A ResponseAlwaysMiddlewarer represents response routed success hook interface of server
-type ResponseAlwaysMiddlewarer interface {
-	ResponseAlways() []gogo.Middlewarer
+// A ResponseAlwaysInterceptor represents response routed success hook interface of server
+type ResponseAlwaysInterceptor interface {
+	ResponseAlways() []interceptors.Interceptor
 }
 </golang>
 

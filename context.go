@@ -52,14 +52,14 @@ type Context struct {
 	mux            sync.RWMutex
 	settings       map[string]interface{}
 	frozenSettings map[string]interface{}
-	responseReady  *hooks.HookList
 	cursor         int8
 
-	pkg      string
-	ctrl     string
-	action   string
-	filters  []FilterFunc
-	issuedAt time.Time
+	pkg           string
+	ctrl          string
+	action        string
+	filters       []Middleware
+	responseReady *hooks.HookList
+	issuedAt      time.Time
 }
 
 // NewContext returns a *Context without initialization
@@ -99,22 +99,15 @@ func (c *Context) ContentType() string {
 
 // Set binds a new value with key for the context
 func (c *Context) Set(key string, value interface{}) {
-	c.mux.Lock()
-
 	if c.settings == nil {
 		c.settings = make(map[string]interface{})
 	}
 
 	c.settings[key] = value
-
-	c.mux.Unlock()
 }
 
 // Get returns a value of the key
 func (c *Context) Get(key string) (v interface{}, ok bool) {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
-
 	if c.settings == nil {
 		return
 	}
@@ -135,9 +128,6 @@ func (c *Context) MustGet(key string) interface{} {
 
 // SetFinal binds a value with key for the context and freezes it
 func (c *Context) SetFinal(key string, value interface{}) error {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-
 	if c.frozenSettings == nil {
 		c.frozenSettings = make(map[string]interface{})
 	}
@@ -153,9 +143,6 @@ func (c *Context) SetFinal(key string, value interface{}) error {
 
 // GetFinal returns a frozen value of the key
 func (c *Context) GetFinal(key string) (v interface{}, ok bool) {
-	c.mux.RLock()
-	defer c.mux.RUnlock()
-
 	if c.frozenSettings == nil {
 		return
 	}
@@ -212,15 +199,15 @@ func (c *Context) HasRawHeader(key string) bool {
 	return false
 }
 
-// RawHeader returns request header value of specified key
-func (c *Context) RawHeader(key string) string {
-	for yek, val := range c.Request.Header {
+// RawHeader returns raw request header value of specified key
+func (c *Context) RawHeader(key string) []string {
+	for yek, vals := range c.Request.Header {
 		if key == yek {
-			return strings.Join(val, ",")
+			return vals
 		}
 	}
 
-	return ""
+	return nil
 }
 
 // HasHeader returns true if request sets its header for canonicaled specified key
@@ -396,7 +383,7 @@ func (c *Context) Abort() {
 }
 
 // run starting request chan with new envs.
-func (c *Context) run(handler http.Handler, filters []FilterFunc, responseReady *hooks.HookList) {
+func (c *Context) run(handler http.Handler, filters []Middleware, responseReady *hooks.HookList) {
 	c.mux.Lock()
 	defer c.mux.Unlock()
 

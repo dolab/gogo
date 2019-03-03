@@ -13,13 +13,13 @@ import (
 	"github.com/dolab/httpdispatch"
 )
 
-// AppGroup defines a grouped server of gogo.
+// AppGroup defines a routes grouped of server.
 type AppGroup struct {
 	mux sync.RWMutex
 
 	server  *AppServer
 	prefix  string
-	filters []FilterFunc
+	filters []Middleware
 	handler Handler
 }
 
@@ -40,15 +40,15 @@ func NewAppGroup(prefix string, server *AppServer) *AppGroup {
 }
 
 // NewGroup returns a new *AppGroup which has the same prefix path and filters
-func (r *AppGroup) NewGroup(prefix string, filters ...FilterFunc) Grouper {
+func (r *AppGroup) NewGroup(prefix string, filters ...Middleware) Grouper {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
 	return &AppGroup{
 		server:  r.server,
-		prefix:  r.buildPrefix(prefix),
 		handler: r.handler,
-		filters: r.buildFilters(filters...),
+		prefix:  r.buildPrefix(prefix),
+		filters: r.buildMiddlewares(filters...),
 	}
 }
 
@@ -62,67 +62,67 @@ func (r *AppGroup) SetHandler(handler Handler) {
 // Use appends new filters to the end of group
 //
 // TODO: ignore duplicated filters?
-func (r *AppGroup) Use(filters ...FilterFunc) {
+func (r *AppGroup) Use(filters ...Middleware) {
 	r.mux.Lock()
 	defer r.mux.Unlock()
 
 	r.filters = append(r.filters, filters...)
 	if len(r.filters) >= math.MaxInt8 {
-		panic(ErrTooManyFilters)
+		panic(ErrTooManyMiddlewares)
 	}
 }
 
-// Filters returns all filters of AppGroup
-func (r *AppGroup) Filters() []FilterFunc {
+// Middlewares returns all filters registered with AppGroup
+func (r *AppGroup) Middlewares() []Middleware {
 	return r.filters
 }
 
-// CleanFilters removes all registered filters of AppGroup
+// CleanMiddlewares removes all filters registered of AppGroup
 //
 // NOTE: It's useful in testing cases.
-func (r *AppGroup) CleanFilters() {
+func (r *AppGroup) CleanMiddlewares() {
 	r.mux.Lock()
-	r.filters = []FilterFunc{}
+	r.filters = []Middleware{}
 	r.mux.Unlock()
 }
 
 // OPTIONS is a shortcut of group.Handle("OPTIONS", path, handler)
-func (r *AppGroup) OPTIONS(rpath string, handler FilterFunc) {
+func (r *AppGroup) OPTIONS(rpath string, handler Middleware) {
 	r.Handle("OPTIONS", rpath, handler)
 }
 
 // HEAD is a shortcut of group.Handle("HEAD", path, handler)
-func (r *AppGroup) HEAD(rpath string, handler FilterFunc) {
+func (r *AppGroup) HEAD(rpath string, handler Middleware) {
 	r.Handle("HEAD", rpath, handler)
 }
 
 // POST is a shortcut of group.Handle("POST", path, handler)
-func (r *AppGroup) POST(rpath string, handler FilterFunc) {
+func (r *AppGroup) POST(rpath string, handler Middleware) {
 	r.Handle("POST", rpath, handler)
 }
 
 // GET is a shortcut of group.Handle("GET", path, handler)
-func (r *AppGroup) GET(rpath string, handler FilterFunc) {
+func (r *AppGroup) GET(rpath string, handler Middleware) {
 	r.Handle("GET", rpath, handler)
 }
 
 // PUT is a shortcut of group.Handle("PUT", path, handler)
-func (r *AppGroup) PUT(rpath string, handler FilterFunc) {
+func (r *AppGroup) PUT(rpath string, handler Middleware) {
 	r.Handle("PUT", rpath, handler)
 }
 
 // PATCH is a shortcut of group.Handle("PATCH", path, handler)
-func (r *AppGroup) PATCH(rpath string, handler FilterFunc) {
+func (r *AppGroup) PATCH(rpath string, handler Middleware) {
 	r.Handle("PATCH", rpath, handler)
 }
 
 // DELETE is a shortcut of group.Handle("DELETE", path, handler)
-func (r *AppGroup) DELETE(rpath string, handler FilterFunc) {
+func (r *AppGroup) DELETE(rpath string, handler Middleware) {
 	r.Handle("DELETE", rpath, handler)
 }
 
 // Any is a shortcut for all request methods
-func (r *AppGroup) Any(rpath string, handler FilterFunc) {
+func (r *AppGroup) Any(rpath string, handler Middleware) {
 	r.Handle("GET", rpath, handler)
 	r.Handle("POST", rpath, handler)
 	r.Handle("PUT", rpath, handler)
@@ -256,7 +256,7 @@ func (r *AppGroup) HandlerFunc(method, uri string, handler http.HandlerFunc) {
 // Handler registers a new resource with http.Handler
 func (r *AppGroup) Handler(method, uri string, handler http.Handler) {
 	uri = r.buildPrefix(uri)
-	filters := r.buildFilters()
+	filters := r.buildMiddlewares()
 
 	r.handler.Handle(method, uri, NewContextHandle(
 		handler.ServeHTTP, filters,
@@ -265,9 +265,9 @@ func (r *AppGroup) Handler(method, uri string, handler http.Handler) {
 }
 
 // Handle registers a new resource
-func (r *AppGroup) Handle(method string, uri string, handler FilterFunc) {
+func (r *AppGroup) Handle(method string, uri string, filter Middleware) {
 	uri = r.buildPrefix(uri)
-	filters := r.buildFilters(handler)
+	filters := r.buildMiddlewares(filter)
 
 	r.handler.Handle(method, uri, NewContextHandle(
 		nil, filters,
@@ -281,7 +281,7 @@ func (r *AppGroup) MountRPC(method string, svc RPCServicer) {
 
 	// registry
 	for uri, handler := range svc.ServiceRegistry(prefix) {
-		filters := r.buildFilters(handler)
+		filters := r.buildMiddlewares(handler)
 
 		r.handler.Handle(method, uri, NewContextHandle(
 			nil, filters,
@@ -291,9 +291,9 @@ func (r *AppGroup) MountRPC(method string, svc RPCServicer) {
 }
 
 // MockHandle mocks a new resource with specified response and handler, useful for testing
-func (r *AppGroup) MockHandle(method string, rpath string, recorder http.ResponseWriter, handler FilterFunc) {
+func (r *AppGroup) MockHandle(method string, rpath string, recorder http.ResponseWriter, handler Middleware) {
 	uri := r.buildPrefix(rpath)
-	filters := r.buildFilters(handler)
+	filters := r.buildMiddlewares(handler)
 
 	r.handler.Handle(method, uri, NewFakeHandle(
 		nil, filters, recorder,
@@ -356,8 +356,8 @@ func (r *AppGroup) buildPrefix(suffix string) (prefix string) {
 	return prefix
 }
 
-func (r *AppGroup) buildFilters(filters ...FilterFunc) []FilterFunc {
-	combined := make([]FilterFunc, len(r.filters)+len(filters))
+func (r *AppGroup) buildMiddlewares(filters ...Middleware) []Middleware {
+	combined := make([]Middleware, len(r.filters)+len(filters))
 	copy(combined[:len(r.filters)], r.filters)
 	copy(combined[len(r.filters):], filters)
 

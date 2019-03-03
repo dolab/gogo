@@ -6,9 +6,7 @@
 
 It's heavily inspired from [rails](http://rubyonrails.org/) for best practice.
 
-> NOTE: From *VERSION 2*, gogo requires `go1.10+` support. If you want to support `go1.6` or older, please use released tag [v1.0.0](https://github.com/dolab/gogo/releases/tag/v1.0.0) instead.
-
-> NOTE: The *VERSION 3* introduces a big broken!!! And the API is frozen from now. We **Strongly** advice you to start from it for your product.
+> NOTE: From *VERSION 2*, gogo requires `go1.10+` support. We **Strongly** advice you to start from it for your product. If you want to support `go1.6` or older, please use released tag [v1.1.0](https://github.com/dolab/gogo/releases/tag/v1.1.0) instead.
 
 ## Install
 
@@ -92,7 +90,7 @@ func main() {
 }
 ```
 
-- Using filters
+- Using Middlewares
 
 Middlewares is the best practice of doing common processing when handling a request.
 
@@ -130,9 +128,9 @@ func main() {
 }
 ```
 
-- Using group
+- Using AppGroup
 
-Group is useful when defining resources with shared filters and the same uri prefix.
+AppGroup is useful when defining resources with shared middlewares and the same uri prefix.
 
 ```go
 package main
@@ -262,8 +260,8 @@ func main() {
 
 ```yaml
 ---
-mode: test
 name: gogo
+mode: test
 
 default_server: &default_server
   addr: localhost

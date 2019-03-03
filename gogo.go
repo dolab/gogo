@@ -54,8 +54,8 @@ var (
 		return filepath
 	}
 
-	// FindMiddlewareConfigFile returns config file for middlewares.
-	FindMiddlewareConfigFile = func(mode, cfgfile string) string {
+	// FindInterceptorConfigFile returns config file for middlewares.
+	FindInterceptorConfigFile = func(mode, cfgfile string) string {
 		// adjust cfgfile
 		cfgfile = path.Clean(cfgfile)
 
@@ -75,13 +75,13 @@ var (
 		}
 
 		// resolve cfgfile with run mode
-		filename := "middlewares.yml"
+		filename := "interceptors.yml"
 		switch RunMode(mode) {
 		case Development:
-			filename = "middlewares.development.yml"
+			filename = "interceptors.development.yml"
 
 		case Test:
-			filename = "middlewares.test.yml"
+			filename = "interceptors.test.yml"
 
 		case Production:
 			// skip
@@ -90,7 +90,7 @@ var (
 
 		filepath := path.Join(cfgfile, "config", filename)
 		if _, err := os.Stat(filepath); os.IsNotExist(err) {
-			filepath = path.Join(cfgfile, "config", "middlewares.yml")
+			filepath = path.Join(cfgfile, "config", "interceptors.yml")
 		}
 
 		return filepath
@@ -135,8 +135,8 @@ func NewWithLogger(config Configer, logger Logger) *AppServer {
 
 	// try load config of middlewares
 	// NOTE: ignore returned error is ok!
-	if err := config.LoadMiddlewares(); err != nil {
-		logger.Errorf("LoadMiddlewares(): %v", err)
+	if err := config.LoadInterceptors(); err != nil {
+		logger.Errorf("config.LoadInterceptors(): %v", err)
 	}
 
 	return NewAppServer(config, logger)

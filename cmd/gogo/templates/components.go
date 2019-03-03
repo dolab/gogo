@@ -125,7 +125,7 @@ import (
 	"github.com/dolab/gogo"
 )
 
-func {{.Name}}() gogo.FilterFunc {
+func {{.Name}}() gogo.Middleware {
 	return func(ctx *gogo.Context) {
 		// TODO: implements custom logic
 		ctx.AddHeader("x-gogo-filter", "Hello, Filter!")

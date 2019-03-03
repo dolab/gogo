@@ -30,7 +30,7 @@ var (
 			config.filename = filename
 
 			// try to load config of middlewares
-			config.LoadMiddlewares()
+			config.LoadInterceptors()
 		}
 		return
 	}

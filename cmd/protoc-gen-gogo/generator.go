@@ -671,7 +671,7 @@ func (g *generator) genServiceAccessors(
 	g.P(`}`)
 	g.P()
 	g.P(`// ServiceRegistry returns all names to handlers of service required by `, g.aliases["gogo"], `.MountRPC interface`)
-	g.P(`func (s *`, svcStruct, `) ServiceRegistry(prefix string) map[string]`, g.aliases["gogo"], `.FilterFunc {`)
+	g.P(`func (s *`, svcStruct, `) ServiceRegistry(prefix string) map[string]`, g.aliases["gogo"], `.Middleware {`)
 	g.P(`	s.mux.Lock()`)
 	g.P(`	defer s.mux.Unlock()`)
 	g.P()
@@ -687,7 +687,7 @@ func (g *generator) genServiceAccessors(
 
 	g.P(`	}`)
 	g.P()
-	g.P(`	return map[string]`, g.aliases["gogo"], `.FilterFunc{`)
+	g.P(`	return map[string]`, g.aliases["gogo"], `.Middleware{`)
 
 	// Services
 	for _, method := range service.Method {
@@ -1060,7 +1060,7 @@ func (g *generator) goTypeName(protoName string) string {
 	return prefix + toTypeName(name)
 }
 
-func (g *generator) goFormat(dupFilters ...bool) string {
+func (g *generator) goFormat(dupMiddlewares ...bool) string {
 	defer g.buf.Reset()
 
 	// Reformat generated code.
@@ -1082,7 +1082,7 @@ func (g *generator) goFormat(dupFilters ...bool) string {
 	}
 
 	// trim duplicated methods
-	if len(dupFilters) > 0 && dupFilters[0] {
+	if len(dupMiddlewares) > 0 && dupMiddlewares[0] {
 		commentMap := ast.NewCommentMap(fset, fast, fast.Comments)
 
 		methods := map[string]bool{}

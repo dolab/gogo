@@ -1,7 +1,7 @@
 package templates
 
 var (
-	filterTestingTemplate = `package middlewares
+	middlewareTestingTemplate = `package middlewares
 
 import (
 	"os"

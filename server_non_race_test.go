@@ -137,17 +137,17 @@ func (rt *timeoutRoundTripper) RoundTrip(r *http.Request) (rs *http.Response, er
 
 func Test_ServerWithTimeout(t *testing.T) {
 	it := assert.New(t)
+	timeout := 1 * time.Second
 
 	server := fakeTimeoutServer()
 	server.GET("/server/timeout", func(ctx *Context) {
 		ctx.Response.FlushHeader()
 
 		if ctx.HasHeader("X-Response-Timeout") {
-			time.Sleep(1 * time.Second)
+			time.Sleep(timeout)
 		}
 
-		_, err := ctx.Response.Write([]byte("TIMEOUT"))
-		it.Nil(err)
+		ctx.Response.Write([]byte("TIMEOUT"))
 	})
 
 	go server.Run()
@@ -178,7 +178,7 @@ func Test_ServerWithTimeout(t *testing.T) {
 	requestTimeoutClient := &http.Client{
 		Transport: &timeoutRoundTripper{
 			host:           server.Address(),
-			requestTimeout: 1 * time.Second,
+			requestTimeout: timeout,
 		},
 	}
 
@@ -193,7 +193,7 @@ func Test_ServerWithTimeout(t *testing.T) {
 	responseTimeoutClient := &http.Client{
 		Transport: &timeoutRoundTripper{
 			host:            server.Address(),
-			responseTimeout: 1 * time.Second,
+			responseTimeout: timeout,
 		},
 	}
 

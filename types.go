@@ -4,9 +4,14 @@ import (
 	"net/http"
 	"net/http/httputil"
 
-	"github.com/dolab/gogo/pkgs/middleware"
+	"github.com/dolab/gogo/pkgs/interceptors"
 	"github.com/dolab/httpdispatch"
 )
+
+// A Middleware represents request filters or resource handler
+//
+// NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
+type Middleware func(ctx *Context)
 
 // A Configer represents config interface
 type Configer interface {
@@ -19,37 +24,37 @@ type Configer interface {
 	UnmarshalYAML(v interface{}) error
 
 	// for middlewares
-	Middlewares() middleware.Configer
-	LoadMiddlewares() error
+	Interceptors() interceptors.Configer
+	LoadInterceptors() error
 }
 
 // A Grouper represents router interface
 type Grouper interface {
-	NewGroup(prefix string, filters ...FilterFunc) Grouper
+	NewGroup(prefix string, filters ...Middleware) Grouper
 	SetHandler(handler Handler)
-	Use(filters ...FilterFunc)
-	Resource(uri string, resource interface{}) Grouper
-	OPTIONS(uri string, handler FilterFunc)
-	HEAD(uri string, handler FilterFunc)
-	POST(uri string, handler FilterFunc)
-	GET(uri string, handler FilterFunc)
-	PUT(uri string, handler FilterFunc)
-	PATCH(uri string, handler FilterFunc)
-	DELETE(uri string, handler FilterFunc)
-	Any(uri string, handler FilterFunc)
+	Use(filters ...Middleware)
+	OPTIONS(uri string, filter Middleware)
+	HEAD(uri string, filter Middleware)
+	POST(uri string, filter Middleware)
+	GET(uri string, filter Middleware)
+	PUT(uri string, filter Middleware)
+	PATCH(uri string, filter Middleware)
+	DELETE(uri string, filter Middleware)
+	Any(uri string, filter Middleware)
 	Static(uri, root string)
+	Resource(uri string, resource interface{}) Grouper
 	Proxy(method, uri string, proxy *httputil.ReverseProxy)
 	HandlerFunc(method, uri string, fn http.HandlerFunc)
 	Handler(method, uri string, handler http.Handler)
-	Handle(method, uri string, handler FilterFunc)
+	Handle(method, uri string, filter Middleware)
 	MountRPC(method string, rpc RPCServicer)
-	MockHandle(method, uri string, recorder http.ResponseWriter, handler FilterFunc)
+	MockHandle(method, uri string, recorder http.ResponseWriter, filter Middleware)
 }
 
 // A Servicer represents application interface
 type Servicer interface {
 	Init(config Configer, group Grouper)
-	Filters()
+	Middlewares()
 	Resources()
 }
 
@@ -61,7 +66,7 @@ type RPCServicer interface {
 	ProtocGenGogoVersion() string
 
 	// ServiceRegistry returns a rpc method name to handlers map.
-	ServiceRegistry(prefix string) map[string]FilterFunc
+	ServiceRegistry(prefix string) map[string]Middleware
 
 	// ServiceNames returns all rpc services registered.
 	ServiceNames() []string
@@ -126,8 +131,3 @@ type Logger interface {
 	Panic(v ...interface{})
 	Panicf(format string, v ...interface{})
 }
-
-// A FilterFunc represents request filters or resource handler
-//
-// NOTE: It is the filter's responsibility to invoke ctx.Next() for chainning.
-type FilterFunc func(ctx *Context)
